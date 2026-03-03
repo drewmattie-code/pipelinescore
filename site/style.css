@@ -660,7 +660,8 @@ body {
 }
 
 .qs-title { color: #888; font-size: 11px; margin-bottom: 8px; }
-.qs-code { color: #e05a2b; font-family: monospace; font-size: 15px; font-weight: 600; }
+.qs-code { display: block; color: #e05a2b; font-family: monospace; font-size: 15px; font-weight: 600; margin: 4px 0; }
+.qs-code-dim { color: #888; font-weight: 400; }
 
 .download-links { display: flex; gap: 24px; justify-content: center; margin-top: 16px; }
 .download-links a { color: var(--accent); font-size: 13px; text-decoration: none; }
