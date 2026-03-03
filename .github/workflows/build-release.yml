@@ -16,15 +16,15 @@ jobs:
       - name: Install dependencies
         run: |
           pip install pyinstaller
-          pip install -r projects/agentbench/harness/requirements.txt
+          pip install -r harness/requirements.txt
       - name: Build macOS binary
         run: |
-          cd projects/agentbench/harness
+          cd harness
           pyinstaller --onefile --name pipelinescore-macos harness.py
       - uses: actions/upload-artifact@v4
         with:
           name: pipelinescore-macos
-          path: projects/agentbench/harness/dist/pipelinescore-macos
+          path: harness/dist/pipelinescore-macos
 
   build-windows:
     runs-on: windows-latest
@@ -36,15 +36,15 @@ jobs:
       - name: Install dependencies
         run: |
           pip install pyinstaller
-          pip install -r projects/agentbench/harness/requirements.txt
+          pip install -r harness/requirements.txt
       - name: Build Windows binary
         run: |
-          cd projects/agentbench/harness
+          cd harness
           pyinstaller --onefile --name pipelinescore-windows harness.py
       - uses: actions/upload-artifact@v4
         with:
           name: pipelinescore-windows
-          path: projects/agentbench/harness/dist/pipelinescore-windows.exe
+          path: harness/dist/pipelinescore-windows.exe
 
   build-linux:
     runs-on: ubuntu-latest
@@ -56,15 +56,15 @@ jobs:
       - name: Install dependencies
         run: |
           pip install pyinstaller
-          pip install -r projects/agentbench/harness/requirements.txt
+          pip install -r harness/requirements.txt
       - name: Build Linux binary
         run: |
-          cd projects/agentbench/harness
+          cd harness
           pyinstaller --onefile --name pipelinescore-linux harness.py
       - uses: actions/upload-artifact@v4
         with:
           name: pipelinescore-linux
-          path: projects/agentbench/harness/dist/pipelinescore-linux
+          path: harness/dist/pipelinescore-linux
 
   create-release:
     needs: [build-macos, build-windows, build-linux]
