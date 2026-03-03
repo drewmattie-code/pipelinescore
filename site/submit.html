@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submit Your Stack — pipelinescore.ai</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-inner">
+        <a href="index.html" class="logo">
+          <div class="logo-icon">P</div>
+          Pipeline Score
+        </a>
+        <nav class="nav">
+          <a href="index.html">Leaderboard</a>
+          <a href="tasks.html">Tasks</a>
+          <a href="submit.html" class="active">Submit Your Stack</a>
+          <a href="#">About</a>
+          <a href="index.html" class="nav-cta">LEADERBOARD</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Page Header -->
+  <section class="page-header">
+    <div class="container">
+      <h1>Submit Your Stack</h1>
+      <p>Submit your agent team configuration for evaluation. All submissions are reviewed for compliance with our testing protocols.</p>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="container">
+    <div class="submit-container">
+      <form id="submit-form">
+        <div class="form-group">
+          <label class="form-label" for="teamName">Team Name</label>
+          <input type="text" class="form-input" id="teamName" name="teamName" placeholder="e.g., My Custom Stack" required>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="submissionFile">Submission JSON</label>
+          <input type="file" class="form-input" id="submissionFile" name="submissionFile" accept=".json" required>
+          <p class="form-hint">Upload your submission configuration as JSON. See <a href="#" style="color: var(--accent);">submission_schema.yaml</a> for the required format.</p>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="hardwareTier">Hardware Tier</label>
+          <select class="form-select" id="hardwareTier" name="hardwareTier" required>
+            <option value="">Select hardware tier...</option>
+            <option value="cloud-api">Cloud API</option>
+            <option value="consumer-gpu">Consumer GPU (RTX 3080/4090)</option>
+            <option value="prosumer-apple-silicon">Prosumer Apple Silicon (M3 Max/Ultra)</option>
+            <option value="enterprise-gpu">Enterprise GPU (A100/H100)</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="modelFamily">Primary Model Family</label>
+          <select class="form-select" id="modelFamily" name="modelFamily" required>
+            <option value="">Select model family...</option>
+            <option value="qwen3.5">Qwen3.5</option>
+            <option value="claude">Claude</option>
+            <option value="gpt">GPT</option>
+            <option value="gemini">Gemini</option>
+            <option value="llama">Llama</option>
+            <option value="mistral">Mistral</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="mixed">Mixed/Multi-model</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="costPerTask">Estimated Cost per Task (USD)</label>
+          <input type="number" class="form-input" id="costPerTask" name="costPerTask" step="0.01" min="0" placeholder="e.g., 0.15" required>
+          <p class="form-hint">Include API costs, compute costs, and any per-task licensing fees.</p>
+        </div>
+        
+        <button type="submit" class="submit-btn">Submit Your Stack</button>
+        
+        <div class="submit-note">
+          <strong>Note:</strong> Submissions are reviewed within 48 hours. Results are published with full configuration disclosure. Your team's architecture, prompt templates, and tool definitions will be made public.
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p>© 2026 pipelinescore.ai — The public leaderboard for configured AI agent teams.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Handle form submission
+    document.getElementById('submit-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const teamName = document.getElementById('teamName').value;
+      const fileInput = document.getElementById('submissionFile');
+      const hardwareTier = document.getElementById('hardwareTier').value;
+      const modelFamily = document.getElementById('modelFamily').value;
+      const costPerTask = document.getElementById('costPerTask').value;
+      
+      // Read the JSON file
+      const file = fileInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const submissionData = JSON.parse(e.target.result);
+            console.log('Submission data:', submissionData);
+            alert('Submission received! Your team "' + teamName + '" will be reviewed within 48 hours.');
+            // Reset form
+            document.getElementById('submit-form').reset();
+          } catch (err) {
+            alert('Error parsing JSON file: ' + err.message);
+          }
+        };
+        reader.readAsText(file);
+      }
+    });
+  </script>
+</body>
+</html>

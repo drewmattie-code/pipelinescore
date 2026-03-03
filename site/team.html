@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C&R Stack v8 — Pipeline Score</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- Top Tab Bar -->
+  <nav class="tab-bar">
+    <div class="tab-bar-inner">
+      <div class="tab-group">
+        <a href="index.html" class="tab" data-tab="pipeline">Pipeline</a>
+        <a href="#" class="tab" data-tab="extraction">Extraction</a>
+        <a href="#" class="tab" data-tab="code">Code Gen</a>
+        <a href="#" class="tab" data-tab="reasoning">Reasoning</a>
+        <a href="#" class="tab" data-tab="research">Research</a>
+        <a href="#" class="tab" data-tab="multitool">Multi-Tool</a>
+        <a href="#" class="tab" data-tab="bug">Bug Fix</a>
+        <a href="#" class="tab" data-tab="docreview">Doc Review</a>
+        <a href="#" class="tab" data-tab="rtresearch">RT Research</a>
+        <a href="#" class="tab" data-tab="adversarial">Adversarial</a>
+        <span class="tab-separator"></span>
+        <a href="#" class="tab" data-tab="hardware">Hardware Scores</a>
+        <a href="#" class="tab" data-tab="value">Top Value</a>
+      </div>
+      <div class="tab-actions">
+        <a href="index.html" class="tab-action">COMPARE</a>
+        <a href="submit.html" class="tab-action">SUBMIT</a>
+        <a href="submit.html" class="tab-action btn-primary">TEST YOUR STACK</a>
+        <a href="#" class="tab-action">ABOUT</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Stats Strip -->
+  <div class="stats-strip">
+    <div class="stats-strip-inner">
+      <span class="stats-item"><strong>1,423</strong> Teams Benchmarked</span>
+      <span class="stats-divider">·</span>
+      <span class="stats-item"><strong>Pipeline Score</strong> is the standard</span>
+      <span class="stats-divider">·</span>
+      <span class="stats-item">Updated <strong>Mar 2, 2026</strong></span>
+    </div>
+  </div>
+
+  <!-- Main Header -->
+  <header class="main-header">
+    <div class="main-header-inner">
+      <div class="logo-section">
+        <div class="logo-icon-large">A</div>
+        <div class="logo-text">
+          <h1 class="logo-title">Pipeline Score</h1>
+          <p class="logo-tagline">The Agent Team Benchmark</p>
+        </div>
+      </div>
+      <a href="#download" class="download-btn">
+        <span class="download-icon">⬇</span>
+        DOWNLOAD PIPELINE SCORE
+      </a>
+    </div>
+  </header>
+
+  <!-- Team Header -->
+  <section class="team-header">
+    <div class="team-header-inner">
+      <div class="team-icon-large" id="team-icon">C</div>
+      <div class="team-meta">
+        <h1 id="team-name">C&R Stack v8</h1>
+        <div class="team-badges">
+          <span class="score-badge-large green" id="team-score">91</span>
+          <span class="meta-badge" id="team-hardware">🍎 Apple Silicon</span>
+          <span class="meta-badge" id="team-date">Submitted Feb 15, 2026</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="container">
+    <div class="profile-grid">
+      <!-- Radar Chart -->
+      <div class="profile-card">
+        <h3>Performance Radar</h3>
+        <div class="radar-chart-container">
+          <canvas id="team-radar-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Score Breakdown -->
+      <div class="profile-card">
+        <h3>Score Breakdown</h3>
+        <table class="score-breakdown-table">
+          <thead>
+            <tr>
+              <th>Test Type</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody id="score-breakdown">
+            <!-- Populated by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Agent Roster -->
+      <div class="profile-card full-width">
+        <h3>Agent Roster</h3>
+        <div class="agent-roster">
+          <div class="agent-card">
+            <div class="agent-number">1</div>
+            <div class="agent-info">
+              <div class="agent-name">Bruno</div>
+              <div class="agent-model">claude-sonnet-4-6</div>
+            </div>
+            <div class="agent-role">Orchestrator</div>
+          </div>
+          <div class="agent-card">
+            <div class="agent-number">2</div>
+            <div class="agent-info">
+              <div class="agent-name">Rocky</div>
+              <div class="agent-model">qwen3.5:27b</div>
+            </div>
+            <div class="agent-role">Secondary</div>
+          </div>
+          <div class="agent-card">
+            <div class="agent-number">3</div>
+            <div class="agent-info">
+              <div class="agent-name">Ethan</div>
+              <div class="agent-model">qwen3.5:122b-a10b</div>
+            </div>
+            <div class="agent-role">Code Specialist</div>
+          </div>
+          <div class="agent-card">
+            <div class="agent-number">4</div>
+            <div class="agent-info">
+              <div class="agent-name">Sterling</div>
+              <div class="agent-model">qwen3.5:122b-a10b</div>
+            </div>
+            <div class="agent-role">Research</div>
+          </div>
+          <div class="agent-card">
+            <div class="agent-number">5</div>
+            <div class="agent-info">
+              <div class="agent-name">007</div>
+              <div class="agent-model">claude-sonnet-4-6</div>
+            </div>
+            <div class="agent-role">Analysis</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Back Button -->
+    <div style="text-align: center; margin-bottom: 40px;">
+      <a href="index.html" class="back-btn">← Back to Leaderboard</a>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p>© 2026 Pipeline Score — The public leaderboard for configured AI agent teams.</p>
+    </div>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Initialize team profile
+    document.addEventListener('DOMContentLoaded', function() {
+      initTeamProfile();
+    });
+
+    function initTeamProfile() {
+      // C&R Stack v8 is team id 1
+      const team = PIPELINESCORE_DATA.teams.find(t => t.id === 1);
+      
+      if (!team) return;
+      
+      // Populate header
+      document.getElementById('team-name').textContent = team.name;
+      document.getElementById('team-score').textContent = team.pipeline;
+      document.getElementById('team-score').className = 'score-badge-large ' + getScoreColor(team.pipeline);
+      document.getElementById('team-hardware').textContent = team.hardwareLabel;
+      document.getElementById('team-icon').textContent = team.name.charAt(0);
+      
+      // Populate score breakdown - Pipeline is the hero
+      const breakdownBody = document.getElementById('score-breakdown');
+      if (breakdownBody) {
+        const tests = [
+          { id: 'pipeline', name: 'Pipeline Score', isHero: true },
+          { id: 'extraction', name: 'Extraction' },
+          { id: 'code', name: 'Code Generation' },
+          { id: 'reasoning', name: 'Logical Reasoning' },
+          { id: 'research', name: 'Research Synthesis' },
+          { id: 'multitool', name: 'Multi-Tool' },
+          { id: 'bugfix', name: 'Bug Diagnosis' },
+          { id: 'docreview', name: 'Document Review' },
+          { id: 'rtresearch', name: 'Real-Time Research' },
+          { id: 'adversarial', name: 'Adversarial' }
+        ];
+        
+        breakdownBody.innerHTML = tests.map(test => `
+          <tr class="${test.isHero ? 'hero-row' : ''}">
+            <td>${test.isHero ? '★ ' : ''}${test.name}</td>
+            <td><span class="score-small ${test.isHero ? 'score-hero' : ''} ${getScoreColor(team[test.id])}">${team[test.id]}</span></td>
+          </tr>
+        `).join('');
+      }
+      
+      // Initialize radar chart
+      initRadarChart(team);
+    }
+
+    function getScoreColor(score) {
+      if (score >= 90) return 'green';
+      if (score >= 70) return 'yellow';
+      return 'red';
+    }
+
+    function initRadarChart(team) {
+      const ctx = document.getElementById('team-radar-chart');
+      if (!ctx) return;
+      
+      new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['Pipeline', 'Extraction', 'Code', 'Reasoning', 'Research', 'Multi-Tool', 'Bug Fix', 'Doc Review', 'RT Research', 'Adversarial'],
+          datasets: [{
+            label: team.name,
+            data: [
+              team.pipeline,
+              team.extraction,
+              team.code,
+              team.reasoning,
+              team.research,
+              team.multitool,
+              team.bugfix,
+              team.docreview,
+              team.rtresearch,
+              team.adversarial
+            ],
+            backgroundColor: 'rgba(224, 90, 43, 0.2)',
+            borderColor: '#e05a2b',
+            borderWidth: 2,
+            pointBackgroundColor: '#e05a2b',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: '#e05a2b'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              beginAtZero: true,
+              max: 100,
+              ticks: {
+                stepSize: 20,
+                color: '#666',
+                backdropColor: 'transparent'
+              },
+              grid: {
+                color: '#e0e0e0'
+              },
+              angleLines: {
+                color: '#e0e0e0'
+              },
+              pointLabels: {
+                color: '#1a1a1a',
+                font: {
+                  size: 10
+                }
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+# Pipeline Score Team Configuration
+# Fill this out and run: python harness.py --config team.yaml
+
+team:
+  name: "C&R Stack v8"
+  owner_email: "your@email.com"
+  description: "5-agent mixed local/cloud stack"
+
+agents:
+  - name: "Bruno"
+    role: "orchestrator"        # orchestrator, researcher, analyst, coder, communicator
+    provider: "anthropic"       # anthropic, openai, ollama, openai-compatible
+    model: "claude-sonnet-4-20250514"
+    endpoint: "https://api.anthropic.com"
+    api_key_env: "ANTHROPIC_API_KEY"    # env var name (never put key here)
+
+  - name: "Rocky"
+    role: "researcher"
+    provider: "ollama"
+    model: "qwen3.5:27b"
+    endpoint: "http://localhost:11434"
+    # no api_key_env needed for local Ollama
+
+  - name: "Ethan"
+    role: "analyst"
+    provider: "ollama"
+    model: "qwen3.5:14b"
+    endpoint: "http://localhost:11434"
+
+  - name: "Q"
+    role: "coder"
+    provider: "ollama"
+    model: "qwen3.5:27b"
+    endpoint: "http://localhost:11434"
+
+  - name: "Sterling"
+    role: "communicator"
+    provider: "ollama"
+    model: "qwen3.5:14b"
+    endpoint: "http://localhost:11434"
+
+hardware:
+  type: "apple_silicon"         # apple_silicon, consumer_gpu, enterprise_gpu, cloud_api
+  declared_ram_gb: 96
+  declared_cpu: "Apple M3 Ultra"
+
+pipelinescore:
+  api_key_env: "PIPELINESCORE_API_KEY"   # get yours at pipelinescore.ai/account

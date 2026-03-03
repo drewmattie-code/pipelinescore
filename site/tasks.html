@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tasks — Pipeline Score</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Top Tab Bar -->
+  <nav class="tab-bar">
+    <div class="tab-bar-inner">
+      <div class="tab-group">
+        <a href="index.html" class="tab" data-tab="pipeline">Pipeline</a>
+        <a href="#" class="tab" data-tab="extraction">Extraction</a>
+        <a href="#" class="tab" data-tab="code">Code Gen</a>
+        <a href="#" class="tab" data-tab="reasoning">Reasoning</a>
+        <a href="#" class="tab" data-tab="research">Research</a>
+        <a href="#" class="tab" data-tab="multitool">Multi-Tool</a>
+        <a href="#" class="tab" data-tab="bug">Bug Fix</a>
+        <a href="#" class="tab" data-tab="docreview">Doc Review</a>
+        <a href="#" class="tab" data-tab="rtresearch">RT Research</a>
+        <a href="#" class="tab" data-tab="adversarial">Adversarial</a>
+        <span class="tab-separator"></span>
+        <a href="#" class="tab" data-tab="hardware">Hardware Scores</a>
+        <a href="#" class="tab" data-tab="value">Top Value</a>
+      </div>
+      <div class="tab-actions">
+        <a href="index.html" class="tab-action">COMPARE</a>
+        <a href="submit.html" class="tab-action">SUBMIT</a>
+        <a href="submit.html" class="tab-action btn-primary">TEST YOUR STACK</a>
+        <a href="#" class="tab-action">ABOUT</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Stats Strip -->
+  <div class="stats-strip">
+    <div class="stats-strip-inner">
+      <span class="stats-item"><strong>1,423</strong> Teams Benchmarked</span>
+      <span class="stats-divider">·</span>
+      <span class="stats-item"><strong>Pipeline Score</strong> is the standard</span>
+      <span class="stats-divider">·</span>
+      <span class="stats-item">Updated <strong>Mar 2, 2026</strong></span>
+    </div>
+  </div>
+
+  <!-- Main Header -->
+  <header class="main-header">
+    <div class="main-header-inner">
+      <div class="logo-section">
+        <div class="logo-icon-large">A</div>
+        <div class="logo-text">
+          <h1 class="logo-title">Pipeline Score</h1>
+          <p class="logo-tagline">The Agent Team Benchmark</p>
+        </div>
+      </div>
+      <a href="#download" class="download-btn">
+        <span class="download-icon">⬇</span>
+        DOWNLOAD PIPELINE SCORE
+      </a>
+    </div>
+  </header>
+
+  <!-- Page Header -->
+  <section class="page-header">
+    <div class="container">
+      <h1>Benchmark Tasks</h1>
+      <p>Ten standardized test types measure the capabilities of agent teams versus solo models across increasingly complex challenges.</p>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Test Type Cards -->
+    <div class="tasks-grid">
+      <!-- Tier 1: Foundation -->
+      <div class="task-card">
+        <div class="task-header">
+          <h3 class="task-name">Structured Extraction</h3>
+          <span class="difficulty-badge easy">Tier 1</span>
+        </div>
+        <p class="task-desc">Extract structured data from a 500-word unstructured document. Scored on field accuracy.</p>
+        <div class="task-scores">
+          <div class="task-score">
+            <div class="task-score-value team">88%</div>
+            <div class="task-score-label">Avg Team</div>
+          </div>
+          <div class="task-score">
+            <div class="task-score-value solo">76%</div>
+            <div class="task-score-label">Avg Solo</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="task-card">
+        <div class="task-header">
+          <h3 class="task-name">Code Generation</h3>
+          <span class="difficulty-badge easy">Tier 1</span>
+        </div>
+        <p class="task-desc">Write a working Python function from a natural language spec. Scored on test pass rate.</p>
+        <div class="task-scores">
+          <div class="task-score">
+            <div class="task-score-value team">86%</div>
+            <div class="task-score-label">Avg Team</div>
+          </div>
+          <div class="task-score">
+            <div class="task-score-value solo">82%</div>
+            <div class="task-score-label">Avg Solo</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="task-card">
+        <div class="task-header">
+          <h3 class="task-name">Logical Reasoning</h3>
+          <span class="difficulty-badge easy">Tier 1</span>
+        </div>
+        <p class="task-desc">Solve a multi-step reasoning problem with verifiable answer. Scored on correctness.</p>
+        <div class="task-scores">
+          <div class="task-score">
+            <div class="task-score-value team">85%</div>
+            <div class="task-score-label">Avg Team</div>
+          </div>
+          <div class="task-score">
+            <div class="task-score-value solo">81%</div>
+            <div class="task-score-label">Avg Solo</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tier 2: Professional -->
+      <div class="task-card">
+        <div class="task-header">
+          <h3 class="task-name">Research Synthesis</h3>
+          <span class="difficulty-badge medium">Tier 2</span>
+        </div>
+        <p class="task-desc">Produce a 600-word brief from 5 source documents. Scored on accuracy, coverage, conciseness.</p>
+        <div class="task-scores">
+          <div class="task-score">
+            <div class="task-score-value team">84%</div>
+            <div class="task-score-label">Avg Team</div>
+          </div>
+          <div class="task-score">
+            <div class="task-score-value solo">70%</div>
+            <div class="task-score-label">Avg Solo</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="task-card">
+        <div class="task-header">
+          <h3 class="task-name">Multi-Tool Orchestration</h3>
+          <span class="difficulty-badge medium">Tier 2</span>
+        </div>
+        <p class="task-desc">Complete a task requiring 3+ tool calls in sequence. Scored on completion rate and tool accuracy.</p>
+        <div class="task-scores">
+          <div class="task-score">
+            <div class="task-score-value team">81%</div>
+            <div class="task-score-label">Avg Team</div>
+          </div>
+          <div class="task-score">
+            <div class="task-score-value solo">63%</div>
+            <div class="task-score-label">Avg Solo</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="task-card">
+        <div class="task-header">
+          <h3 class="task-name">Bug Diagnosis</h3>
+          <span class="difficulty-badge medium">Tier 2</span>
+        </div>
+        <p class="task-desc">Identify and fix 3 bugs in a 200-line codebase. Scored on fix correctness.</p>
+        <div class="task-scores">
+          <div class="task-score">
+            <div class="task-score-value team">83%</div>
+            <div class="task-score-label">Avg Team</div>
+          </div>
+          <div class="task-score">
+            <div class="task-score-value solo">74%</div>
+            <div class="task-score-label">Avg Solo</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tier 3: Agentic -->
+      <div class="task-card">
+        <div class="task-header">
+          <h3 class="task-name">Document Review</h3>
+          <span class="difficulty-badge hard">Tier 3</span>
+        </div>
+        <p class="task-desc">Flag risks in a 40-page contract. Scored on recall vs expert annotation.</p>
+        <div class="task-scores">
+          <div class="task-score">
+            <div class="task-score-value team">79%</div>
+            <div class="task-score-label">Avg Team</div>
+          </div>
+          <div class="task-score">
+            <div class="task-score-value solo">56%</div>
+            <div class="task-score-label">Avg Solo</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="task-card">
+        <div class="task-header">
+          <h3 class="task-name">Real-Time Research</h3>
+          <span class="difficulty-badge hard">Tier 3</span>
+        </div>
+        <p class="task-desc">Answer a question requiring live web data + synthesis. Scored on accuracy + recency.</p>
+        <div class="task-scores">
+          <div class="task-score">
+            <div class="task-score-value team">76%</div>
+            <div class="task-score-label">Avg Team</div>
+          </div>
+          <div class="task-score">
+            <div class="task-score-value solo">60%</div>
+            <div class="task-score-label">Avg Solo</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="task-card">
+        <div class="task-header">
+          <h3 class="task-name">Adversarial Reasoning</h3>
+          <span class="difficulty-badge hard">Tier 3</span>
+        </div>
+        <p class="task-desc">Construct and defend a position under counter-argument. Scored on coherence + factual grounding.</p>
+        <div class="task-scores">
+          <div class="task-score">
+            <div class="task-score-value team">74%</div>
+            <div class="task-score-label">Avg Team</div>
+          </div>
+          <div class="task-score">
+            <div class="task-score-value solo">53%</div>
+            <div class="task-score-label">Avg Solo</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Download Section -->
+  <section class="download-section" id="download">
+    <div class="download-inner">
+      <h2>Download Pipeline Score</h2>
+      <p class="download-desc">Run the benchmark on your own agent stack. Free, open source, takes ~15 minutes.</p>
+      <div class="download-buttons">
+        <a href="#" class="download-option">
+          <span class="dl-icon">⬇</span>
+          <span class="dl-text">Download harness.py</span>
+        </a>
+        <a href="#" class="download-option">
+          <span class="dl-icon">📄</span>
+          <span class="dl-text">View Schema</span>
+        </a>
+        <a href="#" class="download-option">
+          <span class="dl-icon">🐙</span>
+          <span class="dl-text">GitHub</span>
+        </a>
+      </div>
+      <p class="download-reqs">Requirements: Python 3.10+ · Ollama or API key · 15 min runtime</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p>© 2026 Pipeline Score — The public leaderboard for configured AI agent teams.</p>
+    </div>
+  </footer>
+</body>
+</html>

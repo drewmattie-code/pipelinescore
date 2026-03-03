@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pipeline Score — The Agent Team Benchmark</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Top Tab Bar -->
+  <nav class="tab-bar">
+    <div class="tab-bar-inner">
+      <div class="tab-group">
+        <a href="#" class="tab active" data-tab="pipeline" title="Multi-stage task requiring Research → Analysis → Build → Communicate. The definitive team vs solo test.">Pipeline</a>
+        <a href="#" class="tab" data-tab="extraction">Extraction</a>
+        <a href="#" class="tab" data-tab="code">Code Gen</a>
+        <a href="#" class="tab" data-tab="reasoning">Reasoning</a>
+        <a href="#" class="tab" data-tab="research">Research</a>
+        <a href="#" class="tab" data-tab="multitool">Multi-Tool</a>
+        <a href="#" class="tab" data-tab="bug">Bug Fix</a>
+        <a href="#" class="tab" data-tab="docreview">Doc Review</a>
+        <a href="#" class="tab" data-tab="rtresearch">RT Research</a>
+        <a href="#" class="tab" data-tab="adversarial">Adversarial</a>
+        <span class="tab-separator"></span>
+        <a href="#" class="tab" data-tab="hardware">Hardware Scores</a>
+        <a href="#" class="tab" data-tab="value">Top Value</a>
+      </div>
+      <div class="tab-actions">
+        <a href="#" class="tab-action">COMPARE</a>
+        <a href="submit.html" class="tab-action">SUBMIT</a>
+        <a href="submit.html" class="tab-action btn-primary">TEST YOUR STACK</a>
+        <a href="#" class="tab-action">ABOUT</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Header Stats Strip -->
+  <div class="stats-strip">
+    <div class="stats-strip-inner">
+      <span class="stats-item"><strong>1,423</strong> Teams Benchmarked</span>
+      <span class="stats-divider">·</span>
+      <span class="stats-item"><strong>Pipeline Score</strong> is the standard</span>
+      <span class="stats-divider">·</span>
+      <span class="stats-item">Updated <strong>Mar 2, 2026</strong></span>
+    </div>
+  </div>
+
+  <!-- Main Header -->
+  <header class="main-header">
+    <div class="main-header-inner">
+      <div class="logo-section">
+        <div class="logo-icon-large">A</div>
+        <div class="logo-text">
+          <h1 class="logo-title">Pipeline Score</h1>
+          <p class="logo-tagline">The Agent Team Benchmark</p>
+        </div>
+      </div>
+      <a href="#download" class="download-btn">
+        <span class="download-icon">⬇</span>
+        DOWNLOAD PIPELINE SCORE
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <div class="content-wrapper">
+    <!-- Left Sidebar -->
+    <aside class="sidebar-filters">
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">Filters</h3>
+        
+        <div class="filter-item">
+          <label class="filter-label">Team Type</label>
+          <select class="filter-select" id="filter-type">
+            <option value="all">All Types</option>
+            <option value="solo">Solo Agents</option>
+            <option value="team">Agent Teams</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label class="filter-label">Hardware Tier</label>
+          <select class="filter-select" id="filter-hardware">
+            <option value="all">All Hardware</option>
+            <option value="cloud">Cloud API</option>
+            <option value="apple">Apple Silicon</option>
+            <option value="gpu">Consumer GPU</option>
+            <option value="enterprise">Enterprise GPU</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label class="filter-label">Overall Score (min)</label>
+          <input type="range" class="filter-range" id="filter-overall" min="0" max="100" value="0">
+          <div class="range-label"><span id="val-overall">0</span></div>
+        </div>
+
+        <div class="filter-item">
+          <label class="filter-label">Quality (min)</label>
+          <input type="range" class="filter-range" id="filter-quality" min="0" max="100" value="0">
+          <div class="range-label"><span id="val-quality">0</span></div>
+        </div>
+
+        <div class="filter-item">
+          <label class="filter-label">Speed (min)</label>
+          <input type="range" class="filter-range" id="filter-speed" min="0" max="100" value="0">
+          <div class="range-label"><span id="val-speed">0</span></div>
+        </div>
+
+        <div class="filter-item">
+          <label class="filter-label">Cost/Task (max)</label>
+          <input type="range" class="filter-range" id="filter-cost" min="0" max="1" step="0.01" value="1">
+          <div class="range-label">$<span id="val-cost">1.00</span></div>
+        </div>
+
+        <div class="filter-item">
+          <label class="filter-label">Agents # (max)</label>
+          <input type="range" class="filter-range" id="filter-agents" min="1" max="10" value="10">
+          <div class="range-label"><span id="val-agents">10</span></div>
+        </div>
+      </div>
+
+      <div class="sidebar-actions">
+        <button class="sidebar-btn primary" id="btn-test">
+          <span class="btn-icon">🧪</span> TEST YOUR STACK
+        </button>
+        <button class="sidebar-btn" id="btn-compare">
+          <span class="btn-icon">⚖️</span> COMPARE TEAMS
+        </button>
+        <button class="sidebar-btn" id="btn-submit">
+          <span class="btn-icon">📤</span> SUBMIT YOUR STACK
+        </button>
+        <button class="sidebar-btn" id="btn-csv">
+          <span class="btn-icon">📥</span> Download CSV
+        </button>
+      </div>
+    </aside>
+
+    <!-- Right Main Content -->
+    <main class="main-content">
+      <!-- Content Header -->
+      <div class="content-header">
+        <div class="content-title">
+          <h2>Best rated agent teams</h2>
+          <span class="team-count">8 teams</span>
+        </div>
+        <div class="search-box">
+          <input type="text" class="search-input" id="search-input" placeholder="Search teams, models...">
+        </div>
+      </div>
+
+      <!-- Compare Bar (hidden by default) -->
+      <div class="compare-bar" id="compare-bar" style="display: none;">
+        <span><span id="compare-count">0</span> teams selected for comparison</span>
+        <button class="compare-bar-btn" id="run-compare">Compare Now</button>
+        <button class="compare-bar-btn secondary" id="clear-compare">Clear</button>
+      </div>
+
+      <!-- Leaderboard Table -->
+      <div class="table-wrapper">
+        <table class="leaderboard-table" id="leaderboard-table">
+          <thead>
+            <tr>
+              <th class="th-rank">#</th>
+              <th class="th-team">Team Name</th>
+              <th class="th-pipeline th-sortable" data-sort="pipeline" title="Multi-stage task: Research → Analysis → Build → Communicate. The definitive team vs solo test.">Pipeline ▼</th>
+              <th class="th-score th-sortable" data-sort="extraction">Extr.</th>
+              <th class="th-score th-sortable" data-sort="code">Code</th>
+              <th class="th-score th-sortable" data-sort="reasoning">Reason.</th>
+              <th class="th-score th-sortable" data-sort="research">Research</th>
+              <th class="th-score th-sortable" data-sort="multitool">M-Tool</th>
+              <th class="th-score th-sortable" data-sort="bugfix">Bug Fix</th>
+              <th class="th-score th-sortable" data-sort="docreview">Doc Rev.</th>
+              <th class="th-score th-sortable" data-sort="rtresearch">RT Res.</th>
+              <th class="th-score th-sortable" data-sort="adversarial">Advers.</th>
+              <th class="th-center th-sortable" data-sort="agents">Agents</th>
+              <th class="th-center">Hardware</th>
+              <th class="th-cost th-sortable" data-sort="cost">Cost/Task</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <!-- Populated by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- Download Section -->
+  <section class="download-section" id="download">
+    <div class="download-inner">
+      <h2>Download Pipeline Score</h2>
+      <p class="download-desc">Run the benchmark on your own agent stack. Free, open source, takes ~15 minutes. Choose your platform:</p>
+      
+      <div class="platform-downloads">
+        <a href="https://github.com/charlesandroe/pipelinescore/releases/latest/download/pipelinescore-macos" class="platform-btn">
+          <span class="platform-icon">🍎</span>
+          <span class="platform-label">macOS</span>
+          <span class="platform-sub">Apple Silicon + Intel</span>
+        </a>
+        <a href="https://github.com/charlesandroe/pipelinescore/releases/latest/download/pipelinescore-windows.exe" class="platform-btn">
+          <span class="platform-icon">🪟</span>
+          <span class="platform-label">Windows</span>
+          <span class="platform-sub">.exe — no install needed</span>
+        </a>
+        <a href="https://github.com/charlesandroe/pipelinescore/releases/latest/download/pipelinescore-linux" class="platform-btn">
+          <span class="platform-icon">🐧</span>
+          <span class="platform-label">Linux</span>
+          <span class="platform-sub">x86_64 binary</span>
+        </a>
+        <a href="https://github.com/charlesandroe/pipelinescore/releases/latest/download/harness.py" class="platform-btn platform-python">
+          <span class="platform-icon">🐍</span>
+          <span class="platform-label">Python Script</span>
+          <span class="platform-sub">Requires Python 3.10+</span>
+        </a>
+      </div>
+      
+      <div class="quickstart">
+        <p class="qs-title">Quick Start</p>
+        <code class="qs-code">./pipelinescore-macos --config team.yaml</code>
+      </div>
+      
+      <p class="download-reqs">Python script requirements: Python 3.10+ · pip install -r requirements.txt</p>
+      
+      <div class="download-links">
+        <a href="#">View team.yaml template</a>
+        <a href="#">Read the docs</a>
+        <a href="https://github.com/charlesandroe/pipelinescore">GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p>© 2026 Pipeline Score — The public leaderboard for configured AI agent teams.</p>
+    </div>
+  </footer>
+
+  <!-- Compare Modal -->
+  <div class="modal-overlay" id="compare-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Team Comparison</h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="compare-modal-body">
+        <!-- Populated by JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
