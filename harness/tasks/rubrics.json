@@ -1,0 +1,5 @@
+{
+  "default_rubric": "Score this AI response 0-100 on these criteria: Accuracy (30pts) - factually correct, no hallucinations; Completeness (25pts) - all parts of the task addressed; Quality (25pts) - well-structured, clear, professional; Usefulness (20pts) - practically useful output. Return only a JSON object: {\"score\": <0-100>, \"breakdown\": {\"accuracy\": <0-30>, \"completeness\": <0-25>, \"quality\": <0-25>, \"usefulness\": <0-20>}, \"notes\": \"brief explanation\"}",
+  
+  "pipeline_rubric": "Score this 4-stage pipeline output 0-100. Evaluate: Stage Quality (40pts - each stage output is high quality); Pipeline Coherence (30pts - each stage builds properly on the previous); Final Output Quality (30pts - the communicate stage output is excellent and standalone-useful). Return JSON: {\"score\": <0-100>, \"breakdown\": {\"stage_quality\": <0-40>, \"coherence\": <0-30>, \"final_output\": <0-30>}, \"notes\": \"brief explanation\"}"
+}

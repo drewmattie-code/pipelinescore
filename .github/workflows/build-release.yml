@@ -1,0 +1,98 @@
+name: Build & Release Pipeline Score Harness
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller
+          pip install -r projects/agentbench/harness/requirements.txt
+      - name: Build macOS binary
+        run: |
+          cd projects/agentbench/harness
+          pyinstaller --onefile --name pipelinescore-macos harness.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pipelinescore-macos
+          path: projects/agentbench/harness/dist/pipelinescore-macos
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller
+          pip install -r projects/agentbench/harness/requirements.txt
+      - name: Build Windows binary
+        run: |
+          cd projects/agentbench/harness
+          pyinstaller --onefile --name pipelinescore-windows harness.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pipelinescore-windows
+          path: projects/agentbench/harness/dist/pipelinescore-windows.exe
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller
+          pip install -r projects/agentbench/harness/requirements.txt
+      - name: Build Linux binary
+        run: |
+          cd projects/agentbench/harness
+          pyinstaller --onefile --name pipelinescore-linux harness.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pipelinescore-linux
+          path: projects/agentbench/harness/dist/pipelinescore-linux
+
+  create-release:
+    needs: [build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/pipelinescore-macos/pipelinescore-macos
+            dist/pipelinescore-windows/pipelinescore-windows.exe
+            dist/pipelinescore-linux/pipelinescore-linux
+          body: |
+            ## Pipeline Score Harness ${{ github.ref_name }}
+            
+            Run the benchmark on your own agent stack. Download for your platform below.
+            
+            **Requirements (Python version only):** Python 3.10+, API keys for your declared models
+            **Requirements (compiled version):** Nothing — just run it
+            
+            **Quick start:**
+            1. Download for your platform
+            2. Copy `team.yaml` template and fill in your agent config
+            3. Set your API key env vars
+            4. Run: `./pipelinescore-macos --config team.yaml`

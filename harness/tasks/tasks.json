@@ -1,0 +1,87 @@
+{
+  "version": "1.0",
+  "tasks": [
+    {
+      "id": "pipeline_001",
+      "type": "pipeline",
+      "name": "Pipeline Test",
+      "description": "Multi-stage: Market Research → Competitive Analysis → Build Tracking Script → Executive Summary",
+      "stages": [
+        {
+          "id": "research",
+          "role": "researcher",
+          "prompt": "Research the current state of AI agent benchmarking. What are the top 5 existing benchmarks, who runs them, what do they test, and what gaps exist? Be specific and factual. Return structured findings."
+        },
+        {
+          "id": "analysis",
+          "role": "analyst",
+          "prompt": "Based on this research: {research_output}\n\nAnalyze the competitive gap. What would a new benchmark need to do to stand out? Identify the top 3 opportunities. Return a structured competitive analysis."
+        },
+        {
+          "id": "build",
+          "role": "coder",
+          "prompt": "Based on this analysis: {analysis_output}\n\nWrite a Python script that tracks and compares benchmark scores across the identified competitors. Should output a formatted comparison table. Make it runnable."
+        },
+        {
+          "id": "communicate",
+          "role": "communicator",
+          "prompt": "Based on this work: {build_output}\n\nWrite a 200-word executive summary suitable for a VC pitch email. Clear, compelling, no jargon."
+        }
+      ]
+    },
+    {
+      "id": "extraction_001",
+      "type": "single",
+      "name": "Structured Extraction",
+      "prompt": "Extract all key data points from the following text and return as structured JSON with these fields: company_name, founded_year, revenue, employees, products (array), key_executives (array with name/title):\n\n[TEXT: Acme Corp was founded in 1987 by Jane Smith (CEO) and Bob Jones (CTO). The company generated $47.3M in revenue last year with 312 employees. Their main products are WidgetPro, DataSync, and CloudBridge. The board includes Sarah Lee as CFO.]"
+    },
+    {
+      "id": "code_001",
+      "type": "single",
+      "name": "Code Generation",
+      "prompt": "Write a Python function called `calculate_weighted_pipeline_score` that takes a list of stage results (each with 'quality', 'speed_seconds', 'cost_usd', 'tokens') and returns a composite score 0-100. Quality weight: 60%, Speed weight: 25%, Cost efficiency weight: 15%. Normalize speed (target: under 30s per stage = 100, over 120s = 0). Normalize cost (under $0.01 = 100, over $0.50 = 0). Include docstring and example usage."
+    },
+    {
+      "id": "reasoning_001",
+      "type": "single",
+      "name": "Logical Reasoning",
+      "prompt": "A supply chain manager has 4 suppliers (A, B, C, D). Supplier A is 20% cheaper than B but has 3x the lead time. Supplier C has the same price as B but 50% lower defect rate. Supplier D is 15% more expensive than A but has guaranteed next-day delivery and zero defect SLA. If the manager's priorities are: 1) on-time delivery (weight 40%), 2) quality (weight 35%), 3) cost (weight 25%) — rank the suppliers and explain your reasoning step by step."
+    },
+    {
+      "id": "research_001",
+      "type": "single",
+      "name": "Research Synthesis",
+      "prompt": "Without searching the web, synthesize what you know about the current state of MCP (Model Context Protocol) adoption as of early 2026. Which major platforms have adopted it? What are the main use cases? What are the current limitations? Return a structured brief with: Current State, Key Adopters, Use Cases, Limitations, 6-Month Outlook."
+    },
+    {
+      "id": "multitool_001",
+      "type": "single",
+      "name": "Multi-Tool Orchestration",
+      "prompt": "You have access to these tools: search_web(query), read_file(path), write_file(path, content), run_python(code), send_email(to, subject, body). Describe step-by-step exactly which tools you would call, in what order, with what parameters, to complete this task: 'Every Monday morning, pull our sales data from /data/sales.csv, calculate week-over-week change, and email a summary to sales@company.com'. Show your full tool call plan."
+    },
+    {
+      "id": "bugfix_001",
+      "type": "single",
+      "name": "Bug Diagnosis",
+      "prompt": "Find and fix all bugs in this Python code:\n```python\ndef calculate_inventory_turnover(cogs, avg_inventory):\n    turnover = cogs / avg_inventory\n    days = 365 / turnover\n    return {'turnover_ratio': round(turnover, 2), 'days_on_hand': round(days, 2)}\n\nresults = []\nfor item in inventory_items:\n    result = calculate_inventory_turnover(item['annual_cogs'], item['avg_inventory'])\n    results.append(result)\n    \nprint(f'Average days on hand: {sum(results) / len(results)}')\n```\nList each bug, explain why it's a bug, and provide the corrected code."
+    },
+    {
+      "id": "docreview_001",
+      "type": "single",
+      "name": "Document Review",
+      "prompt": "Review this SaaS contract clause and identify: (1) risks to the customer, (2) ambiguous language that needs clarification, (3) missing standard protections:\n\n'Provider will use commercially reasonable efforts to maintain 99% uptime. Customer acknowledges that scheduled maintenance windows may impact availability. Provider reserves the right to modify service features with reasonable notice. Liability for service interruptions is limited to credits against future invoices at Provider's discretion.'"
+    },
+    {
+      "id": "rtresearch_001",
+      "type": "single",
+      "name": "Real-Time Research",
+      "prompt": "Based on your training data, what were the top 3 AI agent frameworks that had the most GitHub stars and community traction as of late 2025? For each: name, primary use case, key differentiator, approximate GitHub stars, main limitation. If you're uncertain about specific numbers, say so explicitly rather than guessing."
+    },
+    {
+      "id": "adversarial_001",
+      "type": "single",
+      "name": "Adversarial Reasoning",
+      "prompt": "I'm going to make an argument and I want you to find every flaw in it:\n\n'Our AI agent stack is better than GPT-5 because it scored higher on our internal benchmark. Therefore, any enterprise should choose our stack over GPT-5. The benchmark tested 10 different task types and our stack won 8 of them. The 2 tasks GPT-5 won were edge cases that don't matter in real enterprise deployments. Our stack is also cheaper, which proves it delivers better value.'\n\nIdentify every logical flaw, unsupported claim, and missing context. Be specific and ruthless."
+    }
+  ]
+}

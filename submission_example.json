@@ -1,0 +1,108 @@
+{
+  "team": {
+    "id": "charles_roe",
+    "name": "Charles & Roe Inc.",
+    "contact_email": "engineering@charlesroe.com"
+  },
+  "agents": [
+    {
+      "id": "bruno",
+      "role": "orchestrator",
+      "model": "qwen3.5",
+      "model_version": "qwen3.5-30b-a3b",
+      "quantization": "Q4_K_M",
+      "constitution_hash": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12"
+    },
+    {
+      "id": "rocky",
+      "role": "specialist",
+      "model": "qwen3.5",
+      "model_version": "qwen3.5-30b-a3b",
+      "quantization": "Q4_K_M",
+      "constitution_hash": "b2c3d4e5f67890123456789012345678901bcdef1234567890abcdef12345"
+    },
+    {
+      "id": "ethan",
+      "role": "specialist",
+      "model": "qwen3.5",
+      "model_version": "qwen3.5-30b-a3b",
+      "quantization": "Q4_K_M",
+      "constitution_hash": "c3d4e5f678901234567890123456789012cdef1234567890abcdef123456"
+    },
+    {
+      "id": "sterling",
+      "role": "specialist",
+      "model": "qwen3.5",
+      "model_version": "qwen3.5-30b-a3b",
+      "quantization": "Q4_K_M",
+      "constitution_hash": "d4e5f6789012345678901234567890123def1234567890abcdef1234567"
+    },
+    {
+      "id": "007",
+      "role": "executor",
+      "model": "qwen3.5",
+      "model_version": "qwen3.5-30b-a3b",
+      "quantization": "Q4_K_M",
+      "constitution_hash": "e5f678901234567890123456789012345ef1234567890abcdef12345678"
+    }
+  ],
+  "hardware": {
+    "tier": "prosumer_apple_silicon",
+    "specs": "Mac Studio M3 Ultra, 192GB Unified Memory, 24-core CPU, 80-core GPU",
+    "cost_per_hour": 3.50
+  },
+  "orchestration": {
+    "entry_point": "bruno",
+    "routes": {
+      "bruno": ["rocky"],
+      "rocky": ["ethan"],
+      "ethan": ["sterling"],
+      "sterling": ["007"],
+      "007": []
+    }
+  },
+  "tools": [
+    {
+      "id": "codex",
+      "category": "code_generation",
+      "description": "Code generation and refactoring via Codex API"
+    },
+    {
+      "id": "claude_code",
+      "category": "code_review",
+      "description": "AI-powered code review and analysis"
+    },
+    {
+      "id": "terminal",
+      "category": "execution",
+      "description": "Shell command execution"
+    },
+    {
+      "id": "file_system",
+      "category": "io",
+      "description": "File read/write operations"
+    },
+    {
+      "id": "browser",
+      "category": "web",
+      "description": "Browser automation for web interactions"
+    },
+    {
+      "id": "memory",
+      "category": "storage",
+      "description": "Persistent memory and context storage"
+    }
+  ],
+  "cost_profile": {
+    "estimated_cost_per_task_usd": 0.12,
+    "cost_breakdown": {
+      "per_agent_cost_usd": 0.02,
+      "per_1k_tokens_cost_usd": 0.001
+    }
+  },
+  "metadata": {
+    "submitted_at": "2026-03-02T18:30:00Z",
+    "benchmark_version": "1.0.0",
+    "notes": "Charles & Roe production stack with Qwen3.5 agents running locally on Mac Studio M3 Ultra"
+  }
+}

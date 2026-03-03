@@ -1,0 +1,91 @@
+# Pipeline Score Submission Schema
+# Version: 1.0
+# Defines the format for team submissions to Pipeline Score benchmarks
+
+# =============================================================================
+# TEAM IDENTIFICATION
+# =============================================================================
+team:
+  # Unique team identifier (alphanumeric, underscores allowed)
+  id: string
+  # Human-readable team name
+  name: string
+  # Contact email for the team
+  contact_email: string
+
+# =============================================================================
+# AGENT ROSTER
+# =============================================================================
+# List of agents in the team's pipeline
+agents:
+  - # Unique agent identifier within this submission
+    id: string
+    # Role in the orchestration (e.g., orchestrator, specialist, executor)
+    role: string
+    # Model family (e.g., qwen3.5, gpt-4o, claude-3-5-sonnet)
+    model: string
+    # Specific model version (e.g., qwen3.5-30b-a3b)
+    model_version: string
+    # Quantization level if applicable (e.g., Q4_K_M, Q8_0, F16, none)
+    quantization: string | null
+    # SHA256 hash of the agent's constitution/system prompt
+    constitution_hash: string
+
+# =============================================================================
+# HARDWARE DECLARATION
+# =============================================================================
+hardware:
+  # Hardware tier classification
+  tier: enum[cloud_api, consumer_gpu, prosumer_apple_silicon, enterprise_gpu]
+  # Free-form specifications (e.g., "Mac Studio M3 Ultra, 192GB Unified Memory")
+  specs: string
+  # Estimated hourly cost in USD (for cloud: rental; for owned: amortized)
+  cost_per_hour: float
+
+# =============================================================================
+# ORCHESTRATION TOPOLOGY
+# =============================================================================
+# Adjacency list defining routing between agents
+# Key = agent_id, Value = list of agent_ids this agent can route to
+orchestration:
+  # Entry point agent (first agent to receive the task)
+  entry_point: string
+  # Routing graph as adjacency list
+  routes:
+    agent_id_1: [agent_id_2, agent_id_3]
+    agent_id_2: [agent_id_4]
+    # ...
+
+# =============================================================================
+# TOOL MANIFEST
+# =============================================================================
+# External tools available to agents in this submission
+tools:
+  - # Tool identifier
+    id: string
+    # Tool category
+    category: string
+    # Brief description of capability
+    description: string
+
+# =============================================================================
+# COST PROFILE
+# =============================================================================
+cost_profile:
+  # Estimated cost per task in USD (including all agents in pipeline)
+  estimated_cost_per_task_usd: float
+  # Breakdown (optional, for transparency)
+  cost_breakdown:
+    per_agent_cost_usd: float
+    per_1k_tokens_cost_usd: float
+
+# =============================================================================
+# METADATA
+# =============================================================================
+metadata:
+  # Submission timestamp (ISO 8601)
+  submitted_at: string
+  # Benchmark version this submission targets
+  benchmark_version: string
+  # Optional notes from the team
+  notes: string | null
