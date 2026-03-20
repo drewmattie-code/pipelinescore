@@ -1,0 +1,48 @@
+team:
+  name: "C&R Stack v9"
+  owner_email: "Drew.mattie@gmail.com"
+  description: "5-agent mixed local/cloud stack — Apple Silicon M3 Ultra 96GB + Anthropic API + GPT-5.3-Codex"
+
+agents:
+  - name: "Bruno"
+    role: "orchestrator"
+    provider: "openai-compatible"
+    model: "claude-sonnet-4-6"
+    endpoint: "http://localhost:8080"
+    api_key_env: "ANTHROPIC_API_KEY"
+
+  - name: "Rocky"
+    role: "researcher"
+    provider: "openai-compatible"
+    model: "claude-sonnet-4-6"
+    endpoint: "http://localhost:8080"
+    api_key_env: "ANTHROPIC_API_KEY"
+
+  - name: "Ethan"
+    role: "analyst"
+    provider: "openai-compatible"
+    model: "claude-sonnet-4-6"
+    endpoint: "http://localhost:8080"
+    api_key_env: "ANTHROPIC_API_KEY"
+
+  - name: "Q"
+    role: "coder"
+    provider: "openai"
+    model: "gpt-4o"
+    endpoint: "https://api.openai.com/v1"
+    api_key_env: "OPENAI_API_KEY"
+
+  - name: "007"
+    role: "communicator"
+    provider: "openai-compatible"
+    model: "claude-sonnet-4-6"
+    endpoint: "http://localhost:8080"
+    api_key_env: "ANTHROPIC_API_KEY"
+
+hardware:
+  type: "apple_silicon"
+  declared_ram_gb: 96
+  declared_cpu: "Apple M3 Ultra"
+
+pipelinescore:
+  api_key_env: "PIPELINESCORE_API_KEY"

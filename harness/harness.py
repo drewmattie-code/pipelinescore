@@ -6,6 +6,7 @@ Run the benchmark on your own agent stack and submit scores.
 
 import json
 import os
+import re
 import sys
 import hashlib
 import platform
@@ -26,7 +27,22 @@ console = Console()
 
 # Version
 VERSION = "2.0.0"
-PIPELINESCORE_API_URL = "https://pipelinescore.ai/api/submit"
+PIPELINESCORE_API_URL = "https://api.pipelinescore.ai/api/submit"
+
+# ── Tier system ─────────────────────────────────────────────────────────────
+TIERS = [
+    (80, "LOBSTER", "🦞", "This stack slaps.",            "bold red"),
+    (50, "CHEF",    "👨‍🍳", "Something's cooking.",        "bold yellow"),
+    (10, "SHRIMP",  "🦐", "Needs more seasoning.",        "yellow"),
+    (0,  "💩",      "💩", "We don't talk about this run.", "dim"),
+]
+
+def get_tier(score: int) -> tuple:
+    """Return (name, emoji, tagline, style) for a pipeline score."""
+    for threshold, name, emoji, tagline, style in TIERS:
+        if score >= threshold:
+            return name, emoji, tagline, style
+    return TIERS[-1][1], TIERS[-1][2], TIERS[-1][3], TIERS[-1][4]
 
 
 class TeamConfig:
@@ -353,16 +369,23 @@ class TaskRunner:
             agent = agents_by_role.get(role) or self.config.get_orchestrator()
             
             # Build prompt with context from previous stages
+            # Use safe replacement (not .format) to avoid issues with LLM outputs containing {}
             prompt = stage["prompt"]
             if context:
-                prompt = prompt.format(**context)
+                for key, value in context.items():
+                    prompt = prompt.replace('{' + key + '}', str(value))
             
             start_time = time.time()
             response = self._call_agent(agent, prompt)
+            # Retry once if response is empty or suspiciously short
+            if len(response.strip()) < 50:
+                console.print(f"[yellow]  Warning: {stage['id']} returned short response ({len(response.strip())} chars), retrying...[/yellow]")
+                response = self._call_agent(agent, prompt)
             elapsed = time.time() - start_time
             
-            # Store context for next stage
-            context[f"{role}_output"] = response
+            # Store context for next stage (use stage id, not role name)
+            context[f"{stage['id']}_output"] = response
+            context[f"{role}_output"] = response  # also store by role as fallback
             
             input_tokens = len(prompt.split()) * 1.3
             output_tokens = len(response.split()) * 1.3
@@ -407,13 +430,19 @@ class TaskRunner:
         raise ValueError(f"Unknown provider: {provider}")
     
     def _call_ollama(self, endpoint: str, model: str, prompt: str) -> str:
-        """Call Ollama API."""
+        """Call Ollama API via generate endpoint."""
         url = f"{endpoint.rstrip('/')}/api/generate"
-        resp = requests.post(url, json={
+        payload = {
             "model": model,
             "prompt": prompt,
-            "stream": False
-        }, timeout=120)
+            "stream": False,
+            "options": {
+                "num_predict": 4096,
+                "num_ctx": 32768,
+                "temperature": 0.4
+            }
+        }
+        resp = requests.post(url, json=payload, timeout=600)
         resp.raise_for_status()
         return resp.json().get("response", "")
     
@@ -435,7 +464,7 @@ class TaskRunner:
             "messages": [{"role": "user", "content": prompt}]
         }
         
-        resp = requests.post(url, headers=headers, json=body, timeout=120)
+        resp = requests.post(url, headers=headers, json=body, timeout=600)
         resp.raise_for_status()
         
         data = resp.json()
@@ -458,7 +487,7 @@ class TaskRunner:
             "max_tokens": 4096
         }
         
-        resp = requests.post(url, headers=headers, json=body, timeout=120)
+        resp = requests.post(url, headers=headers, json=body, timeout=600)
         resp.raise_for_status()
         
         data = resp.json()
@@ -479,7 +508,7 @@ class TaskRunner:
             "max_tokens": 4096
         }
         
-        resp = requests.post(url, headers=headers, json=body, timeout=120)
+        resp = requests.post(url, headers=headers, json=body, timeout=600)
         resp.raise_for_status()
         
         data = resp.json()
@@ -531,33 +560,39 @@ class Scorer:
         # Use orchestrator as judge
         judge = self.config.get_orchestrator()
         
-        scoring_prompt = f"{rubric}\n\nOutput to evaluate:\n{full_output}"
+        json_instruction = '\n\nRespond with ONLY valid JSON in this exact format (no markdown, no explanation):\n{"score": <integer 0-100>, "reasoning": "<one sentence>"}'
+        scoring_prompt = f"{rubric}\n\nOutput to evaluate:\n{full_output}{json_instruction}"
         
         response = self._call_judge(judge, scoring_prompt)
         
+        import re
         try:
-            # Try to extract JSON from response
-            import re
             json_match = re.search(r'\{[^}]+\}', response, re.DOTALL)
             if json_match:
                 score_data = json.loads(json_match.group())
                 return score_data.get("score", 50)
         except Exception:
             pass
+        
+        # Fallback: find any number 0-100 in response
+        numbers = re.findall(r'\b(100|[1-9][0-9]|[1-9])\b', response)
+        if numbers:
+            return int(numbers[0])
         
         return 50  # Default if parsing fails
     
     def _score_task(self, result: dict) -> int:
         """Score individual task output."""
+        import re
         rubric = self.rubrics.get("default_rubric")
         
-        scoring_prompt = f"{rubric}\n\nOutput to evaluate:\n{result.get('response', '')}"
+        json_instruction = '\n\nRespond with ONLY valid JSON in this exact format (no markdown, no explanation):\n{"score": <integer 0-100>, "reasoning": "<one sentence>"}'
+        scoring_prompt = f"{rubric}\n\nOutput to evaluate:\n{result.get('response', '')}{json_instruction}"
         
         judge = self.config.get_orchestrator()
         response = self._call_judge(judge, scoring_prompt)
         
         try:
-            import re
             json_match = re.search(r'\{[^}]+\}', response, re.DOTALL)
             if json_match:
                 score_data = json.loads(json_match.group())
@@ -565,14 +600,37 @@ class Scorer:
         except Exception:
             pass
         
+        numbers = re.findall(r'\b(100|[1-9][0-9]|[1-9])\b', response)
+        if numbers:
+            return int(numbers[0])
+        
         return 50
     
     def _call_judge(self, judge: dict, prompt: str) -> str:
-        """Call judge agent for scoring."""
-        # This is a simplified version - in production would use proper API calls
-        task_runner = TaskRunner.__new__(TaskRunner)
-        task_runner.config = self.config
-        return task_runner._call_agent(judge, prompt)
+        """Call judge agent for scoring at temperature=0 for deterministic results."""
+        api_key = self.config.get_api_key(judge.get("api_key_env"))
+        # Only use native Anthropic path if provider is explicitly anthropic
+        if not api_key or judge.get("provider") != "anthropic":
+            # Route through _call_agent to respect provider config (proxy, openai-compatible, etc.)
+            task_runner = TaskRunner.__new__(TaskRunner)
+            task_runner.config = self.config
+            return task_runner._call_agent(judge, prompt)
+
+        url = "https://api.anthropic.com/v1/messages"
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+        }
+        body = {
+            "model": judge["model"],
+            "max_tokens": 512,
+            "temperature": 0,   # Deterministic — same output every time
+            "messages": [{"role": "user", "content": prompt}]
+        }
+        resp = requests.post(url, headers=headers, json=body, timeout=60)
+        resp.raise_for_status()
+        return resp.json().get("content", [{}])[0].get("text", "")
 
 
 class ResultBundler:
@@ -627,33 +685,50 @@ class Submitter:
         self.local = local
     
     def submit(self, bundle: dict, dry_run: bool = False) -> dict:
-        """Submit bundle to API."""
-        api_key_env = self.config.config.get("pipelinescore", {}).get("api_key_env")
-        api_key = self.config.get_api_key(api_key_env) or "demo_key"
-        
+        """Submit bundle to pipelinescore.ai via secure API. No CF credentials in binary."""
         if dry_run:
             console.print("[yellow]DRY RUN - Not actually submitting[/yellow]")
             return {"id": "dry-run", "rank": None, "url": None}
-        
-        url = PIPELINESCORE_API_URL if not self.local else "http://localhost:8080/api/submit"
-        
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        
+
+        api_key_env = self.config.config.get("pipelinescore", {}).get("api_key_env")
+        api_key = self.config.get_api_key(api_key_env) or os.environ.get("PIPELINESCORE_API_KEY", "")
+
         try:
-            resp = requests.post(url, headers=headers, json=bundle, timeout=30)
+            resp = requests.post(
+                "https://pipelinescore.ai/api/submit",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json=bundle,
+                timeout=30
+            )
             resp.raise_for_status()
-            return resp.json()
-        except requests.RequestException as e:
-            console.print(f"[red]Submission failed: {e}[/red]")
-            # Return mock response for demo purposes
+            data = resp.json()
+            run_number = data.get("run_number", "?")
+            rank = data.get("rank")
+            score = data.get("pipeline_score", bundle.get("scores", {}).get("pipeline"))
+            result_url = data.get("result_url", "https://pipelinescore.ai")
+            console.print(f"[green]✅ Submitted! Run #{run_number} · Score: {score}/100 · Rank: #{rank}[/green]")
             return {
-                "id": f"demo-{hash(str(bundle))[:8]}",
-                "rank": None,
-                "url": f"https://pipelinescore.ai/team/demo"
+                "status": "submitted",
+                "id": data.get("submission_id", ""),
+                "run_number": run_number,
+                "rank": rank,
+                "pipeline_score": score,
+                "url": result_url,
             }
+
+        except Exception as e:
+            console.print(f"[red]Submission failed: {e}[/red]")
+            results_dir = Path("results")
+            results_dir.mkdir(exist_ok=True)
+            ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+            local_path = results_dir / f"submission-{ts}.json"
+            with open(local_path, "w") as f:
+                json.dump(bundle, f, indent=2)
+            console.print(f"[yellow]Saved locally to {local_path}[/yellow]")
+            return {"status": "local", "id": f"local-{ts}", "rank": None, "url": "https://pipelinescore.ai"}
 
 
 @click.command()
@@ -681,7 +756,34 @@ def main(config, task, verify, dry_run, local, version):
     rubrics_path = script_dir / "tasks" / "rubrics.json"
     
     console.print(f"[bold]Pipeline Score Harness v{VERSION}[/bold]")
-    
+
+    # Auto-register if no API key is set (UserBenchmark-style: just run it)
+    _ps_key_file = Path.home() / ".pipelinescore_key"
+    if not os.environ.get("PIPELINESCORE_API_KEY") and not _ps_key_file.exists():
+        console.print("\n[bold cyan]First run detected![/bold cyan] Let's get you set up.\n")
+        _nickname = console.input("[cyan]Team nickname[/cyan] (e.g. 'My Llama Stack'): ").strip()
+        _email = console.input("[cyan]Email address[/cyan] (for your results page): ").strip()
+        if _nickname and _email:
+            try:
+                _reg_resp = requests.post(
+                    "https://pipelinescore.ai/api/register",
+                    json={"nickname": _nickname, "email": _email},
+                    headers={"Content-Type": "application/json"},
+                    timeout=10
+                )
+                _reg_data = _reg_resp.json() if _reg_resp.ok else {}
+                _new_key = _reg_data.get("api_key")
+                if _new_key:
+                    _ps_key_file.write_text(_new_key)
+                    os.environ["PIPELINESCORE_API_KEY"] = _new_key
+                    console.print(f"[green]✓[/green] Registered! Key saved to ~/.pipelinescore_key\n")
+                else:
+                    console.print("[yellow]⚠ Could not auto-register — run will proceed and save locally.[/yellow]\n")
+            except Exception:
+                console.print("[yellow]⚠ Registration skipped (offline?) — results will save locally.[/yellow]\n")
+    elif _ps_key_file.exists() and not os.environ.get("PIPELINESCORE_API_KEY"):
+        os.environ["PIPELINESCORE_API_KEY"] = _ps_key_file.read_text().strip()
+
     # Load config
     try:
         team_config = TeamConfig.load(config)
@@ -717,26 +819,121 @@ def main(config, task, verify, dry_run, local, version):
     
     raw_results = {}
     
-    # Run pipeline
-    console.print("[cyan]🏃 Running Pipeline Test (flagship)...[/cyan]")
-    pipeline_task = task_runner._find_task("pipeline_001")
-    if pipeline_task:
-        pipeline_result = task_runner._run_pipeline(pipeline_task)
-        raw_results["pipeline"] = pipeline_result
-        console.print(f"[green]✓[/green] Pipeline complete: {pipeline_result['total_elapsed_seconds']}s")
+    # ── Live status display ──────────────────────────────────────────────
+    from rich.live import Live
+    from rich.table import Table
+    from rich.layout import Layout
+    from rich.panel import Panel
+    from rich.text import Text
+    import time as _time
+
+    TASK_LABELS = {
+        "pipeline":       ("🔗 Pipeline Test",    "Flagship — 4-stage team coordination"),
+        "extraction_001": ("📋 Extraction",        "Structured data from text"),
+        "code_001":       ("💻 Code Generation",   "Working Python from spec"),
+        "reasoning_001":  ("🧠 Reasoning",         "Multi-step logical deduction"),
+        "research_001":   ("🔍 Research",          "Source-grounded synthesis"),
+        "multitool_001":  ("🔧 Multi-Tool",        "Chained tool orchestration"),
+        "bugfix_001":     ("🐛 Bug Fix",           "Root cause identification"),
+        "docreview_001":  ("📄 Doc Review",        "Clause-level comprehension"),
+        "rtresearch_001":("🌐 RT Research",       "Live web data retrieval"),
+        "adversarial_001":("🛡️  Adversarial",      "Resist prompt injection"),
+    }
+    TASK_ORDER = list(TASK_LABELS.keys())
+
+    task_status = {k: {"state": "pending", "score": None, "elapsed": None} for k in TASK_ORDER}
+    run_start = _time.time()
+
+    def score_color(s):
+        if s is None: return "dim"
+        return "green" if s >= 80 else "yellow" if s >= 60 else "red"
+
+    def build_table():
+        elapsed = int(_time.time() - run_start)
+        mins, secs = divmod(elapsed, 60)
+        table = Table(box=None, padding=(0, 2), show_header=True, header_style="dim")
+        table.add_column("Task", style="white", no_wrap=True, width=26)
+        table.add_column("Description", style="dim", width=32)
+        table.add_column("Status", justify="center", width=12)
+        table.add_column("Score", justify="right", width=10)
+        table.add_column("Time", justify="right", width=8)
+
+        for key in TASK_ORDER:
+            label, desc = TASK_LABELS[key]
+            info = task_status[key]
+            state = info["state"]
+            score = info["score"]
+            elapsed_t = info["elapsed"]
+
+            if state == "running":
+                status_txt = Text("● Running", style="cyan")
+            elif state == "scoring":
+                status_txt = Text("◌ Scoring", style="yellow")
+            elif state == "done":
+                status_txt = Text("✓ Done", style="green")
+            else:
+                status_txt = Text("○ Waiting", style="dim")
+
+            score_txt = Text(f"{score}/100" if score is not None else "—", style=score_color(score))
+            time_txt = Text(f"{elapsed_t:.0f}s" if elapsed_t else "—", style="dim")
+            table.add_row(label, desc, status_txt, score_txt, time_txt)
+
+        header = Text(f"Pipeline Score Harness v{VERSION}  ·  {team_config.config.get('team',{}).get('name','')}  ·  Elapsed {mins:02d}:{secs:02d}", style="bold white")
+        return Panel(table, title=header, border_style="bright_black", padding=(1, 2))
+
+    scores = {}
+
+    with Live(build_table(), refresh_per_second=4, console=console) as live:
+
+        # ── Pipeline test ────────────────────────────────────────────
+        task_status["pipeline"]["state"] = "running"
+        live.update(build_table())
+        t0 = _time.time()
+
+        pipeline_task = task_runner._find_task("pipeline_001")
+        if pipeline_task:
+            pipeline_result = task_runner._run_pipeline(pipeline_task)
+            raw_results["pipeline"] = pipeline_result
+            task_status["pipeline"]["elapsed"] = _time.time() - t0
+
+            task_status["pipeline"]["state"] = "scoring"
+            live.update(build_table())
+
+            pipeline_score = scorer._score_pipeline(pipeline_result)
+            scores["pipeline"] = pipeline_score
+            task_status["pipeline"]["score"] = pipeline_score
+            task_status["pipeline"]["state"] = "done"
+            live.update(build_table())
+
+        # ── Supporting tasks ─────────────────────────────────────────
+        task_results = {}
+        for task in task_runner.tasks.get("tasks", []):
+            if task["type"] != "single":
+                continue
+            tid = task["id"]
+            task_status[tid]["state"] = "running"
+            live.update(build_table())
+            t0 = _time.time()
+
+            result = task_runner._run_single_task(task)
+            task_results[tid] = result
+            task_status[tid]["elapsed"] = _time.time() - t0
+
+            task_status[tid]["state"] = "scoring"
+            live.update(build_table())
+
+            task_score = scorer._score_task(result)
+            scores[tid] = task_score
+            task_status[tid]["score"] = task_score
+            task_status[tid]["state"] = "done"
+            live.update(build_table())
+
+        raw_results["tasks"] = task_results
+
+    # ─────────────────────────────────────────────────────────────────
     
-    # Run supporting tasks
-    console.print("[cyan]🧪 Running 9 supporting tests...[/cyan]")
-    task_results = task_runner.run_all()
-    raw_results["tasks"] = task_results
-    console.print(f"[green]✓[/green] All tasks complete")
-    
-    # Score results
-    console.print("[cyan]📊 Scoring outputs...[/cyan]")
-    scores = scorer.score(pipeline_result, task_results)
-    
-    for task_id, score in scores.items():
-        console.print(f"  {task_id}: {score}/100")
+    # Scores already collected inline during Live display — print summary
+    console.print()
     
     # Bundle results
     bundler = ResultBundler(team_config, hardware, verification, scores)
@@ -747,15 +944,65 @@ def main(config, task, verify, dry_run, local, version):
     submitter = Submitter(team_config, local)
     submission = submitter.submit(bundle, dry_run)
     
-    # Print results
+    # ── Result card ──────────────────────────────────────────────────────
+    from rich.panel import Panel as _Panel
+    from rich.text import Text as _Text
+    from rich.align import Align as _Align
+    from rich.columns import Columns as _Columns
+
     pipeline_score = scores.get("pipeline", 0)
-    console.print(f"\n[bold green]✅ Done! Pipeline Score: {pipeline_score}/100[/bold green]")
+    sub_id = submission.get("id", "")
+    result_url = f"https://pipelinescore.ai/result.html?id={sub_id}" if sub_id and not sub_id.startswith("local") else "https://pipelinescore.ai"
+    rank = submission.get("rank")
+    tier_name, tier_emoji, tier_tagline, tier_style = get_tier(pipeline_score)
+
+    # Build the result card
+    card_lines = []
+    card_lines.append(_Align.center(_Text(f"{tier_emoji}  {tier_name}  {tier_emoji}", style=tier_style + " bold")))
+    card_lines.append(_Align.center(_Text("")))
+    card_lines.append(_Align.center(_Text(f"Pipeline Score", style="dim")))
+    card_lines.append(_Align.center(_Text(f"{pipeline_score} / 100", style=f"{tier_style} bold", overflow="fold")))
+    if rank:
+        card_lines.append(_Align.center(_Text(f"Rank #{rank} on the leaderboard", style="dim")))
+    card_lines.append(_Align.center(_Text("")))
+    card_lines.append(_Align.center(_Text(f'"{tier_tagline}"', style="italic dim")))
+    card_lines.append(_Align.center(_Text("")))
+    card_lines.append(_Align.center(_Text(f"📊 {result_url}", style="cyan")))
+
+    from rich.console import Group as _Group
+    border = "red" if pipeline_score >= 70 else "yellow" if pipeline_score >= 50 else "dim"
+    console.print()
+    console.print(_Panel(
+        _Group(*card_lines),
+        border_style=border,
+        padding=(1, 4),
+        expand=False,
+    ))
+    console.print()
+
+    # Log every run to run history
+    from datetime import datetime
+    history_path = Path("results/run-history.json")
+    history_path.parent.mkdir(exist_ok=True)
+    history = []
+    if history_path.exists():
+        try:
+            history = json.loads(history_path.read_text())
+        except Exception:
+            history = []
     
-    if submission.get("url"):
-        console.print(f"[link]{submission['url']}[/link]")
-    
-    if submission.get("rank"):
-        console.print(f"Leaderboard Rank: #{submission['rank']}")
+    history.append({
+        "run": len(history) + 1,
+        "timestamp": datetime.now().isoformat(),
+        "team": bundle.get("team", {}).get("name", "unknown"),
+        "scores": scores,
+        "pipeline_score": pipeline_score,
+        "submission_status": submission.get("status", "submitted"),
+        "submission_id": submission.get("id"),
+        "total_tasks": len(scores)
+    })
+    history_path.write_text(json.dumps(history, indent=2))
+    console.print(f"[dim]Run #{len(history)} logged to {history_path}[/dim]")
 
 
 if __name__ == "__main__":

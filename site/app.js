@@ -1,6 +1,8 @@
 // Pipeline Score — Application Logic
 // Leaderboard, filtering, sorting, tabs, compare
 
+const API_BASE = 'https://pipelinescore.ai';
+
 document.addEventListener('DOMContentLoaded', function() {
   initLeaderboard();
   initFilters();
@@ -13,6 +15,42 @@ let currentTab = 'pipeline';
 let currentSort = { column: 'pipeline', direction: 'desc' };
 let selectedTeams = [];
 let filteredTeams = [...PIPELINESCORE_DATA.teams];
+
+// Try to load live data from API, fall back to static seed data
+async function loadLeaderboardData() {
+  try {
+    const res = await fetch(`${API_BASE}/api/leaderboard`);
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    if (data.teams && data.teams.length > 0) {
+      return data.teams.map(t => ({
+        id: t.team_id,
+        name: t.team_name,
+        rank: t.rank,
+        trend: '—',
+        pipeline: t.pipeline,
+        extraction: t.extraction || 0,
+        code: t.code || 0,
+        reasoning: t.reasoning || 0,
+        research: t.research || 0,
+        multitool: t.multitool || 0,
+        bugfix: t.bugfix || 0,
+        docreview: t.docreview || 0,
+        rtresearch: t.rtresearch || 0,
+        adversarial: t.adversarial || 0,
+        agentCount: t.agents || 1,
+        hardwareTier: t.hardwareType || 'cloud',
+        hardwareLabel: t.hardwareLabel || '☁ Cloud',
+        cost: t.cost || 0,
+        agents: (t.agentsList || []).map(a => ({ name: a.name, model: a.model })),
+        verified: t.verified,
+      }));
+    }
+  } catch (e) {
+    console.log('API unavailable, using seed data');
+  }
+  return null;
+}
 
 // Get score color class
 function getScoreColor(score) {
@@ -34,6 +72,22 @@ function formatAgentList(agents) {
 }
 
 // Render the leaderboard table
+// ── HTML escaping (must be first — used throughout) ──────────────────────────
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── Tier system ──────────────────────────────────────────────────────────────
+const TIERS = [
+  { min: 80, name: 'LOBSTER', emoji: '🦞',  tagline: 'This stack slaps.',            cls: 'tier-lobster' },
+  { min: 50, name: 'CHEF',    emoji: '👨‍🍳', tagline: "Something's cooking.",         cls: 'tier-chef'    },
+  { min: 10, name: 'SHRIMP',  emoji: '🦐',  tagline: 'Needs more seasoning.',        cls: 'tier-shrimp'  },
+  { min: 0,  name: '💩',      emoji: '💩',  tagline: "We don't talk about this run.", cls: 'tier-poo'     },
+];
+function getTier(score) {
+  return TIERS.find(t => score >= t.min) || TIERS[TIERS.length - 1];
+}
+
 function renderTable() {
   const tbody = document.getElementById('table-body');
   if (!tbody) return;
@@ -41,7 +95,8 @@ function renderTable() {
   tbody.innerHTML = filteredTeams.map((team, idx) => {
     const rank = idx + 1;
     const trendIcon = team.trend === 'up' ? '▲' : team.trend === 'down' ? '▼' : '—';
-    const agentList = team.agents.map(a => `${a.name} <span class="agent-model">(${a.model})</span>`).join(' · ');
+    const agentList = team.agents.map(a => `${escHtml(a.name)} <span class="agent-model">(${escHtml(a.model)})</span>`).join(' · ');
+    const tier = getTier(team.pipeline);
     
     return `<tr class="team-row" data-id="${team.id}">
       <td class="td-rank">
@@ -49,11 +104,14 @@ function renderTable() {
         <span class="rank-trend ${team.trend}">${trendIcon}</span>
       </td>
       <td class="td-team">
-        <a href="team.html?id=${team.id}" class="team-name">${team.name}</a>
+        <a href="team.html?id=${encodeURIComponent(team.id)}" class="team-name">${escHtml(team.name)}</a>
         <div class="team-models">${agentList}</div>
       </td>
       <td class="td-pipeline">
-        <span class="score-hero score-${getScoreColor(team.pipeline)}">${team.pipeline}</span>
+        <div class="pipeline-cell">
+          <span class="score-hero score-${getScoreColor(team.pipeline)}">${team.pipeline}</span>
+          <span class="tier-badge ${tier.cls}" title="${tier.tagline}">${tier.emoji} ${tier.name}</span>
+        </div>
       </td>
       <td class="td-score"><span class="score-sm score-${getScoreColor(team.extraction)}">${team.extraction}</span></td>
       <td class="td-score"><span class="score-sm score-${getScoreColor(team.code)}">${team.code}</span></td>
@@ -72,7 +130,13 @@ function renderTable() {
 }
 
 // Initialize leaderboard
-function initLeaderboard() {
+async function initLeaderboard() {
+  // Try to load live data first
+  const liveData = await loadLeaderboardData();
+  if (liveData) {
+    filteredTeams = liveData;
+  }
+  
   // Initial sort by pipeline (descending)
   filteredTeams.sort((a, b) => b.pipeline - a.pipeline);
   renderTable();
@@ -261,7 +325,20 @@ function initTabs() {
       
       // Set current tab and re-render
       currentTab = this.dataset.tab;
-      
+
+      const allRunsPanel = document.getElementById('all-runs-panel');
+      const tableWrapper = document.getElementById('leaderboard-table-wrapper');
+
+      if (currentTab === 'all-runs') {
+        if (allRunsPanel) allRunsPanel.style.display = 'block';
+        if (tableWrapper) tableWrapper.style.display = 'none';
+        loadAllRuns().then(runs => renderAllRuns(runs));
+        return;
+      }
+
+      if (allRunsPanel) allRunsPanel.style.display = 'none';
+      if (tableWrapper) tableWrapper.style.display = '';
+
       // For hardware/value tabs, special handling
       if (currentTab === 'hardware') {
         sortByHardware();
@@ -403,7 +480,7 @@ function showCompareModal() {
   body.innerHTML = `
     <div class="compare-grid">
       <div class="compare-team-card">
-        <div class="compare-team-title">${team1.name}</div>
+        <div class="compare-team-title">${escHtml(team1.name)}</div>
         <div class="compare-stat-row highlight">
           <span class="compare-stat-label">Pipeline Score</span>
           <span class="compare-stat-value score-hero ${getScoreColor(team1.pipeline)}">${team1.pipeline}</span>
@@ -446,7 +523,7 @@ function showCompareModal() {
         </div>
       </div>
       <div class="compare-team-card">
-        <div class="compare-team-title">${team2.name}</div>
+        <div class="compare-team-title">${escHtml(team2.name)}</div>
         <div class="compare-stat-row highlight">
           <span class="compare-stat-label">Pipeline Score</span>
           <span class="compare-stat-value score-hero ${getScoreColor(team2.pipeline)}">${team2.pipeline}</span>
@@ -527,3 +604,179 @@ function downloadCSV() {
 
 // Make functions available globally
 window.toggleTeamCompare = toggleTeamCompare;
+
+// ─── ALL RUNS VIEW ────────────────────────────────────────────────
+async function loadAllRuns() {
+  try {
+    const res = await fetch(`${API_BASE}/api/runs?limit=200`);
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    return data.runs || [];
+  } catch (e) {
+    console.log('Could not load runs:', e);
+    return [];
+  }
+}
+
+function renderAllRuns(runs) {
+  const container = document.getElementById('all-runs-container');
+  if (!container) return;
+
+  if (!runs.length) {
+    container.innerHTML = '<div class="empty-state">No runs submitted yet. Run the harness to appear here.</div>';
+    return;
+  }
+
+  // Group by team
+  const byTeam = {};
+  runs.forEach(r => {
+    if (!byTeam[r.team_id]) byTeam[r.team_id] = { name: r.team_name, runs: [] };
+    byTeam[r.team_id].runs.push(r);
+  });
+
+  container.innerHTML = Object.entries(byTeam).map(([teamId, team]) => `
+    <div class="team-runs-block">
+      <div class="team-runs-header">
+        <span class="team-runs-name">${escHtml(team.name)}</span>
+        <span class="team-runs-count">${team.runs.length} run${team.runs.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="runs-list">
+        ${team.runs.map(r => `
+          <div class="run-row ${r.pipeline >= 80 ? 'run-good' : r.pipeline >= 60 ? 'run-ok' : 'run-poor'}">
+            <span class="run-badge">Run #${r.run_number}</span>
+            <span class="run-date">${new Date(r.submitted_at).toLocaleDateString('en-CA', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+            <span class="run-pipeline score-${r.pipeline >= 80 ? 'green' : r.pipeline >= 60 ? 'yellow' : 'red'}">${r.pipeline}<small>/100</small></span>
+            <div class="run-subtasks">
+              ${['extraction','code','reasoning','research','multitool','bugfix','docreview','rtresearch','adversarial']
+                .filter(k => r[k] != null)
+                .map(k => `<span class="subtask-chip" title="${k}">${r[k]}</span>`)
+                .join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// Hook into tab system
+document.addEventListener('DOMContentLoaded', function() {
+  const allRunsTab = document.querySelector('[data-tab="all-runs"]');
+  if (allRunsTab) {
+    allRunsTab.addEventListener('click', async () => {
+      const runs = await loadAllRuns();
+      renderAllRuns(runs);
+    });
+  }
+});
+
+// ─── Notes Tab ────────────────────────────────────────────────────────────
+async function loadNotes(teamFilter = 'all') {
+  const container = document.getElementById('notes-container');
+  if (!container) return;
+  container.innerHTML = '<div class="notes-loading">Loading run notes...</div>';
+
+  // Fetch all submissions with notes from D1 via Worker
+  let runs = [];
+  try {
+    const resp = await fetch('https://api.pipelinescore.ai/api/runs?limit=100');
+    if (resp.ok) {
+      const data = await resp.json();
+      runs = data.submissions || data.runs || [];
+    }
+  } catch(e) {}
+
+  // Fallback: use hardcoded C&R data if API unavailable
+  if (!runs.length) {
+    runs = STATIC_RUNS;
+  }
+
+  // Populate team selector
+  const sel = document.getElementById('notes-team-select');
+  if (sel && sel.options.length <= 1) {
+    const teams = [...new Set(runs.map(r => r.team_name).filter(Boolean))];
+    teams.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t; opt.textContent = t;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', () => loadNotes(sel.value));
+  }
+
+  // Filter
+  const filtered = teamFilter === 'all' ? runs : runs.filter(r => r.team_name === teamFilter);
+  const withNotes = filtered.filter(r => r.notes);
+
+  if (!withNotes.length) {
+    container.innerHTML = '<div class="notes-empty">No notes for this selection yet.</div>';
+    return;
+  }
+
+  // Sort newest last (show the story chronologically)
+  withNotes.sort((a,b) => new Date(a.submitted_at) - new Date(b.submitted_at));
+
+  // Group by team
+  const byTeam = {};
+  withNotes.forEach(r => {
+    const t = r.team_name || 'Unknown';
+    if (!byTeam[t]) byTeam[t] = [];
+    byTeam[t].push(r);
+  });
+
+  container.innerHTML = Object.entries(byTeam).map(([team, teamRuns]) => `
+    <div class="notes-team-block">
+      <div class="notes-team-header">
+        <span class="notes-team-name">${escHtml(team)}</span>
+        <span class="notes-team-count">${teamRuns.length} annotated run${teamRuns.length > 1 ? 's' : ''}</span>
+      </div>
+      <div class="notes-run-list">
+        ${teamRuns.map((r, i) => {
+          const score = r.pipeline_score ?? r.pipeline ?? 0;
+          const trend = i === 0 ? null : score > (teamRuns[i-1].pipeline_score ?? 0) ? 'up' : score < (teamRuns[i-1].pipeline_score ?? 0) ? 'down' : 'flat';
+          const trendIcon = trend === 'up' ? '↑' : trend === 'down' ? '↓' : trend === 'flat' ? '→' : '';
+          const trendClass = trend === 'up' ? 'trend-up' : trend === 'down' ? 'trend-down' : 'trend-flat';
+          const date = r.submitted_at ? new Date(r.submitted_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+          const runLabel = r.run_number ? `Run #${r.run_number}` : `Run`;
+          return `
+          <div class="notes-run-card">
+            <div class="notes-run-meta">
+              <div class="notes-run-left">
+                <span class="notes-run-label">${runLabel}</span>
+                <span class="notes-score-badge notes-score-${score >= 80 ? 'high' : score >= 60 ? 'mid' : 'low'}">${score}<span class="notes-score-denom">/100</span></span>
+                ${trendIcon ? `<span class="notes-trend ${trendClass}">${trendIcon} ${Math.abs(score - (teamRuns[i-1].pipeline_score??0))}</span>` : ''}
+              </div>
+              <span class="notes-run-date">${date}</span>
+            </div>
+            <div class="notes-run-note">${escHtml(r.notes)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// Static fallback data (C&R Stack v8 full history)
+const STATIC_RUNS = [
+  {team_name:'C&R Stack v8',pipeline_score:31,run_number:1,submitted_at:'2026-03-03T10:50:48Z',notes:"First real run. Ollama was truncating responses at ~512 tokens (no num_predict set). Analysis and build stages came back short. Pipeline collapsed. Fixed by adding num_predict: 4096 and num_ctx: 32768."},
+  {team_name:'C&R Stack v8',pipeline_score:18,run_number:2,submitted_at:'2026-03-03T11:15:20Z',notes:"Longer prompts overwhelmed the default Ollama context window (2048 tokens). Analysis and communicate stages returned empty strings — the model just stopped. The retry logic caught it but couldn't recover gracefully. Fixed by explicitly setting num_ctx: 32768."},
+  {team_name:'C&R Stack v8',pipeline_score:82,run_number:3,submitted_at:'2026-03-03T11:50:41Z',notes:"First clean run after the Ollama context fix. Retry logic caught 2 empty responses mid-run (build + communicate) and recovered successfully. This established our baseline: 82/100 pipeline was achievable with the right config."},
+  {team_name:'C&R Stack v8',pipeline_score:31,run_number:4,submitted_at:'2026-03-03T12:39:35Z',notes:"Regression. The judge rubric was still holistic ('stage quality, 40pts') giving the LLM too much latitude. Same stack, same config — scored 31 vs 82 the run before. Confirmed the rubric was the problem, not the model outputs."},
+  {team_name:'C&R Stack v8',pipeline_score:84,run_number:5,submitted_at:'2026-03-03T14:01:32Z',notes:"Scoring consistency fix confirmed. Rewrote rubric as binary checkboxes (specific criteria, specific points). Set judge temperature to 0. Lowered pipeline agent temperature to 0.2. Pipeline task now has guided inputs to reduce cascade variance. Runs #3 and #5 within 2 points of each other (82 vs 84). First submission to the live leaderboard."},
+  {team_name:'C&R Stack v8',pipeline_score:62,run_number:6,submitted_at:'2026-03-03T15:40:02Z',notes:"Analysis stage fired the empty-response retry again. When temp=0.2 is too low for the 27b model on complex prompts, it stops early and the retry produces weaker output. The cascade hurt communicate. Individual tasks improved across the board (+15 on research, +4 on multi-tool, +3 on doc review). Pipeline still needs work. Bumping agent temp to 0.4 for Run #7."},
+];
+
+// Hook into tab switching
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.tab[data-tab]').forEach(tab => {
+    tab.addEventListener('click', e => {
+      if (tab.dataset.tab === 'notes') {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('[id$="-panel"], #all-runs-panel, #notes-panel').forEach(p => p.style.display = 'none');
+        const np = document.getElementById('notes-panel');
+        if (np) { np.style.display = 'block'; loadNotes(); }
+        e.preventDefault();
+      }
+    });
+  });
+});

@@ -24,10 +24,11 @@
         <span class="tab-separator"></span>
         <a href="#" class="tab" data-tab="hardware">Hardware Scores</a>
         <a href="#" class="tab" data-tab="value">Top Value</a>
+        <a href="#" class="tab" data-tab="all-runs">All Runs</a>
+        <a href="#" class="tab tab-notes" data-tab="notes">📝 Notes</a>
       </div>
       <div class="tab-actions">
         <a href="#" class="tab-action">COMPARE</a>
-        <a href="submit.html" class="tab-action">SUBMIT</a>
         <a href="submit.html" class="tab-action btn-primary">TEST YOUR STACK</a>
         <a href="#" class="tab-action">ABOUT</a>
       </div>
@@ -49,16 +50,19 @@
   <header class="main-header">
     <div class="main-header-inner">
       <div class="logo-section">
-        <div class="logo-icon-large">A</div>
+        <img src="logo.png" alt="Pipeline Score" class="logo-img">
         <div class="logo-text">
           <h1 class="logo-title">Pipeline Score</h1>
-          <p class="logo-tagline">The Agent Team Benchmark</p>
+          <p class="logo-tagline">The Agent Team Benchmark by <a href="https://saasquach.ai" class="logo-brand-link" target="_blank">SaaSquach.AI</a></p>
         </div>
       </div>
-      <a href="#download" class="download-btn">
-        <span class="download-icon">⬇</span>
-        DOWNLOAD PIPELINE SCORE
-      </a>
+      <div class="header-downloads">
+        <span class="header-dl-label">Download Free:</span>
+        <a href="https://github.com/drewmattie-code/pipelinescore/releases/latest/download/pipelinescore-macos" class="header-dl-btn">🍎 macOS</a>
+        <a href="https://github.com/drewmattie-code/pipelinescore/releases/latest/download/pipelinescore-windows.exe" class="header-dl-btn">🪟 Windows</a>
+        <a href="https://github.com/drewmattie-code/pipelinescore/releases/latest/download/pipelinescore-linux" class="header-dl-btn">🐧 Linux</a>
+        <a href="https://github.com/drewmattie-code/pipelinescore/releases/latest/download/harness.py" class="header-dl-btn header-dl-python">🐍 Python</a>
+      </div>
     </div>
   </header>
 
@@ -127,9 +131,6 @@
         <button class="sidebar-btn" id="btn-compare">
           <span class="btn-icon">⚖️</span> COMPARE TEAMS
         </button>
-        <button class="sidebar-btn" id="btn-submit">
-          <span class="btn-icon">📤</span> SUBMIT YOUR STACK
-        </button>
         <button class="sidebar-btn" id="btn-csv">
           <span class="btn-icon">📥</span> Download CSV
         </button>
@@ -156,8 +157,38 @@
         <button class="compare-bar-btn secondary" id="clear-compare">Clear</button>
       </div>
 
+      <!-- All Runs Panel -->
+      <div id="all-runs-panel" style="display:none;">
+        <div id="all-runs-container" style="padding:20px 0;"></div>
+      </div>
+
+      <div id="notes-panel" style="display:none;">
+        <div class="notes-panel-header">
+          <div class="notes-header-left">
+            <h3 class="notes-panel-title">Run Notes</h3>
+            <p class="notes-panel-sub">Teams annotate their runs — what changed, what broke, what they learned. The honest record of building an agent stack.</p>
+          </div>
+          <div class="notes-team-selector">
+            <select id="notes-team-select" class="notes-select">
+              <option value="all">All teams</option>
+            </select>
+          </div>
+        </div>
+        <div id="notes-container"></div>
+        <div class="notes-submit-cta">
+          <div class="notes-cta-inner">
+            <span class="notes-cta-icon">✍️</span>
+            <div class="notes-cta-text">
+              <strong>Add notes to your runs</strong>
+              Include a <code>notes</code> field in your submission bundle or update via the API after submitting.
+            </div>
+            <a href="submit.html" class="notes-cta-btn">Submit Your Stack →</a>
+          </div>
+        </div>
+      </div>
+
       <!-- Leaderboard Table -->
-      <div class="table-wrapper">
+      <div class="table-wrapper" id="leaderboard-table-wrapper">
         <table class="leaderboard-table" id="leaderboard-table">
           <thead>
             <tr>
@@ -185,6 +216,198 @@
       </div>
     </main>
   </div>
+
+  <!-- Methodology Section -->
+  <section class="methodology-section" id="methodology">
+    <div class="meth-dot-grid"></div>
+    <div class="methodology-inner">
+
+      <!-- Section Header -->
+      <div class="meth-header">
+        <div class="meth-eyebrow">HOW IT WORKS</div>
+        <h2 class="meth-title">Built to be trusted,<br>not just used.</h2>
+        <p class="meth-subtitle">Every score is produced by the same harness, the same tasks, and the same judge — in the same order, every time. Here's the design.</p>
+      </div>
+
+      <!-- Big Stats Bar -->
+      <div class="meth-stats-bar">
+        <div class="meth-stat">
+          <span class="meth-stat-num">4</span>
+          <span class="meth-stat-label">Sequential pipeline stages</span>
+        </div>
+        <div class="meth-stat-divider"></div>
+        <div class="meth-stat">
+          <span class="meth-stat-num">9</span>
+          <span class="meth-stat-label">Supporting task categories</span>
+        </div>
+        <div class="meth-stat-divider"></div>
+        <div class="meth-stat">
+          <span class="meth-stat-num">0</span>
+          <span class="meth-stat-label">Judge temperature — fully deterministic</span>
+        </div>
+        <div class="meth-stat-divider"></div>
+        <div class="meth-stat">
+          <span class="meth-stat-num">≤2pt</span>
+          <span class="meth-stat-label">Judge variance across 5 trials</span>
+        </div>
+      </div>
+
+      <!-- Pipeline Flow Diagram -->
+      <div class="meth-pipeline-block">
+        <div class="meth-pipeline-label">THE PIPELINE TEST — FLAGSHIP</div>
+        <div class="meth-pipeline-desc">A single task passed sequentially through four specialized agents. Each sees only the previous agent's output. No shared context. No shortcuts. This is what real team intelligence looks like.</div>
+        <div class="meth-pipeline-flow">
+          <div class="meth-stage" data-color="blue">
+            <div class="meth-stage-node">
+              <div class="meth-stage-num">01</div>
+            </div>
+            <div class="meth-stage-connector"></div>
+            <div class="meth-stage-body">
+              <div class="meth-stage-role">RESEARCHER</div>
+              <div class="meth-stage-title">Research</div>
+              <div class="meth-stage-detail">Named benchmarks, maintainers, and specific limitations — grounded in fact</div>
+              <div class="meth-stage-pts">25 pts</div>
+            </div>
+          </div>
+          <div class="meth-flow-arrow">
+            <svg width="40" height="12" viewBox="0 0 40 12" fill="none"><path d="M0 6H36M36 6L30 1M36 6L30 11" stroke="#333" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="meth-stage" data-color="amber">
+            <div class="meth-stage-node">
+              <div class="meth-stage-num">02</div>
+            </div>
+            <div class="meth-stage-connector"></div>
+            <div class="meth-stage-body">
+              <div class="meth-stage-role">ANALYST</div>
+              <div class="meth-stage-title">Analysis</div>
+              <div class="meth-stage-detail">One specific gap, clearly identified, with reasoning that holds up to scrutiny</div>
+              <div class="meth-stage-pts">25 pts</div>
+            </div>
+          </div>
+          <div class="meth-flow-arrow">
+            <svg width="40" height="12" viewBox="0 0 40 12" fill="none"><path d="M0 6H36M36 6L30 1M36 6L30 11" stroke="#333" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="meth-stage" data-color="purple">
+            <div class="meth-stage-node">
+              <div class="meth-stage-num">03</div>
+            </div>
+            <div class="meth-stage-connector"></div>
+            <div class="meth-stage-body">
+              <div class="meth-stage-role">BUILDER</div>
+              <div class="meth-stage-title">Build</div>
+              <div class="meth-stage-detail">Working Python: valid syntax, correct metrics, readable output table</div>
+              <div class="meth-stage-pts">25 pts</div>
+            </div>
+          </div>
+          <div class="meth-flow-arrow">
+            <svg width="40" height="12" viewBox="0 0 40 12" fill="none"><path d="M0 6H36M36 6L30 1M36 6L30 11" stroke="#333" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="meth-stage" data-color="green">
+            <div class="meth-stage-node">
+              <div class="meth-stage-num">04</div>
+            </div>
+            <div class="meth-stage-connector"></div>
+            <div class="meth-stage-body">
+              <div class="meth-stage-role">COMMUNICATOR</div>
+              <div class="meth-stage-title">Communicate</div>
+              <div class="meth-stage-detail">4-sentence executive pitch — specific problem, differentiation, audience, next step</div>
+              <div class="meth-stage-pts">25 pts</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Three Pillars -->
+      <div class="meth-pillars">
+
+        <div class="meth-pillar">
+          <div class="meth-pillar-top">
+            <div class="meth-pillar-num">—01</div>
+            <h3 class="meth-pillar-title">Binary rubric.<br>No impressions.</h3>
+          </div>
+          <p class="meth-pillar-body">Every point is tied to a specific, checkable criterion. Does the research stage name GAIA? +8. Does it name SWE-bench? +8. Either it's in the output or it isn't.</p>
+          <p class="meth-pillar-body">There's no holistic scoring, no "overall quality" bucket. The judge can't give a vague 7/10 — it awards specific points for specific things. This is the only way to make scores mean something.</p>
+          <div class="meth-pillar-callout">
+            "Eliminates the single biggest source of benchmark noise: judge latitude on vague rubrics."
+          </div>
+        </div>
+
+        <div class="meth-pillar">
+          <div class="meth-pillar-top">
+            <div class="meth-pillar-num">—02</div>
+            <h3 class="meth-pillar-title">Temperature zero.<br>Same score, every time.</h3>
+          </div>
+          <p class="meth-pillar-body">The judge runs at temperature = 0. We tested this by submitting the same output 5 times and scoring it independently each time. Variance: ≤ 2 points across all trials.</p>
+          <p class="meth-pillar-body">The judge returns structured JSON: a numeric score and a one-sentence rationale. If JSON parsing fails, a regex fallback extracts the score. There is no case where a valid response returns a default.</p>
+          <div class="meth-pillar-tasks">
+            <div class="meth-pillar-task-chip">Structured JSON output</div>
+            <div class="meth-pillar-task-chip">Regex fallback</div>
+            <div class="meth-pillar-task-chip">Frontier model judge</div>
+          </div>
+        </div>
+
+        <div class="meth-pillar">
+          <div class="meth-pillar-top">
+            <div class="meth-pillar-num">—03</div>
+            <h3 class="meth-pillar-title">9 task types.<br>Full capability map.</h3>
+          </div>
+          <p class="meth-pillar-body">The Pipeline Test measures team coordination. The supporting tasks measure individual capabilities. Both matter — a team that can coordinate but can't reason is still broken.</p>
+          <div class="meth-task-grid">
+            <div class="meth-task-item"><span class="meth-task-dot meth-dot-blue"></span>Extraction</div>
+            <div class="meth-task-item"><span class="meth-task-dot meth-dot-purple"></span>Code Gen</div>
+            <div class="meth-task-item"><span class="meth-task-dot meth-dot-amber"></span>Reasoning</div>
+            <div class="meth-task-item"><span class="meth-task-dot meth-dot-blue"></span>Research</div>
+            <div class="meth-task-item"><span class="meth-task-dot meth-dot-green"></span>Multi-Tool</div>
+            <div class="meth-task-item"><span class="meth-task-dot meth-dot-purple"></span>Bug Fix</div>
+            <div class="meth-task-item"><span class="meth-task-dot meth-dot-amber"></span>Doc Review</div>
+            <div class="meth-task-item"><span class="meth-task-dot meth-dot-blue"></span>RT Research</div>
+            <div class="meth-task-item"><span class="meth-task-dot meth-dot-green"></span>Adversarial</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Trust Strip -->
+      <div class="meth-trust-strip">
+        <div class="meth-trust-item">
+          <div class="meth-trust-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L12.5 7.5L18 8.5L14 12.5L15 18L10 15.5L5 18L6 12.5L2 8.5L7.5 7.5L10 2Z" stroke="#00ff95" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="meth-trust-text">
+            <strong>Cryptographic signatures</strong>
+            Every submission signed with your API key before it leaves the harness.
+          </div>
+        </div>
+        <div class="meth-trust-divider"></div>
+        <div class="meth-trust-item">
+          <div class="meth-trust-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#00ff95" stroke-width="1.5"/><path d="M7 10L9 12L13 8" stroke="#00ff95" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="meth-trust-text">
+            <strong>Model verification before every run</strong>
+            The harness confirms each declared model is actually responding. No substitutions.
+          </div>
+        </div>
+        <div class="meth-trust-divider"></div>
+        <div class="meth-trust-item">
+          <div class="meth-trust-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="#00ff95" stroke-width="1.5"/><path d="M7 7H13M7 10H13M7 13H10" stroke="#00ff95" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="meth-trust-text">
+            <strong>Fully open harness</strong>
+            Every task prompt, every rubric criterion, every line of scoring logic is public.
+          </div>
+        </div>
+      </div>
+
+      <!-- CTAs -->
+      <div class="meth-cta-row">
+        <a href="https://github.com/charlesandroe/pipelinescore" class="meth-cta-ghost" target="_blank">Read the Source ↗</a>
+        <a href="submit.html" class="meth-cta-primary">Test Your Stack →</a>
+      </div>
+
+    </div>
+  </section>
 
   <!-- Download Section -->
   <section class="download-section" id="download">
@@ -230,6 +453,18 @@
       </div>
     </div>
   </section>
+
+  <!-- ClawShop Banner -->
+  <div class="clawshop-banner">
+    <a href="https://claw-shop.com" target="_blank" class="clawshop-inner">
+      <span class="clawshop-icon">🦞</span>
+      <div class="clawshop-text">
+        <span class="clawshop-title">Represent the Stack</span>
+        <span class="clawshop-sub">AI agent merch, prompt packs & tools — ClawShop.com</span>
+      </div>
+      <span class="clawshop-cta">Shop Now →</span>
+    </a>
+  </div>
 
   <!-- Footer -->
   <footer class="site-footer">

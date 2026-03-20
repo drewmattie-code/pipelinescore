@@ -1,0 +1,171 @@
+[
+  {
+    "run": 1,
+    "timestamp": "2026-03-03T10:50:48",
+    "team": "C&R Stack v8",
+    "scores": {
+      "pipeline": 31,
+      "extraction_001": 82,
+      "code_001": 91,
+      "reasoning_001": 92,
+      "research_001": 88,
+      "multitool_001": 88,
+      "bugfix_001": 91,
+      "docreview_001": 91,
+      "rtresearch_001": 72,
+      "adversarial_001": 72
+    },
+    "pipeline_score": 31,
+    "submission_status": "local",
+    "submission_id": "local-20260303-105048",
+    "total_tasks": 10,
+    "notes": "First real run. Judge scoring confirmed working. Pipeline 31/100 due to: truncated Ollama responses (no num_predict), weak stage prompts. Fixed for Run 2."
+  },
+  {
+    "run": 2,
+    "timestamp": "2026-03-03T11:15:20.391539",
+    "team": "C&R Stack v8",
+    "scores": {
+      "pipeline": 18,
+      "extraction_001": 88,
+      "code_001": 91,
+      "reasoning_001": 88,
+      "research_001": 82,
+      "multitool_001": 88,
+      "bugfix_001": 91,
+      "docreview_001": 91,
+      "rtresearch_001": 72,
+      "adversarial_001": 88
+    },
+    "pipeline_score": 18,
+    "submission_status": "local",
+    "submission_id": "local-20260303-111520",
+    "total_tasks": 10
+  },
+  {
+    "run": 3,
+    "timestamp": "2026-03-03T11:50:41.996490",
+    "team": "C&R Stack v8",
+    "scores": {
+      "pipeline": 82,
+      "extraction_001": 88,
+      "code_001": 91,
+      "reasoning_001": 91,
+      "research_001": 88,
+      "multitool_001": 88,
+      "bugfix_001": 91,
+      "docreview_001": 92,
+      "rtresearch_001": 72,
+      "adversarial_001": 78
+    },
+    "pipeline_score": 82,
+    "submission_status": "local",
+    "submission_id": "local-20260303-115041",
+    "total_tasks": 10
+  },
+  {
+    "run": 4,
+    "timestamp": "2026-03-03T12:39:35.522136",
+    "team": "C&R Stack v8",
+    "scores": {
+      "pipeline": 31,
+      "extraction_001": 88,
+      "code_001": 91,
+      "reasoning_001": 88,
+      "research_001": 82,
+      "multitool_001": 82,
+      "bugfix_001": 92,
+      "docreview_001": 92,
+      "rtresearch_001": 72,
+      "adversarial_001": 72
+    },
+    "pipeline_score": 31,
+    "submission_status": "local",
+    "submission_id": "local-20260303-123935",
+    "total_tasks": 10
+  },
+  {
+    "run": 5,
+    "timestamp": "2026-03-03T14:01:32.341855",
+    "team": "C&R Stack v8",
+    "scores": {
+      "pipeline": 84,
+      "extraction_001": 72,
+      "code_001": 89,
+      "reasoning_001": 91,
+      "research_001": 72,
+      "multitool_001": 87,
+      "bugfix_001": 97,
+      "docreview_001": 91,
+      "rtresearch_001": 62,
+      "adversarial_001": 91
+    },
+    "pipeline_score": 84,
+    "submission_status": "local",
+    "submission_id": "local-20260303-140132",
+    "total_tasks": 10
+  },
+  {
+    "run": 6,
+    "timestamp": "2026-03-03T15:40:02.803449",
+    "team": "C&R Stack v8",
+    "scores": {
+      "pipeline": 62,
+      "extraction_001": 72,
+      "code_001": 97,
+      "reasoning_001": 91,
+      "research_001": 87,
+      "multitool_001": 91,
+      "bugfix_001": 97,
+      "docreview_001": 94,
+      "rtresearch_001": 52,
+      "adversarial_001": 94
+    },
+    "pipeline_score": 62,
+    "submission_status": "local",
+    "submission_id": "local-20260303-154002",
+    "total_tasks": 10
+  },
+  {
+    "run": 7,
+    "timestamp": "2026-03-03T18:28:41.811810",
+    "team": "C&R Stack v8",
+    "scores": {
+      "pipeline": 84,
+      "extraction_001": 72,
+      "code_001": 94,
+      "reasoning_001": 72,
+      "research_001": 82,
+      "multitool_001": 91,
+      "bugfix_001": 97,
+      "docreview_001": 97,
+      "rtresearch_001": 62,
+      "adversarial_001": 94
+    },
+    "pipeline_score": 84,
+    "submission_status": "local",
+    "submission_id": "local-20260303-182841",
+    "total_tasks": 10
+  },
+  {
+    "run": 8,
+    "timestamp": "2026-03-04T19:48:02.352340",
+    "team": "C&R Stack v9",
+    "scores": {
+      "pipeline": 97,
+      "extraction_001": 82,
+      "code_001": 89,
+      "reasoning_001": 82,
+      "research_001": 72,
+      "multitool_001": 91,
+      "bugfix_001": 97,
+      "docreview_001": 97,
+      "rtresearch_001": 62,
+      "adversarial_001": 92
+    },
+    "pipeline_score": 97,
+    "submission_status": "submitted",
+    "submission_id": "7bacb3efefa2ec11b5b89b1d9143ba61",
+    "total_tasks": 10
+  }
+]
