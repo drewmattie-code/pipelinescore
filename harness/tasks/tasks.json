@@ -5,27 +5,27 @@
       "id": "pipeline_001",
       "type": "pipeline",
       "name": "Pipeline Test",
-      "description": "Multi-stage: Market Research → Competitive Analysis → Build Tracking Script → Executive Summary",
+      "description": "Multi-stage: Market Research \u2192 Competitive Analysis \u2192 Build Tracking Script \u2192 Executive Summary",
       "stages": [
         {
           "id": "research",
           "role": "researcher",
-          "prompt": "Research the current state of AI agent benchmarking. What are the top 5 existing benchmarks, who runs them, what do they test, and what gaps exist? Be specific and factual. Return structured findings."
+          "prompt": "You are researching AI agent benchmarks for a competitive analysis report.\n\nList exactly these 3 benchmarks with the following details for each:\n1. GAIA (General AI Assistants benchmark)\n2. SWE-bench (Software Engineering benchmark)\n3. AgentBench (Multi-scenario agent benchmark)\n\nFor each one provide: (a) who maintains it, (b) what it specifically tests, (c) its primary limitation.\n\nBe factual and specific. This will be passed to an analyst for gap analysis."
         },
         {
           "id": "analysis",
           "role": "analyst",
-          "prompt": "Based on this research: {research_output}\n\nAnalyze the competitive gap. What would a new benchmark need to do to stand out? Identify the top 3 opportunities. Return a structured competitive analysis."
+          "prompt": "You are a senior AI research analyst. You have received this benchmark research:\n\n{research_output}\n\nYour task: Identify the single most important gap that NONE of the above benchmarks address.\n\nRequirements:\n- The gap must be specific (not vague like \"real-world tasks\")\n- Explain WHY this gap matters for enterprise AI agent deployment\n- Explain what a benchmark filling this gap would need to measure\n- Be analytical \u2014 support your claim with reasoning\n\nThis analysis will be used to build a new benchmarking tool."
         },
         {
           "id": "build",
           "role": "coder",
-          "prompt": "Based on this analysis: {analysis_output}\n\nWrite a Python script that tracks and compares benchmark scores across the identified competitors. Should output a formatted comparison table. Make it runnable."
+          "prompt": "You are a senior Python engineer. Based on this gap analysis:\n\n{analysis_output}\n\nWrite a complete Python script that scores an AI agent team on exactly these 3 metrics:\n1. quality: float (0-100) \u2014 task completion accuracy\n2. speed: float \u2014 total execution time in seconds  \n3. cost: float \u2014 total USD cost\n\nRequirements:\n- Function signature: def score_team(quality: float, speed: float, cost: float) -> dict\n- Returns a dict with individual scores and a weighted composite (quality=0.5, speed=0.3, cost=0.2)\n- For speed and cost, normalize against these baselines: speed_baseline=300s, cost_baseline=1.00 USD\n- Include a main() that prints a formatted table showing the scores\n- Add inline comments explaining the scoring methodology\n- The script must be runnable as-is with no external dependencies"
         },
         {
           "id": "communicate",
           "role": "communicator",
-          "prompt": "Based on this work: {build_output}\n\nWrite a 200-word executive summary suitable for a VC pitch email. Clear, compelling, no jargon."
+          "prompt": "You are a senior technical writer preparing an executive pitch.\n\nContext:\n- Research conducted: {research_output}\n- Gap identified: {analysis_output}\n- Tool built: {build_output}\n\nWrite a 4-sentence executive pitch for this benchmarking tool:\n- Sentence 1: The specific problem it solves (reference the gap identified above)\n- Sentence 2: What makes it different from GAIA, SWE-bench, and AgentBench\n- Sentence 3: Who needs it and why (be specific about the audience)\n- Sentence 4: The concrete next step someone should take\n\nDo not use jargon. Write for a VP of Engineering or CTO."
         }
       ]
     },
@@ -45,7 +45,7 @@
       "id": "reasoning_001",
       "type": "single",
       "name": "Logical Reasoning",
-      "prompt": "A supply chain manager has 4 suppliers (A, B, C, D). Supplier A is 20% cheaper than B but has 3x the lead time. Supplier C has the same price as B but 50% lower defect rate. Supplier D is 15% more expensive than A but has guaranteed next-day delivery and zero defect SLA. If the manager's priorities are: 1) on-time delivery (weight 40%), 2) quality (weight 35%), 3) cost (weight 25%) — rank the suppliers and explain your reasoning step by step."
+      "prompt": "A supply chain manager has 4 suppliers (A, B, C, D). Supplier A is 20% cheaper than B but has 3x the lead time. Supplier C has the same price as B but 50% lower defect rate. Supplier D is 15% more expensive than A but has guaranteed next-day delivery and zero defect SLA. If the manager's priorities are: 1) on-time delivery (weight 40%), 2) quality (weight 35%), 3) cost (weight 25%) \u2014 rank the suppliers and explain your reasoning step by step."
     },
     {
       "id": "research_001",

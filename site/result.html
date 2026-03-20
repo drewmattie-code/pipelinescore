@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Results — Pipeline Score</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #060606; }
+    .result-wrap { max-width: 720px; margin: 0 auto; padding: 60px 24px 100px; }
+    .result-back { display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; color:#444; text-decoration:none; margin-bottom:48px; }
+    .result-back:hover { color:#aaa; }
+
+    /* Score hero */
+    .score-hero {
+      background:#0a0a0a; border:1px solid #1a1a1a;
+      border-radius:20px; padding:44px; margin-bottom:20px;
+      position:relative; overflow:hidden;
+    }
+    .score-hero::before {
+      content:''; position:absolute; top:0;left:0;right:0; height:3px;
+      background:linear-gradient(90deg,#4da6ff,#ffd166,#a78bfa,#00ff95);
+    }
+    .score-hero-top { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:20px; }
+    .score-hero-left {}
+    .score-team-name { font-size:1.5rem; font-weight:800; color:#f0f0f0; letter-spacing:-0.02em; margin:0 0 6px; }
+    .score-meta { font-size:0.78rem; color:#555; display:flex; gap:14px; flex-wrap:wrap; }
+    .score-meta-item { display:flex; align-items:center; gap:4px; }
+    .score-big {
+      text-align:right;
+    }
+    .score-big-num {
+      font-size:4rem; font-weight:900; letter-spacing:-0.05em;
+      line-height:1; color:#f0f0f0;
+    }
+    .score-big-num.high { color:#00ff95; }
+    .score-big-num.mid  { color:#ffd166; }
+    .score-big-num.low  { color:#ff6b6b; }
+    .score-big-denom { font-size:1rem; color:#444; font-weight:500; }
+    .score-big-label { font-size:0.65rem; font-weight:700; letter-spacing:0.12em; color:#555; text-transform:uppercase; text-align:right; }
+    .score-divider { height:1px; background:#141414; margin:32px 0; }
+
+    /* Sub scores */
+    .sub-scores-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .sub-score-item {
+      background:#080808; border:1px solid #111;
+      border-radius:10px; padding:14px 16px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .sub-score-name { font-size:0.78rem; color:#777; }
+    .sub-score-val { font-size:1rem; font-weight:700; color:#e0e0e0; }
+    .sub-score-val.high { color:#00ff95; }
+    .sub-score-val.mid  { color:#ffd166; }
+    .sub-score-val.low  { color:#ff6b6b; }
+
+    /* Hardware + agents */
+    .meta-cards { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:20px; }
+    .meta-card { background:#0a0a0a; border:1px solid #141414; border-radius:14px; padding:24px; }
+    .meta-card-title { font-size:0.65rem; font-weight:700; letter-spacing:0.12em; color:#444; text-transform:uppercase; margin-bottom:14px; }
+    .meta-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #0e0e0e; }
+    .meta-row:last-child { border-bottom:none; }
+    .meta-key { font-size:0.78rem; color:#555; }
+    .meta-val { font-size:0.78rem; color:#ccc; font-weight:500; text-align:right; max-width:180px; word-break:break-word; }
+
+    /* Notes */
+    .result-notes { background:#0a0a0a; border:1px solid #141414; border-radius:14px; padding:24px; margin-top:20px; }
+    .result-notes-label { font-size:0.65rem; font-weight:700; letter-spacing:0.12em; color:#444; text-transform:uppercase; margin-bottom:12px; }
+    .result-notes-text { font-size:0.85rem; color:#777; line-height:1.75; }
+
+    /* Share strip */
+    .share-strip { display:flex; align-items:center; justify-content:space-between; background:#0a0a0a; border:1px solid #141414; border-radius:14px; padding:20px 24px; margin-top:20px; gap:16px; flex-wrap:wrap; }
+    .share-url { font-family:monospace; font-size:0.82rem; color:#888; background:#060606; border:1px solid #1a1a1a; border-radius:8px; padding:8px 14px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .share-copy { background:#111; border:1px solid #222; color:#ccc; border-radius:8px; padding:9px 18px; font-size:0.8rem; font-weight:600; cursor:pointer; white-space:nowrap; }
+    .share-copy:hover { border-color:#444; color:#fff; }
+
+    /* Leaderboard CTA */
+    .back-cta { text-align:center; margin-top:40px; }
+    .back-cta a { font-size:0.85rem; color:#555; text-decoration:none; }
+    .back-cta a:hover { color:#aaa; }
+
+    .loading-state { text-align:center; padding:80px 0; color:#444; font-size:0.9rem; }
+    .error-state { text-align:center; padding:80px 0; color:#666; }
+    .error-state h3 { font-size:1.2rem; color:#888; margin-bottom:8px; }
+  </style>
+</head>
+<body>
+  <div class="result-wrap">
+    <a href="/" class="result-back">← Leaderboard</a>
+    <div id="result-content">
+      <div class="loading-state">Loading results...</div>
+    </div>
+  </div>
+
+  <script>
+    const STATIC_RUNS = {
+      /* C&R Stack v8 runs — fallback if API unavailable */
+      'run5': {team_name:'C&R Stack v8',owner_email:'Drew.mattie@gmail.com',submitted_at:'2026-03-03T14:01:32Z',pipeline_score:84,extraction_score:72,code_score:89,reasoning_score:91,research_score:72,multitool_score:87,bugfix_score:97,docreview_score:91,rtresearch_score:62,adversarial_score:91,hardware_label:'Apple M3 · 24GB RAM',hardware_type:'apple_silicon',agent_count:5,agents_json:'[{"name":"Bruno","role":"orchestrator","model":"claude-sonnet-4-6"},{"name":"Rocky","role":"researcher","model":"qwen3.5:27b"},{"name":"Ethan","role":"analyst","model":"qwen3.5:27b"},{"name":"Q","role":"builder","model":"qwen3.5:27b"},{"name":"Sterling","role":"communicator","model":"qwen3.5:27b"}]',notes:"Scoring consistency fix confirmed. Binary rubric checkboxes, judge temperature=0, guided pipeline inputs. Runs #3 and #5 within 2 points. First live leaderboard submission."},
+    };
+
+    const TIERS = [
+      { min:80, name:'LOBSTER', emoji:'🦞',  tagline:'This stack slaps.',            cls:'tier-color-lobster' },
+      { min:50, name:'CHEF',    emoji:'👨‍🍳', tagline:"Something's cooking.",         cls:'tier-color-chef'    },
+      { min:10, name:'SHRIMP',  emoji:'🦐',  tagline:'Needs more seasoning.',        cls:'tier-color-shrimp'  },
+      { min:0,  name:'💩',      emoji:'💩',  tagline:"We don't talk about this run.", cls:'tier-color-poo'     },
+    ];
+    function getTier(s) { return TIERS.find(t => s >= t.min) || TIERS[TIERS.length-1]; }
+    function scoreClass(s) { return s >= 80 ? 'high' : s >= 60 ? 'mid' : 'low'; }
+    function fmtDate(ts) { return new Date(ts).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}); }
+
+    function render(r) {
+      const pipeline = r.pipeline_score ?? 0;
+      const tier = getTier(pipeline);
+      const agents = (() => { try { return JSON.parse(r.agents_json || '[]'); } catch(e) { return []; } })();
+      const subScores = [
+        ['Extraction',     r.extraction_score],
+        ['Code Gen',       r.code_score],
+        ['Reasoning',      r.reasoning_score],
+        ['Research',       r.research_score],
+        ['Multi-Tool',     r.multitool_score],
+        ['Bug Fix',        r.bugfix_score],
+        ['Doc Review',     r.docreview_score],
+        ['RT Research',    r.rtresearch_score],
+        ['Adversarial',    r.adversarial_score],
+      ].filter(([,v]) => v != null);
+
+      const pageUrl = window.location.href;
+
+      document.getElementById('result-content').innerHTML = `
+        <div class="score-hero ${tier.cls}">
+          <!-- Tier hero -->
+          <div class="tier-hero">
+            <span class="tier-hero-emoji">${tier.emoji}</span>
+            <div class="tier-hero-name">${tier.name}</div>
+            <div class="tier-hero-score">${pipeline}<span class="tier-hero-denom">/100</span></div>
+            <div class="tier-hero-tagline">"${tier.tagline}"</div>
+          </div>
+
+          <div class="score-divider"></div>
+
+          <!-- Team meta -->
+          <div class="score-hero-top" style="padding:0 4px 4px;">
+            <div class="score-hero-left">
+              <h1 class="score-team-name">${r.team_name || 'Unknown Team'}</h1>
+              <div class="score-meta">
+                <span class="score-meta-item">📅 ${fmtDate(r.submitted_at)}</span>
+                ${r.hardware_label ? `<span class="score-meta-item">💻 ${r.hardware_label}</span>` : ''}
+                ${r.agent_count ? `<span class="score-meta-item">🤖 ${r.agent_count} agents</span>` : ''}
+              </div>
+            </div>
+          </div>
+
+          ${subScores.length ? `
+          <div class="score-divider"></div>
+          <div class="sub-scores-grid">
+            ${subScores.map(([name,val]) => `
+              <div class="sub-score-item">
+                <span class="sub-score-name">${name}</span>
+                <span class="sub-score-val ${scoreClass(val)}">${val}</span>
+              </div>
+            `).join('')}
+          </div>` : ''}
+        </div>
+
+        <div class="meta-cards">
+          <div class="meta-card">
+            <div class="meta-card-title">Agents</div>
+            ${agents.length ? agents.map(a => `
+              <div class="meta-row">
+                <span class="meta-key">${a.name} <span style="color:#333">${a.role || ''}</span></span>
+                <span class="meta-val">${a.model || ''}</span>
+              </div>
+            `).join('') : '<span style="color:#444;font-size:.8rem">No agent data</span>'}
+          </div>
+          <div class="meta-card">
+            <div class="meta-card-title">Hardware</div>
+            ${r.hardware_label ? `<div class="meta-row"><span class="meta-key">System</span><span class="meta-val">${r.hardware_label}</span></div>` : ''}
+            ${r.hardware_type ? `<div class="meta-row"><span class="meta-key">Type</span><span class="meta-val">${r.hardware_type.replace('_',' ')}</span></div>` : ''}
+            <div class="meta-row"><span class="meta-key">Submitted</span><span class="meta-val">${fmtDate(r.submitted_at)}</span></div>
+          </div>
+        </div>
+
+        ${r.notes ? `
+        <div class="result-notes">
+          <div class="result-notes-label">Run Notes</div>
+          <div class="result-notes-text">${r.notes}</div>
+        </div>` : ''}
+
+        <div class="share-strip">
+          <span class="share-url" id="share-url-text">${pageUrl}</span>
+          <button class="share-copy" onclick="copyUrl()">Copy link</button>
+        </div>
+
+        <div class="back-cta">
+          <a href="/">← View the full leaderboard</a>
+        </div>
+      `;
+    }
+
+    function copyUrl() {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        const btn = document.querySelector('.share-copy');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy link', 2000);
+      });
+    }
+
+    async function loadResult() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id') || window.location.pathname.split('/').pop();
+
+      if (!id || id === 'result.html') {
+        document.getElementById('result-content').innerHTML = `
+          <div class="error-state">
+            <h3>No result ID</h3>
+            <p>Use the URL from your harness run: <code>pipelinescore.ai/r/your-id</code></p>
+          </div>`;
+        return;
+      }
+
+      // Try static fallback first
+      if (STATIC_RUNS[id]) { render(STATIC_RUNS[id]); return; }
+
+      // Try API
+      try {
+        const resp = await fetch(`https://api.pipelinescore.ai/api/result/${id}`);
+        if (resp.ok) { const d = await resp.json(); render(d); return; }
+      } catch(e) {}
+
+      document.getElementById('result-content').innerHTML = `
+        <div class="error-state">
+          <h3>Result not found</h3>
+          <p style="color:#555;font-size:.85rem">ID: <code>${id}</code></p>
+          <p style="color:#555;font-size:.85rem;margin-top:12px"><a href="/" style="color:#888">← Back to leaderboard</a></p>
+        </div>`;
+    }
+
+    loadResult();
+  </script>
+</body>
+</html>

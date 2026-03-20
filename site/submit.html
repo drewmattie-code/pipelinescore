@@ -3,129 +3,259 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Submit Your Stack — pipelinescore.ai</title>
+  <title>Test Your Stack — Pipeline Score</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #060606; }
+    .dl-wrap { max-width: 680px; margin: 0 auto; padding: 72px 24px 100px; }
+
+    .dl-back { display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; color:#444; text-decoration:none; margin-bottom:56px; transition:color .15s; }
+    .dl-back:hover { color:#aaa; }
+
+    .dl-eyebrow { font-size:0.65rem; font-weight:700; letter-spacing:0.18em; color:#00ff95; margin-bottom:20px; display:block; }
+    .dl-title { font-size:2.4rem; font-weight:800; color:#f0f0f0; letter-spacing:-0.04em; line-height:1.1; margin:0 0 16px; }
+    .dl-desc { font-size:0.95rem; color:#666; line-height:1.7; margin:0 0 48px; max-width:480px; }
+
+    /* Primary download block */
+    .dl-primary {
+      background: #0c0c0c;
+      border: 1px solid #1e1e1e;
+      border-radius: 20px;
+      padding: 36px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .dl-primary::before {
+      content:'';
+      position:absolute;
+      top:0;left:0;right:0;
+      height:2px;
+      background:linear-gradient(90deg,#00ff95,#4da6ff);
+    }
+    .dl-primary-label { font-size:0.65rem; font-weight:700; letter-spacing:0.14em; color:#555; margin-bottom:20px; display:block; text-transform:uppercase; }
+    .dl-btn-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:28px; }
+    .dl-btn {
+      display:inline-flex; align-items:center; gap:10px;
+      padding:14px 24px;
+      border-radius:12px; font-size:0.9rem; font-weight:700;
+      text-decoration:none; transition:all .15s; cursor:pointer;
+    }
+    .dl-btn-main {
+      background:#00ff95; color:#000;
+      flex:1; justify-content:center;
+      font-size:1rem;
+    }
+    .dl-btn-main:hover { background:#00e085; }
+    .dl-btn-secondary {
+      background:#111; border:1px solid #222; color:#aaa;
+    }
+    .dl-btn-secondary:hover { border-color:#444; color:#fff; }
+
+    .dl-platform-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+    .dl-platform-link { font-size:0.78rem; color:#555; text-decoration:none; padding:5px 10px; border-radius:6px; border:1px solid transparent; transition:all .15s; }
+    .dl-platform-link:hover, .dl-platform-link.active { color:#ccc; border-color:#222; background:#111; }
+    .dl-platform-sep { color:#2a2a2a; }
+    .dl-prereqs { display:flex; gap:20px; flex-wrap:wrap; }
+    .dl-prereq { font-size:0.75rem; color:#444; display:flex; align-items:center; gap:6px; }
+    .dl-prereq-dot { width:4px; height:4px; border-radius:50%; background:#2a2a2a; }
+
+    /* How it works */
+    .how-title { font-size:0.7rem; font-weight:700; letter-spacing:0.12em; color:#444; text-transform:uppercase; margin:40px 0 20px; }
+    .how-steps { display:flex; flex-direction:column; gap:0; }
+    .how-step {
+      display:flex; gap:20px;
+      padding:20px 0;
+      border-bottom:1px solid #111;
+    }
+    .how-step:last-child { border-bottom:none; }
+    .how-step-left { display:flex; flex-direction:column; align-items:center; gap:0; width:32px; flex-shrink:0; }
+    .how-step-num {
+      width:32px; height:32px; border-radius:50%;
+      background:#111; border:1px solid #1e1e1e;
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.72rem; font-weight:700; color:#555;
+      flex-shrink:0;
+    }
+    .how-step-line { width:1px; flex:1; background:#111; margin-top:4px; min-height:20px; }
+    .how-step:last-child .how-step-line { display:none; }
+    .how-step-body { padding-bottom:4px; }
+    .how-step-label { font-size:0.92rem; font-weight:700; color:#e0e0e0; margin-bottom:5px; }
+    .how-step-detail { font-size:0.82rem; color:#555; line-height:1.6; }
+    .how-step-code {
+      margin-top:10px;
+      background:#090909; border:1px solid #181818;
+      border-radius:8px; padding:12px 16px;
+      font-family:monospace; font-size:0.8rem; color:#777;
+      line-height:1.8;
+    }
+    .how-step-code .hl { color:#00ff95; }
+
+    /* Result preview */
+    .result-preview {
+      margin-top:40px;
+      background:#080808; border:1px solid #141414;
+      border-radius:16px; padding:28px 32px;
+      display:flex; align-items:center; gap:20px;
+    }
+    .result-preview-icon { font-size:2rem; flex-shrink:0; }
+    .result-preview-text h4 { font-size:0.9rem; font-weight:700; color:#ccc; margin:0 0 6px; }
+    .result-preview-text p { font-size:0.8rem; color:#555; margin:0; line-height:1.6; }
+    .result-preview-url {
+      font-family:monospace; font-size:0.78rem;
+      color:#00ff95; background:#00ff9510;
+      border:1px solid #00ff9520; border-radius:6px;
+      padding:4px 10px; margin-top:8px; display:inline-block;
+    }
+
+    /* FAQ */
+    .faq-title { font-size:0.7rem; font-weight:700; letter-spacing:0.12em; color:#444; text-transform:uppercase; margin:44px 0 16px; }
+    .faq-item { border-bottom:1px solid #111; padding:16px 0; }
+    .faq-q { font-size:0.87rem; font-weight:600; color:#ccc; margin-bottom:6px; }
+    .faq-a { font-size:0.82rem; color:#555; line-height:1.65; }
+  </style>
 </head>
 <body>
-  <!-- Header -->
-  <header class="header">
-    <div class="container">
-      <div class="header-inner">
-        <a href="index.html" class="logo">
-          <div class="logo-icon">P</div>
-          Pipeline Score
+  <div class="dl-wrap">
+    <a href="/" class="dl-back">← Leaderboard</a>
+
+    <span class="dl-eyebrow">FREE · OPEN SOURCE · ~20 MIN</span>
+    <h1 class="dl-title">Run it. Get<br>your score.</h1>
+    <p class="dl-desc">Download the harness, point it at your agents, and run it. Your results go live on the leaderboard automatically — no account required upfront.</p>
+
+    <!-- Primary download block -->
+    <div class="dl-primary">
+      <span class="dl-primary-label">Download the harness</span>
+      <div class="dl-btn-row">
+        <a href="https://github.com/charlesandroe/pipelinescore/releases/latest/download/pipelinescore-macos" class="dl-btn dl-btn-main" id="dl-btn-auto">
+          <span id="dl-icon">⬇</span> <span id="dl-label">Detecting platform...</span>
         </a>
-        <nav class="nav">
-          <a href="index.html">Leaderboard</a>
-          <a href="tasks.html">Tasks</a>
-          <a href="submit.html" class="active">Submit Your Stack</a>
-          <a href="#">About</a>
-          <a href="index.html" class="nav-cta">LEADERBOARD</a>
-        </nav>
+      </div>
+      <div class="dl-platform-row">
+        <a href="https://github.com/charlesandroe/pipelinescore/releases/latest/download/pipelinescore-macos" class="dl-platform-link" data-os="mac">🍎 macOS</a>
+        <span class="dl-platform-sep">·</span>
+        <a href="https://github.com/charlesandroe/pipelinescore/releases/latest/download/pipelinescore.exe" class="dl-platform-link" data-os="win">🪟 Windows</a>
+        <span class="dl-platform-sep">·</span>
+        <a href="https://github.com/charlesandroe/pipelinescore/releases/latest/download/pipelinescore-linux" class="dl-platform-link" data-os="linux">🐧 Linux</a>
+        <span class="dl-platform-sep">·</span>
+        <a href="https://raw.githubusercontent.com/charlesandroe/pipelinescore/main/harness/harness.py" class="dl-platform-link" data-os="py" download>🐍 Python script</a>
+      </div>
+      <div class="dl-prereqs">
+        <span class="dl-prereq"><span class="dl-prereq-dot"></span>No install needed — just run it</span>
+        <span class="dl-prereq"><span class="dl-prereq-dot"></span>At least 2 agents (any provider)</span>
+        <span class="dl-prereq"><span class="dl-prereq-dot"></span>~20 min to run</span>
+        <span class="dl-prereq"><span class="dl-prereq-dot"></span>Results open in browser automatically</span>
       </div>
     </div>
-  </header>
 
-  <!-- Page Header -->
-  <section class="page-header">
-    <div class="container">
-      <h1>Submit Your Stack</h1>
-      <p>Submit your agent team configuration for evaluation. All submissions are reviewed for compliance with our testing protocols.</p>
-    </div>
-  </section>
+    <!-- How it works -->
+    <p class="how-title">How it works</p>
+    <div class="how-steps">
 
-  <!-- Main Content -->
-  <main class="container">
-    <div class="submit-container">
-      <form id="submit-form">
-        <div class="form-group">
-          <label class="form-label" for="teamName">Team Name</label>
-          <input type="text" class="form-input" id="teamName" name="teamName" placeholder="e.g., My Custom Stack" required>
+      <div class="how-step">
+        <div class="how-step-left">
+          <div class="how-step-num">1</div>
+          <div class="how-step-line"></div>
         </div>
-        
-        <div class="form-group">
-          <label class="form-label" for="submissionFile">Submission JSON</label>
-          <input type="file" class="form-input" id="submissionFile" name="submissionFile" accept=".json" required>
-          <p class="form-hint">Upload your submission configuration as JSON. See <a href="#" style="color: var(--accent);">submission_schema.yaml</a> for the required format.</p>
+        <div class="how-step-body">
+          <div class="how-step-label">Configure your team</div>
+          <div class="how-step-detail">Edit <code style="color:#888;background:#111;padding:1px 5px;border-radius:4px;">team.yaml</code> with your agent names, models, and endpoints. Mix local (Ollama) and cloud (OpenAI, Anthropic) freely.</div>
+          <div class="how-step-code">
+team:<br>
+&nbsp;&nbsp;name: <span class="hl">"My Stack"</span><br>
+&nbsp;&nbsp;owner_email: <span class="hl">"you@example.com"</span><br>
+agents:<br>
+&nbsp;&nbsp;- name: Researcher<br>
+&nbsp;&nbsp;&nbsp;&nbsp;provider: <span class="hl">ollama</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;model: <span class="hl">llama3:8b</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;endpoint: http://localhost:11434
+          </div>
         </div>
-        
-        <div class="form-group">
-          <label class="form-label" for="hardwareTier">Hardware Tier</label>
-          <select class="form-select" id="hardwareTier" name="hardwareTier" required>
-            <option value="">Select hardware tier...</option>
-            <option value="cloud-api">Cloud API</option>
-            <option value="consumer-gpu">Consumer GPU (RTX 3080/4090)</option>
-            <option value="prosumer-apple-silicon">Prosumer Apple Silicon (M3 Max/Ultra)</option>
-            <option value="enterprise-gpu">Enterprise GPU (A100/H100)</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label" for="modelFamily">Primary Model Family</label>
-          <select class="form-select" id="modelFamily" name="modelFamily" required>
-            <option value="">Select model family...</option>
-            <option value="qwen3.5">Qwen3.5</option>
-            <option value="claude">Claude</option>
-            <option value="gpt">GPT</option>
-            <option value="gemini">Gemini</option>
-            <option value="llama">Llama</option>
-            <option value="mistral">Mistral</option>
-            <option value="deepseek">DeepSeek</option>
-            <option value="mixed">Mixed/Multi-model</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label" for="costPerTask">Estimated Cost per Task (USD)</label>
-          <input type="number" class="form-input" id="costPerTask" name="costPerTask" step="0.01" min="0" placeholder="e.g., 0.15" required>
-          <p class="form-hint">Include API costs, compute costs, and any per-task licensing fees.</p>
-        </div>
-        
-        <button type="submit" class="submit-btn">Submit Your Stack</button>
-        
-        <div class="submit-note">
-          <strong>Note:</strong> Submissions are reviewed within 48 hours. Results are published with full configuration disclosure. Your team's architecture, prompt templates, and tool definitions will be made public.
-        </div>
-      </form>
-    </div>
-  </main>
+      </div>
 
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="container">
-      <p>© 2026 pipelinescore.ai — The public leaderboard for configured AI agent teams.</p>
+      <div class="how-step">
+        <div class="how-step-left">
+          <div class="how-step-num">2</div>
+          <div class="how-step-line"></div>
+        </div>
+        <div class="how-step-body">
+          <div class="how-step-label">Run the harness</div>
+          <div class="how-step-detail">One command. The harness runs all 10 tasks across your agent team, scores them, and submits. First run asks for your name and email — that's it.</div>
+          <div class="how-step-code">
+pip install -r requirements.txt<br>
+python3 harness.py -c team.yaml
+          </div>
+        </div>
+      </div>
+
+      <div class="how-step">
+        <div class="how-step-left">
+          <div class="how-step-num">3</div>
+        </div>
+        <div class="how-step-body">
+          <div class="how-step-label">Get your results URL</div>
+          <div class="how-step-detail">When the run finishes, the harness prints your score and a unique results link. Share it, compare to others, or add notes.</div>
+          <div class="how-step-code">
+✅ Done! Pipeline Score: <span class="hl">84/100</span><br>
+📊 Your results: <span class="hl">pipelinescore.ai/r/abc123</span>
+          </div>
+        </div>
+      </div>
+
     </div>
-  </footer>
+
+    <!-- Result preview -->
+    <div class="result-preview">
+      <div class="result-preview-icon">🔗</div>
+      <div class="result-preview-text">
+        <h4>Your result is a shareable page</h4>
+        <p>Every run gets its own URL — full scorecard, hardware info, all 10 task scores. Post it, share it, compare it.</p>
+        <span class="result-preview-url">pipelinescore.ai/r/your-run-id</span>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <p class="faq-title">Common questions</p>
+    <div class="faq-item">
+      <div class="faq-q">Do I need an account to run this?</div>
+      <div class="faq-a">No. The harness asks for your team name and email on first run and handles everything from there. No signup page, no dashboard, no password.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">What does it cost?</div>
+      <div class="faq-a">The harness itself is free. Your only cost is inference — whatever you pay to run your models. A full run with local models costs nothing beyond electricity.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Can I run it on cloud-only agents?</div>
+      <div class="faq-a">Yes. Anthropic, OpenAI, and OpenRouter are all supported out of the box. Set provider and api_key_env in team.yaml — the harness does the rest.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">How long does a run take?</div>
+      <div class="faq-a">~20 minutes for a mixed local/cloud stack. Faster with cloud-only agents (5–10 min). Slower with large local models (30–45 min).</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">What if my agents are on different machines?</div>
+      <div class="faq-a">Each agent in team.yaml has its own endpoint field. Point each agent at the right host — the harness handles routing to each one independently.</div>
+    </div>
+  </div>
 
   <script>
-    // Handle form submission
-    document.getElementById('submit-form').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      const teamName = document.getElementById('teamName').value;
-      const fileInput = document.getElementById('submissionFile');
-      const hardwareTier = document.getElementById('hardwareTier').value;
-      const modelFamily = document.getElementById('modelFamily').value;
-      const costPerTask = document.getElementById('costPerTask').value;
-      
-      // Read the JSON file
-      const file = fileInput.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          try {
-            const submissionData = JSON.parse(e.target.result);
-            console.log('Submission data:', submissionData);
-            alert('Submission received! Your team "' + teamName + '" will be reviewed within 48 hours.');
-            // Reset form
-            document.getElementById('submit-form').reset();
-          } catch (err) {
-            alert('Error parsing JSON file: ' + err.message);
-          }
-        };
-        reader.readAsText(file);
-      }
-    });
+    // Auto-detect platform and update download button
+    (function() {
+      const ua = navigator.userAgent;
+      const btn = document.getElementById('dl-btn-auto');
+      if (!btn) return;
+      const icon = document.getElementById('dl-icon');
+      const label = document.getElementById('dl-label');
+      let os = 'mac', name = 'macOS', file = 'pipelinescore-macos', emoji = '🍎';
+      if (ua.includes('Win')) { os='win'; name='Windows'; file='pipelinescore.exe'; emoji='🪟'; }
+      else if (ua.includes('Linux') && !ua.includes('Android')) { os='linux'; name='Linux'; file='pipelinescore-linux'; emoji='🐧'; }
+      btn.href = `https://github.com/charlesandroe/pipelinescore/releases/latest/download/${file}`;
+      icon.textContent = emoji;
+      label.textContent = `Download for ${name}`;
+      document.querySelectorAll('.dl-platform-link').forEach(l => {
+        if (l.dataset.os === os) l.classList.add('active');
+      });
+    })();
   </script>
 </body>
 </html>

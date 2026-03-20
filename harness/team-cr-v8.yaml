@@ -1,0 +1,44 @@
+team:
+  name: "C&R Stack v8"
+  owner_email: "Drew.mattie@gmail.com"
+  description: "5-agent mixed local/cloud stack — Apple Silicon M3 Ultra 96GB + Anthropic API"
+
+agents:
+  - name: "Bruno"
+    role: "orchestrator"
+    provider: "anthropic"
+    model: "claude-sonnet-4-6"
+    endpoint: "https://api.anthropic.com/v1"
+    api_key_env: "ANTHROPIC_API_KEY"
+
+  - name: "Rocky"
+    role: "researcher"
+    provider: "ollama"
+    model: "qwen3.5:27b"
+    endpoint: "http://192.168.0.19:11434"
+
+  - name: "Ethan"
+    role: "analyst"
+    provider: "ollama"
+    model: "qwen3.5:27b"
+    endpoint: "http://192.168.0.19:11434"
+
+  - name: "Q"
+    role: "coder"
+    provider: "ollama"
+    model: "qwen3.5:27b"
+    endpoint: "http://192.168.0.19:11434"
+
+  - name: "Sterling"
+    role: "communicator"
+    provider: "ollama"
+    model: "qwen3.5:27b"
+    endpoint: "http://192.168.0.19:11434"
+
+hardware:
+  type: "apple_silicon"
+  declared_ram_gb: 96
+  declared_cpu: "Apple M3 Ultra"
+
+pipelinescore:
+  api_key_env: "PIPELINESCORE_API_KEY"

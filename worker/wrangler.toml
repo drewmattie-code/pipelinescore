@@ -1,0 +1,13 @@
+name = "pipelinescore-api"
+main = "index.js"
+compatibility_date = "2024-01-01"
+account_id = "0eea1400b40de45cde5de42a11d1d553"
+
+[[routes]]
+pattern = "api.pipelinescore.ai"
+zone_name = "pipelinescore.ai"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pipelinescore-db"
+database_id = "33ee0183-9c2a-4d62-95f8-6f1f4526b468"
