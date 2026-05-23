@@ -218,6 +218,7 @@ export interface UserLeaderboardQuery {
   provider?: string;
   tier?: string;
   user?: string;
+  search?: string;
   labVerified?: boolean;
   sort?: 'score' | 'date' | 'user' | 'model' | 'provider' | 'tier';
   dir?: 'asc' | 'desc';
@@ -231,6 +232,7 @@ export async function getUserLeaderboard(q: UserLeaderboardQuery = {}): Promise<
   if (q.provider) params.set('provider', q.provider);
   if (q.tier) params.set('tier', q.tier);
   if (q.user) params.set('user', q.user);
+  if (q.search) params.set('search', q.search);
   if (q.labVerified) params.set('lab_verified', '1');
   if (q.sort) params.set('sort', q.sort);
   if (q.dir) params.set('dir', q.dir);
@@ -320,6 +322,10 @@ function mockUserPage(q: UserLeaderboardQuery): UserLeaderboardPage {
   if (q.provider) entries = entries.filter((e) => e.model.provider === q.provider);
   if (q.tier) entries = entries.filter((e) => e.tier === q.tier);
   if (q.user) entries = entries.filter((e) => e.userNickname === q.user);
+  if (q.search) {
+    const needle = q.search.toLowerCase();
+    entries = entries.filter((e) => e.userNickname.toLowerCase().includes(needle));
+  }
   if (q.labVerified) entries = entries.filter((e) => e.labVerified);
   const sort = q.sort ?? 'score';
   const dir = q.dir ?? 'desc';
@@ -347,7 +353,7 @@ function mockUserPage(q: UserLeaderboardQuery): UserLeaderboardPage {
     count: pageEntries.length,
     limit,
     offset,
-    filters: { provider: q.provider, tier: q.tier, user: q.user, lab_verified: !!q.labVerified, days: 365, sort, dir },
+    filters: { provider: q.provider, tier: q.tier, user: q.user, search: q.search, lab_verified: !!q.labVerified, days: 365, sort, dir },
     entries: pageEntries,
   };
 }

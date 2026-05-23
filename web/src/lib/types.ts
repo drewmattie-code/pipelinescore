@@ -75,6 +75,7 @@ export interface UserLeaderboardPage {
     provider?: string;
     tier?: string;
     user?: string;
+    search?: string;
     lab_verified: boolean;
     days: number;
     sort: string;

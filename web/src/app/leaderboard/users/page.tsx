@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getUserLeaderboard, getUserDirectory } from "@/lib/api";
 import type { UserLeaderboardQuery } from "@/lib/api";
 import { TIER_BY_ID } from "@/lib/tiers";
+import { SearchInput } from "@/components/SearchInput";
 
 export const metadata = {
   title: "Users · PipelineScore",
@@ -20,6 +21,7 @@ export default async function UsersLeaderboardPage({
   const query: UserLeaderboardQuery = {
     provider: sp.provider,
     tier: sp.tier,
+    search: sp.search,
     sort: (sp.sort as UserLeaderboardQuery["sort"]) ?? "score",
     dir: (sp.dir as "asc" | "desc") ?? "desc",
     labVerified: sp.lab === "1",
@@ -35,10 +37,11 @@ export default async function UsersLeaderboardPage({
   const providers = Array.from(new Set(page.entries.map((e) => e.model.provider))).sort();
   const tiers = ["trunk", "mainline", "feeder", "tap", "drip"];
 
-  const filtersActive = !!(query.provider || query.tier || query.labVerified);
+  const filtersActive = !!(query.provider || query.tier || query.labVerified || query.search);
   const baseParams = new URLSearchParams();
   if (query.provider) baseParams.set("provider", query.provider);
   if (query.tier) baseParams.set("tier", query.tier);
+  if (query.search) baseParams.set("search", query.search);
   if (query.labVerified) baseParams.set("lab", "1");
 
   function sortHref(col: NonNullable<UserLeaderboardQuery["sort"]>) {
@@ -86,6 +89,16 @@ export default async function UsersLeaderboardPage({
         <div className="mt-4 text-sm text-[var(--color-ink-3)]">
           Want on the board? <Link href="/run" className="underline hover:text-[var(--color-emerald)]">Run the CLI</Link>.
         </div>
+      </div>
+
+      {/* Search */}
+      <div className="mt-8">
+        <SearchInput placeholder="Search by nickname…" />
+        {query.search && (
+          <div className="mt-2 text-xs text-[var(--color-ink-3)]">
+            Showing matches for <span className="font-mono text-[var(--color-ink)]">&quot;{query.search}&quot;</span> — {page.total.toLocaleString()} result{page.total === 1 ? "" : "s"}.
+          </div>
+        )}
       </div>
 
       {/* Filter bar */}

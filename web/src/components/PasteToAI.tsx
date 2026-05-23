@@ -25,7 +25,9 @@ Please do the following:
 
 7. Show me the score card output verbatim — don't paraphrase the numbers. The output includes my tier (TRUNK/MAINLINE/FEEDER/TAP/DRIP), composite PipelineScore, per-category breakdown, and a share URL.
 
-8. Offer to compare against another model with a follow-up run, OR show me how a different --config-tag changes the score for the same base model.
+8. After the CLI prints the card, the CLI will auto-open my browser to https://pipelinescore.ai/users/<my-nickname> so I can see where I rank. Confirm it opened. If it didn't (headless terminal, SSH, locked-down browser), post the URL explicitly in your reply so I can click it. ALSO mention the full board at https://pipelinescore.ai/leaderboard/users — it's searchable by nickname.
+
+9. Offer to compare against another model with a follow-up run, OR show me how a different --config-tag changes the score for the same base model.
 
 Notes:
 - The CLI is open source and runs locally; my API key never leaves my machine

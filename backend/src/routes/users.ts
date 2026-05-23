@@ -21,6 +21,8 @@ router.get('/v1/leaderboard/users', (req, res) => {
   const provider = typeof q.provider === 'string' ? q.provider : undefined;
   const tier = typeof q.tier === 'string' ? q.tier.toLowerCase() : undefined;
   const user = typeof q.user === 'string' ? q.user : undefined;
+  // search is partial-match across user_nickname; user is exact match
+  const search = typeof q.search === 'string' ? q.search.trim() : undefined;
   const labVerified = q.lab_verified === '1' || q.lab_verified === 'true';
   const sort = typeof q.sort === 'string' && SORT_COLUMNS[q.sort] ? q.sort : 'score';
   const dir = q.dir === 'asc' ? 'ASC' : 'DESC';
@@ -34,6 +36,12 @@ router.get('/v1/leaderboard/users', (req, res) => {
   if (provider) { where.push('m.provider = ?'); params.push(provider); }
   if (tier) { where.push('LOWER(s.tier) = ?'); params.push(tier); }
   if (user) { where.push('s.user_nickname = ?'); params.push(user); }
+  if (search) {
+    // Escape LIKE wildcards in user input, then wrap in %...% for partial match.
+    const escaped = search.replace(/[\\%_]/g, (m) => `\\${m}`);
+    where.push("s.user_nickname LIKE ? ESCAPE '\\'");
+    params.push(`%${escaped}%`);
+  }
   if (labVerified) { where.push('s.lab_verified = 1'); }
 
   const countRow = db
@@ -77,7 +85,7 @@ router.get('/v1/leaderboard/users', (req, res) => {
     count: entries.length,
     limit,
     offset,
-    filters: { provider, tier, user, lab_verified: labVerified, days, sort, dir },
+    filters: { provider, tier, user, search, lab_verified: labVerified, days, sort, dir },
     entries,
   }));
 });

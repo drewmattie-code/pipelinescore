@@ -20,7 +20,7 @@ export function Header() {
             Models
           </Link>
           <Link href="/leaderboard/users" className="hover:text-[var(--color-ink)] transition-colors">
-            Users
+            Users Leaderboard
           </Link>
           <Link href="/methodology" className="hover:text-[var(--color-ink)] transition-colors">
             Methodology

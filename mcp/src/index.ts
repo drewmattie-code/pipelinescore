@@ -44,7 +44,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         'Run the PipelineScore benchmark against an LLM and publish the result to the public leaderboard. ' +
         'Returns the score card output (tier, composite score, per-category scores) and the public share URL. ' +
         'Use when the user wants to benchmark/score/rank a model, or compare two models. ' +
-        'Set config_tag when the user is testing a customized version (system prompt, LoRA adapter, persona, RAG setup) so it is differentiated from the base model on the leaderboard.',
+        'Set config_tag when the user is testing a customized version (system prompt, LoRA adapter, persona, RAG setup) so it is differentiated from the base model on the leaderboard. ' +
+        'After the run completes, ALWAYS post the user-leaderboard URL (https://pipelinescore.ai/users/<nickname>) so the user can see their rank — the CLI auto-opens the page in their browser by default, but post the link in your reply too in case the auto-open did not fire.',
       inputSchema: {
         type: 'object',
         required: ['provider', 'model'],

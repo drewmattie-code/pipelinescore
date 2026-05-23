@@ -2,7 +2,8 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import boxen from 'boxen';
-import { homedir } from 'node:os';
+import { spawn } from 'node:child_process';
+import { homedir, platform } from 'node:os';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { AnthropicProvider } from './providers/anthropic.js';
@@ -39,6 +40,44 @@ function saveConfig(next: SavedConfig): void {
   writeFileSync(CONFIG_PATH, JSON.stringify({ ...current, ...next }, null, 2));
 }
 
+/**
+ * Open a URL in the user's default browser. Fire-and-forget — never blocks the
+ * benchmark flow on a missing browser. Honors $BROWSER if set.
+ */
+function openUrl(url: string): void {
+  const envBrowser = process.env.BROWSER;
+  let cmd: string;
+  let args: string[];
+  if (envBrowser) {
+    cmd = envBrowser;
+    args = [url];
+  } else {
+    switch (platform()) {
+      case 'darwin':
+        cmd = 'open';
+        args = [url];
+        break;
+      case 'win32':
+        cmd = 'cmd';
+        // start "" forces a fresh console; the empty title arg is intentional.
+        args = ['/c', 'start', '""', url];
+        break;
+      default:
+        cmd = 'xdg-open';
+        args = [url];
+    }
+  }
+  try {
+    const child = spawn(cmd, args, { stdio: 'ignore', detached: true });
+    child.on('error', () => {
+      // Silently swallow — auto-open is a nicety, not a requirement.
+    });
+    child.unref();
+  } catch {
+    // Ignore — never block the CLI on a missing browser.
+  }
+}
+
 const program = new Command();
 
 program
@@ -60,6 +99,15 @@ program
     'differentiator for this configuration (LoRA adapter, system prompt, skill, persona, etc.)'
   )
   .option('--no-submit', 'do not POST results to the backend')
+  .option(
+    '--no-open',
+    "do not auto-open the user's leaderboard page in the browser after submit"
+  )
+  .option(
+    '--site <url>',
+    'PipelineScore web URL (used for the auto-opened profile page)',
+    'http://localhost:4600'
+  )
   .action(async (opts) => {
     try {
       await runCommand(opts);
@@ -75,9 +123,11 @@ interface RunCommandOptions {
   apiKey?: string;
   endpoint?: string;
   backend: string;
+  site: string;
   user?: string;
   configTag?: string;
   submit: boolean;
+  open: boolean;
 }
 
 async function runCommand(opts: RunCommandOptions): Promise<void> {
@@ -146,7 +196,7 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
       if (res.ok) {
         const data = (await res.json()) as { id?: string; url?: string };
         if (data.url) shareUrl = data.url;
-        else if (data.id) shareUrl = `https://pipelinescore.ai/s/${data.id}`;
+        else if (data.id) shareUrl = `${opts.site}/s/${data.id}`;
       } else if (res.status === 429) {
         const retry = res.headers.get('retry-after');
         let layer = 'unknown';
@@ -186,6 +236,27 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
       shareUrl,
     }) + '\n',
   );
+
+  // Pop the user over to the site so they can see their ranking.
+  if (opts.submit && opts.open && shareUrl) {
+    // Prefer the user's profile page (where they'll see their rank in context),
+    // fall back to the leaderboard, then the per-submission share URL.
+    const profileUrl = nickname
+      ? `${opts.site}/users/${encodeURIComponent(nickname)}`
+      : `${opts.site}/leaderboard/users`;
+    process.stdout.write(
+      chalk.dim(`Opening your leaderboard page: ${chalk.cyan(profileUrl)}\n`),
+    );
+    openUrl(profileUrl);
+  } else if (opts.submit && shareUrl) {
+    process.stdout.write(
+      chalk.dim(
+        `See your run: ${chalk.cyan(
+          nickname ? `${opts.site}/users/${encodeURIComponent(nickname)}` : `${opts.site}/leaderboard/users`,
+        )}\n`,
+      ),
+    );
+  }
 
   // Quick per-task summary to stderr (so stdout stays clean for piping)
   process.stderr.write('\n' + chalk.dim('Per-task scores:\n'));
