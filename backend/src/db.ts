@@ -65,6 +65,25 @@ export function migrate(): void {
     );
 
     CREATE INDEX IF NOT EXISTS idx_task_results_sub ON task_results(submission_id);
+
+    -- Lightweight request log for product-analytics, monetization, abuse detection.
+    -- Retention is 90 days (enforced by retention.ts). No raw bodies — just metadata.
+    CREATE TABLE IF NOT EXISTS events (
+      id              TEXT PRIMARY KEY,
+      ts              TEXT NOT NULL,          -- ISO timestamp
+      method          TEXT NOT NULL,
+      path            TEXT NOT NULL,
+      status          INTEGER NOT NULL,
+      latency_ms      INTEGER,
+      ip              TEXT,
+      user_nickname   TEXT,
+      ua              TEXT,
+      bytes_out       INTEGER
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_events_ts        ON events(ts DESC);
+    CREATE INDEX IF NOT EXISTS idx_events_path      ON events(path, ts DESC);
+    CREATE INDEX IF NOT EXISTS idx_events_nickname  ON events(user_nickname, ts DESC) WHERE user_nickname IS NOT NULL;
   `);
 
   // Idempotent column adds for older DBs. SQLite won't add a column twice;

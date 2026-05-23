@@ -25,6 +25,9 @@ export function Footer() {
           <Link href="/about" className="hover:text-[var(--color-ink)] transition-colors">
             About
           </Link>
+          <Link href="/privacy" className="hover:text-[var(--color-ink)] transition-colors">
+            Privacy
+          </Link>
         </div>
       </div>
     </footer>

@@ -12,6 +12,8 @@ import compare from './routes/compare.js';
 import users from './routes/users.js';
 import { stamp } from './lib/api-version.js';
 import { readLimiter, submitLimiter } from './lib/rate-limit.js';
+import { eventLogger } from './lib/event-log.js';
+import { startRetention } from './lib/retention.js';
 
 const PORT = parseInt(process.env.PORT ?? '4601', 10);
 const ALLOWED_ORIGINS = ['http://localhost:4600', 'http://localhost:4500'];
@@ -34,6 +36,9 @@ app.use(
   })
 );
 
+// Event logger BEFORE the rate limiters so we capture 429s too (they're signal).
+app.use(eventLogger);
+
 // Apply read limiter to ALL GETs; submissions get a stricter layered limiter.
 app.use((req, res, next) => {
   if (req.method === 'GET') return readLimiter(req, res, next);
@@ -55,6 +60,9 @@ app.use(users);
 app.use((_req, res) => {
   res.status(404).json(stamp({ error: 'not_found' }));
 });
+
+// Retention TTL — nullifies transcripts >30d, deletes events >90d. Hourly.
+startRetention();
 
 app.listen(PORT, () => {
   console.log(`[pipelinescore-api] listening on http://localhost:${PORT}`);

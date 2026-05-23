@@ -135,6 +135,52 @@ Other providers wired (untested but typecheck-clean):
 - **CLI**: Node 22, TypeScript, Commander, Chalk, Boxen, cli-progress.
 - **Benchmark judging**: deterministic Python execution + Claude Haiku 4.5 for rubric tasks.
 
+## Data + retention policy
+
+PipelineScore is a public benchmark. Submissions become part of the public leaderboard by design. To keep that responsible, the backend enforces a hard retention policy.
+
+### What is stored permanently
+- Model identity (slug, provider, family, released_at)
+- Pipeline score + tier + per-category scores
+- User nickname (the one you set with `--user`)
+- Submission timestamp + lab-verified flag
+- Optional config tag (LoRA / system-prompt / persona / etc.)
+- CLI version that submitted
+
+### What is stored for 30 days only
+- Raw prompt transcripts (`submissions.raw_transcripts`)
+- Per-task `task_input` (the prompt) and `model_output` (what the model said)
+- Judge rationales
+
+After 30 days these fields are overwritten with `[redacted:30d_ttl]`. The score row stays — only the body of the run is removed. Rationale: users sometimes submit prompts/outputs containing PII, API keys, or internal docs without realizing. Keeping the bodies indefinitely would compound risk every day.
+
+### What is stored for 90 days
+- Request event log (`events` table) — method, path, status, latency, IP, user-agent, nickname-if-known
+- Used for product analytics, abuse detection, and aggregated reporting
+- No request bodies are stored
+- Cleared on a rolling 90-day window
+
+### What is never stored
+- API keys (CLI calls your provider directly with your key; the backend never sees it)
+- Request or response payloads beyond the fields listed above
+- Personal information beyond the nickname you explicitly chose
+
+### Enforcement
+A background job (`backend/src/lib/retention.ts`) runs on startup and every hour:
+- Redacts transcripts on submissions older than 30 days
+- Deletes event-log rows older than 90 days
+- Logs how many rows were touched
+
+You can verify by inspecting `submissions.raw_transcripts` (look for `"redacted":true`) or by querying the `events` table.
+
+### Rate limits
+- 200 reads / IP / minute
+- 20 submits / IP / hour
+- 100 submits / nickname / day
+- 5 submits / (nickname, model) / hour
+
+When a limit is hit you get a `429` + RFC-standard `RateLimit-*` headers + a stamped JSON error body identifying which layer fired.
+
 ## License
 
 To be determined. MIT-leaning.
