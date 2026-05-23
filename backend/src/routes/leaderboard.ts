@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { stamp, toIsoDate } from '../lib/api-version.js';
 
 const router: Router = Router();
 
@@ -45,7 +46,7 @@ router.get('/v1/leaderboard', (req, res) => {
       category_scores: cs,
       lab_verified: Boolean(r.lab_verified),
       user_nickname: (r.user_nickname as string | null) ?? null,
-      created_at: r.created_at,
+      created_at: toIsoDate(r.created_at as string),
       model: {
         slug: r.model_slug,
         display_name: r.model_display_name,
@@ -61,11 +62,11 @@ router.get('/v1/leaderboard', (req, res) => {
       .sort((a, b) => b.category_scores[category] - a.category_scores[category]);
   }
 
-  res.json({
+  res.json(stamp({
     count: entries.length,
     filters: { category, provider, lab_verified: labVerified, days, limit },
     entries,
-  });
+  }));
 });
 
 export default router;

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { stamp, toIsoDate } from '../lib/api-version.js';
 
 const router: Router = Router();
 
@@ -43,7 +44,7 @@ router.get('/v1/leaderboard/users', (req, res) => {
 
   const sortCol = SORT_COLUMNS[sort];
   const sql = `
-    SELECT s.id, s.pipeline_score, s.tier, s.category_scores, s.lab_verified, s.user_nickname, s.created_at, s.cli_version,
+    SELECT s.id, s.pipeline_score, s.tier, s.category_scores, s.lab_verified, s.user_nickname, s.config_tag, s.created_at, s.cli_version,
            m.slug AS model_slug, m.display_name AS model_display_name, m.provider AS model_provider, m.family AS model_family
     FROM submissions s
     JOIN models m ON s.model_id = m.id
@@ -60,7 +61,8 @@ router.get('/v1/leaderboard/users', (req, res) => {
     category_scores: JSON.parse(r.category_scores as string) as Record<string, number>,
     lab_verified: Boolean(r.lab_verified),
     user_nickname: r.user_nickname as string,
-    created_at: r.created_at as string,
+    config_tag: (r.config_tag as string | null) ?? null,
+    created_at: toIsoDate(r.created_at as string),
     cli_version: r.cli_version as string,
     model: {
       slug: r.model_slug as string,
@@ -70,25 +72,25 @@ router.get('/v1/leaderboard/users', (req, res) => {
     },
   }));
 
-  res.json({
+  res.json(stamp({
     total: countRow.c,
     count: entries.length,
     limit,
     offset,
     filters: { provider, tier, user, lab_verified: labVerified, days, sort, dir },
     entries,
-  });
+  }));
 });
 
 // ---- /v1/users/:nickname -----------------------------------------------------
 // Per-user dashboard: best score, all submissions, models attempted, category leaders.
 router.get('/v1/users/:nickname', (req, res) => {
   const nick = req.params.nickname;
-  if (!nick) return res.status(400).json({ error: 'missing_nickname' });
+  if (!nick) return res.status(400).json(stamp({ error: 'missing_nickname' }));
 
   const subs = db
     .prepare(
-      `SELECT s.id, s.pipeline_score, s.tier, s.category_scores, s.lab_verified, s.created_at, s.cli_version,
+      `SELECT s.id, s.pipeline_score, s.tier, s.category_scores, s.lab_verified, s.config_tag, s.created_at, s.cli_version,
               m.slug AS model_slug, m.display_name AS model_display_name, m.provider AS model_provider, m.family AS model_family
        FROM submissions s
        JOIN models m ON s.model_id = m.id
@@ -98,7 +100,7 @@ router.get('/v1/users/:nickname', (req, res) => {
     .all(nick) as Array<Record<string, unknown>>;
 
   if (subs.length === 0) {
-    return res.status(404).json({ error: 'user_not_found', nickname: nick });
+    return res.status(404).json(stamp({ error: 'user_not_found', nickname: nick }));
   }
 
   const entries = subs.map((r) => ({
@@ -107,7 +109,8 @@ router.get('/v1/users/:nickname', (req, res) => {
     tier: r.tier as string,
     category_scores: JSON.parse(r.category_scores as string) as Record<string, number>,
     lab_verified: Boolean(r.lab_verified),
-    created_at: r.created_at as string,
+    config_tag: (r.config_tag as string | null) ?? null,
+    created_at: toIsoDate(r.created_at as string),
     cli_version: r.cli_version as string,
     model: {
       slug: r.model_slug as string,
@@ -136,13 +139,13 @@ router.get('/v1/users/:nickname', (req, res) => {
     providerCounts[e.model.provider] = (providerCounts[e.model.provider] ?? 0) + 1;
   }
 
-  // First-seen
+  // First-seen — find min on the raw entries (already ISO at this point)
   const firstSeen = entries.reduce(
-    (min, e) => (e.created_at < min ? e.created_at : min),
+    (min, e) => ((e.created_at ?? '') < (min ?? '') ? e.created_at : min),
     entries[0].created_at
   );
 
-  res.json({
+  res.json(stamp({
     nickname: nick,
     submission_count: submissionCount,
     best_score: best.pipeline_score,
@@ -153,7 +156,7 @@ router.get('/v1/users/:nickname', (req, res) => {
     provider_counts: providerCounts,
     first_seen: firstSeen,
     submissions: entries,
-  });
+  }));
 });
 
 // ---- /v1/users (directory) ---------------------------------------------------
@@ -170,7 +173,7 @@ router.get('/v1/users', (_req, res) => {
     )
     .all() as Array<{ user_nickname: string; submission_count: number; best_score: number }>;
 
-  res.json({ count: rows.length, users: rows });
+  res.json(stamp({ count: rows.length, users: rows }));
 });
 
 export default router;

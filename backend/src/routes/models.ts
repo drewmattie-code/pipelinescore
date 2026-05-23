@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { stamp, toIsoDate } from '../lib/api-version.js';
 
 const router: Router = Router();
 
@@ -14,7 +15,7 @@ router.get('/v1/models/:slug', (req, res) => {
   const model = db.prepare('SELECT * FROM models WHERE slug = ?').get(req.params.slug) as
     | Record<string, unknown>
     | undefined;
-  if (!model) return res.status(404).json({ error: 'not_found' });
+  if (!model) return res.status(404).json(stamp({ error: 'not_found' }));
 
   const subs = db
     .prepare(
@@ -34,7 +35,7 @@ router.get('/v1/models/:slug', (req, res) => {
   const medians: Record<string, number | null> = {};
   for (const [k, arr] of Object.entries(categoryAccum)) medians[k] = median(arr);
 
-  res.json({
+  res.json(stamp({
     slug: model.slug,
     display_name: model.display_name,
     provider: model.provider,
@@ -55,9 +56,9 @@ router.get('/v1/models/:slug', (req, res) => {
       tier: s.tier,
       category_scores: JSON.parse(s.category_scores as string),
       lab_verified: Boolean(s.lab_verified),
-      created_at: s.created_at,
+      created_at: toIsoDate(s.created_at as string),
     })),
-  });
+  }));
 });
 
 export default router;

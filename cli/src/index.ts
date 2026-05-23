@@ -16,20 +16,27 @@ import type { LLMProvider } from './types.js';
 
 const CONFIG_PATH = resolve(homedir(), '.config', 'pipelinescore', 'config.json');
 const NICKNAME_RE = /^[a-zA-Z0-9._-]{2,40}$/;
+const CONFIG_TAG_RE = /^[a-zA-Z0-9._-]{2,60}$/;
 
-function loadSavedNickname(): string | undefined {
-  if (!existsSync(CONFIG_PATH)) return undefined;
+interface SavedConfig {
+  user_nickname?: string;
+  config_tag?: string;
+}
+
+function loadSavedConfig(): SavedConfig {
+  if (!existsSync(CONFIG_PATH)) return {};
   try {
-    const raw = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) as { user_nickname?: string };
-    return typeof raw.user_nickname === 'string' ? raw.user_nickname : undefined;
+    const raw = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) as SavedConfig;
+    return raw;
   } catch {
-    return undefined;
+    return {};
   }
 }
 
-function saveNickname(nick: string): void {
+function saveConfig(next: SavedConfig): void {
   mkdirSync(dirname(CONFIG_PATH), { recursive: true });
-  writeFileSync(CONFIG_PATH, JSON.stringify({ user_nickname: nick }, null, 2));
+  const current = loadSavedConfig();
+  writeFileSync(CONFIG_PATH, JSON.stringify({ ...current, ...next }, null, 2));
 }
 
 const program = new Command();
@@ -48,6 +55,10 @@ program
   .option('--endpoint <url>', 'override endpoint base URL (for local/OpenAI-compatible)')
   .option('--backend <url>', 'PipelineScore backend URL', 'http://localhost:4601')
   .option('--user <nickname>', 'your public leaderboard nickname (alphanum + . _ -, 2–40 chars)')
+  .option(
+    '--config-tag <tag>',
+    'differentiator for this configuration (LoRA adapter, system prompt, skill, persona, etc.)'
+  )
   .option('--no-submit', 'do not POST results to the backend')
   .action(async (opts) => {
     try {
@@ -65,27 +76,37 @@ interface RunCommandOptions {
   endpoint?: string;
   backend: string;
   user?: string;
+  configTag?: string;
   submit: boolean;
 }
 
 async function runCommand(opts: RunCommandOptions): Promise<void> {
   const providerName = opts.provider.toLowerCase();
 
-  // Resolve nickname: --user flag > saved config > none. Validate + persist.
-  let nickname: string | undefined = opts.user ?? loadSavedNickname();
+  // Resolve nickname + config_tag: flag > saved config > none. Validate + persist.
+  const saved = loadSavedConfig();
+  let nickname: string | undefined = opts.user ?? saved.user_nickname;
   if (nickname && !NICKNAME_RE.test(nickname)) {
     throw new Error(`Invalid nickname "${nickname}". Use 2-40 chars of [a-zA-Z0-9._-].`);
   }
-  if (opts.user && nickname) saveNickname(nickname); // persist if just set via flag
+  let configTag: string | undefined = opts.configTag ?? saved.config_tag;
+  if (configTag && !CONFIG_TAG_RE.test(configTag)) {
+    throw new Error(`Invalid --config-tag "${configTag}". Use 2-60 chars of [a-zA-Z0-9._-].`);
+  }
+  const persist: SavedConfig = {};
+  if (opts.user && nickname) persist.user_nickname = nickname;
+  if (opts.configTag && configTag) persist.config_tag = configTag;
+  if (Object.keys(persist).length > 0) saveConfig(persist);
 
   // Banner
   process.stdout.write(
     boxen(
       `${chalk.bold('PipelineScore')} ${chalk.dim('v0.1.0')}\n` +
-        `${chalk.dim('Provider:')} ${providerName}\n` +
-        `${chalk.dim('Model:')}    ${opts.model}\n` +
-        `${chalk.dim('User:')}     ${nickname ?? chalk.italic.dim('anonymous (use --user to claim a nickname)')}\n` +
-        `${chalk.dim('Submit:')}   ${opts.submit ? 'yes' : 'no'}`,
+        `${chalk.dim('Provider:')}   ${providerName}\n` +
+        `${chalk.dim('Model:')}      ${opts.model}\n` +
+        `${chalk.dim('Config tag:')} ${configTag ?? chalk.italic.dim('— (base model, no customization)')}\n` +
+        `${chalk.dim('User:')}       ${nickname ?? chalk.italic.dim('anonymous (use --user to claim a nickname)')}\n` +
+        `${chalk.dim('Submit:')}     ${opts.submit ? 'yes' : 'no'}`,
       { padding: { top: 0, bottom: 0, left: 1, right: 1 }, borderStyle: 'round', borderColor: 'cyan' },
     ) + '\n',
   );
@@ -115,7 +136,7 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
   // Submit (optional)
   let shareUrl: string | undefined;
   if (opts.submit) {
-    const payload = { ...summary, user_nickname: nickname };
+    const payload = { ...summary, user_nickname: nickname, config_tag: configTag };
     try {
       const res = await fetch(`${opts.backend}/v1/submissions`, {
         method: 'POST',
@@ -126,6 +147,25 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
         const data = (await res.json()) as { id?: string; url?: string };
         if (data.url) shareUrl = data.url;
         else if (data.id) shareUrl = `https://pipelinescore.ai/s/${data.id}`;
+      } else if (res.status === 429) {
+        const retry = res.headers.get('retry-after');
+        let layer = 'unknown';
+        try {
+          const body = (await res.json()) as { layer?: string };
+          if (body.layer) layer = body.layer;
+        } catch {
+          /* ignore parse failure */
+        }
+        const human =
+          retry && Number(retry) > 0
+            ? `${Math.ceil(Number(retry) / 60)} min`
+            : 'a while';
+        process.stderr.write(
+          chalk.yellow(
+            `Submission rate-limited (layer: ${layer}). Try again in ${human}.\n` +
+              chalk.dim('  Score still computed locally — only the upload was blocked.\n'),
+          ),
+        );
       } else {
         process.stderr.write(chalk.yellow(`Submission failed: ${res.status} ${res.statusText}\n`));
       }

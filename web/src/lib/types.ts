@@ -55,6 +55,7 @@ export interface UserLeaderboardEntry {
   tier: TierId;
   categoryScores: CategoryScores;
   labVerified: boolean;
+  configTag: string | null;
   submittedAt: string;
   cliVersion: string;
   model: {

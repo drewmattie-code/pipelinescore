@@ -1,3 +1,5 @@
+import { PasteToAI } from "@/components/PasteToAI";
+
 export const metadata = {
   title: "Run a benchmark · PipelineScore",
   description:
@@ -32,13 +34,18 @@ export default function RunPage() {
         <span className="text-[var(--color-ink-3)] select-none">$ </span>
         <span className="text-white">npx @pipelinescore/cli run </span>
         <span className="text-[var(--color-emerald-light)]">--provider anthropic</span>{" "}
-        <span className="text-[var(--color-emerald-light)]">--model claude-opus-4-7</span>
+        <span className="text-[var(--color-emerald-light)]">--model claude-opus-4-7</span>{" "}
+        <span className="text-[var(--color-emerald-light)]">--user your-handle</span>
       </div>
 
       <p className="text-sm text-[var(--color-ink-3)] mt-3">
         You&apos;ll be prompted for your provider API key, which is read once
         from your environment and discarded on exit.
       </p>
+
+      <div className="mt-12">
+        <PasteToAI />
+      </div>
 
       <section className="mt-16">
         <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">

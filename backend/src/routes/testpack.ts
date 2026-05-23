@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sign } from '../lib/sign.js';
+import { stamp } from '../lib/api-version.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TASKS_PATH = resolve(__dirname, '..', '..', '..', 'benchmarks', 'tasks-v1.json');
@@ -18,9 +19,9 @@ router.get('/v1/testpack', (_req, res) => {
       tasks: parsed.tasks,
     };
     const signature = sign(JSON.stringify(payload));
-    res.json({ ...payload, signature });
+    res.json(stamp({ ...payload, signature }));
   } catch (err) {
-    res.status(500).json({ error: 'failed_to_load_testpack', detail: (err as Error).message });
+    res.status(500).json(stamp({ error: 'failed_to_load_testpack', detail: (err as Error).message }));
   }
 });
 

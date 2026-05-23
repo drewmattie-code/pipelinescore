@@ -176,6 +176,7 @@ interface BackendUserEntry {
   tier: TierId;
   category_scores: Record<string, number>;
   lab_verified: boolean;
+  config_tag?: string | null;
   created_at: string;
   cli_version: string;
   model: {
@@ -201,6 +202,7 @@ function adaptUserEntry(e: BackendUserEntry): UserLeaderboardEntry {
       speed: e.category_scores.speed ?? 0,
     },
     labVerified: !!e.lab_verified,
+    configTag: e.config_tag ?? null,
     submittedAt: e.created_at,
     cliVersion: e.cli_version,
     model: {

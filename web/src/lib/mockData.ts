@@ -250,6 +250,14 @@ export const MOCK_USER_ENTRIES: UserLeaderboardEntry[] = (() => {
         .toISOString()
         .replace('T', ' ')
         .slice(0, 19);
+      const MOCK_TAGS: (string | null)[] = [
+        null, null, null,
+        'system-prompt-coder',
+        'tools-enabled',
+        'lora-domain-finance',
+        'temp-zero',
+        'cot-style',
+      ];
       out.push({
         submissionId: `mock-${m.slug}-${i + 1}`,
         userNickname: isLab ? 'lab' : pickNick(n * 13 + 7),
@@ -264,6 +272,7 @@ export const MOCK_USER_ENTRIES: UserLeaderboardEntry[] = (() => {
           speed: Number(drift(m.categoryScores.speed).toFixed(2)),
         },
         labVerified: isLab,
+        configTag: isLab ? null : MOCK_TAGS[(n * 7) % MOCK_TAGS.length],
         submittedAt: date,
         cliVersion: '0.1.0',
         model: {

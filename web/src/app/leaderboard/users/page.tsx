@@ -141,6 +141,7 @@ export default async function UsersLeaderboardPage({
                 <th className="px-4 py-3"><SortLink href={sortHref("user")} label="User" arrow={arrow("user")} /></th>
                 <th className="px-4 py-3"><SortLink href={sortHref("model")} label="Model" arrow={arrow("model")} /></th>
                 <th className="px-4 py-3 hidden md:table-cell"><SortLink href={sortHref("provider")} label="Provider" arrow={arrow("provider")} /></th>
+                <th className="px-4 py-3 hidden xl:table-cell">Config</th>
                 <th className="px-4 py-3 text-right"><SortLink href={sortHref("score")} label="Score" arrow={arrow("score")} /></th>
                 <th className="px-4 py-3"><SortLink href={sortHref("tier")} label="Tier" arrow={arrow("tier")} /></th>
                 <th className="px-4 py-3 hidden lg:table-cell"><SortLink href={sortHref("date")} label="Date" arrow={arrow("date")} /></th>
@@ -181,6 +182,15 @@ export default async function UsersLeaderboardPage({
                     <td className="px-4 py-3 hidden md:table-cell text-[var(--color-ink-2)] uppercase text-xs tracking-wider">
                       {e.model.provider}
                     </td>
+                    <td className="px-4 py-3 hidden xl:table-cell">
+                      {e.configTag ? (
+                        <span className="inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-[color:var(--color-line-2)] text-[var(--color-ink-2)]">
+                          {e.configTag}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] uppercase tracking-wider text-[var(--color-ink-3)]">base</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right font-mono tabular-nums font-semibold text-[var(--color-ink)]">
                       {e.pipelineScore.toFixed(1)}
                     </td>
@@ -200,7 +210,7 @@ export default async function UsersLeaderboardPage({
               })}
               {page.entries.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-[var(--color-ink-3)]">
+                  <td colSpan={8} className="px-4 py-12 text-center text-[var(--color-ink-3)]">
                     No submissions match the current filters.
                   </td>
                 </tr>

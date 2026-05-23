@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db, uid } from '../db.js';
 import { tierForScore } from '../lib/tier.js';
+import { stamp, toIsoDate } from '../lib/api-version.js';
 
 const router: Router = Router();
 
@@ -42,6 +43,12 @@ const SubmissionInput = z.object({
     .max(40)
     .regex(/^[a-zA-Z0-9._-]+$/, 'nickname: alphanum + . _ - only')
     .optional(),
+  config_tag: z
+    .string()
+    .min(2)
+    .max(60)
+    .regex(/^[a-zA-Z0-9._-]+$/, 'config_tag: alphanum + . _ - only')
+    .optional(),
   notes: z.string().nullable().optional(),
 });
 
@@ -72,7 +79,7 @@ function findOrCreateModel(input: z.infer<typeof ModelInput>): string {
 router.post('/v1/submissions', (req, res) => {
   const parsed = SubmissionInput.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: 'invalid_payload', issues: parsed.error.issues });
+    return res.status(400).json(stamp({ error: 'invalid_payload', issues: parsed.error.issues }));
   }
   const body = parsed.data;
 
@@ -83,8 +90,8 @@ router.post('/v1/submissions', (req, res) => {
       const tier = body.tier ?? tierForScore(body.pipeline_score);
 
       db.prepare(
-        `INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, user_nickname, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, user_nickname, config_tag, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(
         submissionId,
         modelId,
@@ -96,6 +103,7 @@ router.post('/v1/submissions', (req, res) => {
         body.cli_version,
         req.ip ?? null,
         body.user_nickname ?? null,
+        body.config_tag ?? null,
         body.notes ?? null
       );
 
@@ -121,9 +129,9 @@ router.post('/v1/submissions', (req, res) => {
     });
     txn();
 
-    return res.status(201).json({ id: submissionId, url: `/s/${submissionId}` });
+    return res.status(201).json(stamp({ id: submissionId, url: `/s/${submissionId}` }));
   } catch (err) {
-    return res.status(500).json({ error: 'insert_failed', detail: (err as Error).message });
+    return res.status(500).json(stamp({ error: 'insert_failed', detail: (err as Error).message }));
   }
 });
 
@@ -136,13 +144,13 @@ router.get('/v1/submissions/:id', (req, res) => {
     )
     .get(req.params.id) as Record<string, unknown> | undefined;
 
-  if (!sub) return res.status(404).json({ error: 'not_found' });
+  if (!sub) return res.status(404).json(stamp({ error: 'not_found' }));
 
   const tasks = db
     .prepare(`SELECT * FROM task_results WHERE submission_id = ? ORDER BY category, task_id`)
     .all(req.params.id);
 
-  res.json({
+  res.json(stamp({
     id: sub.id,
     model: {
       slug: sub.model_slug,
@@ -158,9 +166,9 @@ router.get('/v1/submissions/:id', (req, res) => {
     cli_version: sub.cli_version,
     lab_verified: Boolean(sub.lab_verified),
     notes: sub.notes,
-    created_at: sub.created_at,
+    created_at: toIsoDate(sub.created_at as string),
     task_results: tasks,
-  });
+  }));
 });
 
 export default router;

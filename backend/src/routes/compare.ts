@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { stamp } from '../lib/api-version.js';
 
 const router: Router = Router();
 
@@ -46,13 +47,13 @@ router.get('/v1/compare', (req, res) => {
   const a = req.query.a;
   const b = req.query.b;
   if (typeof a !== 'string' || typeof b !== 'string') {
-    return res.status(400).json({ error: 'missing_params', detail: 'a and b query params required' });
+    return res.status(400).json(stamp({ error: 'missing_params', detail: 'a and b query params required' }));
   }
 
   const aSum = summarize(a);
   const bSum = summarize(b);
-  if (!aSum) return res.status(404).json({ error: 'not_found', slug: a });
-  if (!bSum) return res.status(404).json({ error: 'not_found', slug: b });
+  if (!aSum) return res.status(404).json(stamp({ error: 'not_found', slug: a }));
+  if (!bSum) return res.status(404).json(stamp({ error: 'not_found', slug: b }));
 
   // diff per category
   const allCats = new Set([
@@ -73,7 +74,7 @@ router.get('/v1/compare', (req, res) => {
     else if (bSum.median_pipeline_score > aSum.median_pipeline_score) winner = 'b';
   }
 
-  res.json({ a: aSum, b: bSum, category_diff: diff, winner });
+  res.json(stamp({ a: aSum, b: bSum, category_diff: diff, winner }));
 });
 
 export default router;

@@ -225,6 +225,23 @@ function pickNickname(): string {
 // Many more synthetic submissions per model so the user leaderboard has volume.
 const SUBMISSIONS_PER_MODEL = 12;
 
+// Plausible config_tags showing how the same base model gets customized.
+// Empty means base/no-config — also the majority case.
+const CONFIG_TAGS = [
+  null, null, null, null, null,           // 5x weight on "no config" (base)
+  'system-prompt-coder',
+  'persona-pirate',
+  'cot-style',
+  'tools-enabled',
+  'rag-prepend',
+  'temp-zero',
+  'lora-domain-finance',
+];
+
+function pickConfigTag(): string | null {
+  return CONFIG_TAGS[Math.floor(Math.random() * CONFIG_TAGS.length)];
+}
+
 // Backfill: any submission missing a user_nickname gets one. Lab-verified rows get "lab".
 function backfillNicknames(): void {
   const missing = db
@@ -257,8 +274,8 @@ export function seedIfEmpty(): void {
   `);
 
   const insertSubmission = db.prepare(`
-    INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, user_nickname, lab_verified, notes, created_at)
-    VALUES (@id, @model_id, @testpack_version, @pipeline_score, @tier, @category_scores, @raw_transcripts, @cli_version, @submitter_ip, @user_nickname, @lab_verified, @notes, @created_at)
+    INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, user_nickname, config_tag, lab_verified, notes, created_at)
+    VALUES (@id, @model_id, @testpack_version, @pipeline_score, @tier, @category_scores, @raw_transcripts, @cli_version, @submitter_ip, @user_nickname, @config_tag, @lab_verified, @notes, @created_at)
   `);
 
   const insertTaskResult = db.prepare(`
@@ -308,6 +325,7 @@ export function seedIfEmpty(): void {
           cli_version: '0.1.0',
           submitter_ip: 'seed',
           user_nickname: i === 0 ? 'lab' : pickNickname(),
+          config_tag: i === 0 ? null : pickConfigTag(),
           lab_verified: i === 0 ? 1 : 0,
           notes: i === 0 ? 'Lab-verified canonical run' : null,
           created_at: createdAt,
