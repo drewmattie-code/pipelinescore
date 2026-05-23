@@ -5,10 +5,13 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// DB path: ~/Projects/pipelinescore/backend/.data/pipelinescore.db
-const DB_PATH = resolve(__dirname, '..', '.data', 'pipelinescore.db');
+// DB path: in dev, defaults to backend/.data/. In prod (Render/Fly), the host
+// mounts a persistent disk at /data and sets DB_DIR=/data so SQLite survives
+// deploys.
+const DB_DIR = process.env.DB_DIR ?? resolve(__dirname, '..', '.data');
+const DB_PATH = resolve(DB_DIR, 'pipelinescore.db');
 
-mkdirSync(dirname(DB_PATH), { recursive: true });
+mkdirSync(DB_DIR, { recursive: true });
 
 export const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
