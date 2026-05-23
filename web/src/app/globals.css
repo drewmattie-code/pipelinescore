@@ -1,15 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  /* Apple-flavored cool palette with industrial emerald accent */
+  /* Industrial-emerald palette. All text reads as black — gray hierarchy is
+     intentionally minimal so subheads and body stay readable over imagery. */
   --color-bg: #FBFBFD;
   --color-surface: #FFFFFF;
   --color-surface-2: #F5F5F7;
-  --color-ink: #1D1D1F;
-  --color-ink-2: #6E6E73;
-  --color-ink-3: #86868B;
-  --color-line: #D2D2D7;
-  --color-line-2: #E8E8ED;
+  --color-ink: #000000;
+  --color-ink-2: #111111;
+  --color-ink-3: #2B2B2B;
+  --color-line: #C7C7CC;
+  --color-line-2: #E5E5EA;
   --color-emerald: #0F766E;
   --color-emerald-light: #14B8A6;
   --color-emerald-dark: #0B5E57;
@@ -26,8 +27,9 @@
   --color-tap: #FF7B30;
   --color-drip: #98989D;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "SF Mono", Menlo, Monaco, monospace;
+  /* Bricolage Grotesque for display + body — bold, technical, distinctive. */
+  --font-sans: var(--font-bricolage), -apple-system, BlinkMacSystemFont, "Helvetica Neue", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", "SF Mono", Menlo, Monaco, monospace;
 }
 
 html, body {
@@ -38,12 +40,15 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3 {
-  letter-spacing: -0.022em;
+h1, h2, h3, h4 {
+  letter-spacing: -0.025em;
+  color: var(--color-ink);
+  font-weight: 700;
 }
 
 h1.display {
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
+  font-weight: 800;
 }
 
 .font-mono {

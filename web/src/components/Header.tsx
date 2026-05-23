@@ -15,20 +15,23 @@ export function Header() {
           />
           PipelineScore
         </Link>
-        <nav className="flex items-center gap-7 text-sm text-[var(--color-ink-2)]">
-          <Link href="/leaderboard" className="hover:text-[var(--color-ink)] transition-colors">
+        <nav className="flex items-center gap-7 text-sm text-[var(--color-ink)] font-medium">
+          <Link href="/" className="hover:text-[var(--color-emerald)] transition-colors">
+            Home
+          </Link>
+          <Link href="/leaderboard" className="hover:text-[var(--color-emerald)] transition-colors">
             Models
           </Link>
-          <Link href="/leaderboard/users" className="hover:text-[var(--color-ink)] transition-colors">
+          <Link href="/leaderboard/users" className="hover:text-[var(--color-emerald)] transition-colors">
             Users Leaderboard
           </Link>
-          <Link href="/methodology" className="hover:text-[var(--color-ink)] transition-colors">
+          <Link href="/methodology" className="hover:text-[var(--color-emerald)] transition-colors">
             Methodology
           </Link>
-          <Link href="/run" className="hover:text-[var(--color-ink)] transition-colors">
+          <Link href="/run" className="hover:text-[var(--color-emerald)] transition-colors">
             Run
           </Link>
-          <Link href="/about" className="hover:text-[var(--color-ink)] transition-colors">
+          <Link href="/about" className="hover:text-[var(--color-emerald)] transition-colors">
             About
           </Link>
         </nav>

@@ -98,7 +98,8 @@ function adaptEntryToModel(e: BackendLeaderboardEntry): Model {
 
 /** Top-of-leaderboard view. Returns a deduped per-model leaderboard ordered by score. */
 export async function getLeaderboardModels(): Promise<Model[]> {
-  const res = await timedFetch(`${API_BASE}/v1/leaderboard?limit=100`);
+  // Pull a large window so every model shows up at least once, then dedupe by slug.
+  const res = await timedFetch(`${API_BASE}/v1/leaderboard?limit=200`);
   if (!res) return MOCK_MODELS;
   try {
     const data = await res.json() as { entries: BackendLeaderboardEntry[] };
@@ -382,6 +383,27 @@ function mockUserProfile(nickname: string): UserProfile | undefined {
     firstSeen: subs.reduce((min, e) => (e.submittedAt < min ? e.submittedAt : min), subs[0].submittedAt),
     submissions: sorted,
   };
+}
+
+export interface SiteStats {
+  submission_count: number;
+  user_count: number;
+  model_count: number;
+}
+
+export async function getStats(): Promise<SiteStats> {
+  const res = await timedFetch(`${API_BASE}/v1/stats`);
+  if (!res) return { submission_count: 0, user_count: 0, model_count: 0 };
+  try {
+    const d = (await res.json()) as Partial<SiteStats>;
+    return {
+      submission_count: d.submission_count ?? 0,
+      user_count: d.user_count ?? 0,
+      model_count: d.model_count ?? 0,
+    };
+  } catch {
+    return { submission_count: 0, user_count: 0, model_count: 0 };
+  }
 }
 
 // Re-export the sample tasks so pages don't have to know where to find them.

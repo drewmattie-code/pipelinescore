@@ -16,4 +16,14 @@ router.get('/health', (_req, res) => {
   }));
 });
 
+// Public site-stats endpoint — used by the homepage live-counts strip.
+router.get('/v1/stats', (_req, res) => {
+  const submission_count = (db.prepare('SELECT COUNT(*) AS c FROM submissions').get() as { c: number }).c;
+  const user_count = (db
+    .prepare('SELECT COUNT(DISTINCT user_nickname) AS c FROM submissions WHERE user_nickname IS NOT NULL')
+    .get() as { c: number }).c;
+  const model_count = (db.prepare('SELECT COUNT(*) AS c FROM models').get() as { c: number }).c;
+  res.json(stamp({ submission_count, user_count, model_count }));
+});
+
 export default router;

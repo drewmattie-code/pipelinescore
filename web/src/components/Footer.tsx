@@ -12,20 +12,23 @@ export function Footer() {
           />
           <span>PipelineScore — user-run LLM benchmarking.</span>
         </div>
-        <div className="flex items-center gap-6">
-          <Link href="/leaderboard" className="hover:text-[var(--color-ink)] transition-colors">
-            Leaderboard
+        <div className="flex items-center gap-6 flex-wrap">
+          <Link href="/leaderboard" className="hover:text-[var(--color-emerald)] transition-colors">
+            Models
           </Link>
-          <Link href="/methodology" className="hover:text-[var(--color-ink)] transition-colors">
+          <Link href="/leaderboard/users" className="hover:text-[var(--color-emerald)] transition-colors">
+            Users Leaderboard
+          </Link>
+          <Link href="/methodology" className="hover:text-[var(--color-emerald)] transition-colors">
             Methodology
           </Link>
-          <Link href="/run" className="hover:text-[var(--color-ink)] transition-colors">
-            Run a benchmark
+          <Link href="/run" className="hover:text-[var(--color-emerald)] transition-colors">
+            Run
           </Link>
-          <Link href="/about" className="hover:text-[var(--color-ink)] transition-colors">
+          <Link href="/about" className="hover:text-[var(--color-emerald)] transition-colors">
             About
           </Link>
-          <Link href="/privacy" className="hover:text-[var(--color-ink)] transition-colors">
+          <Link href="/privacy" className="hover:text-[var(--color-emerald)] transition-colors">
             Privacy
           </Link>
         </div>

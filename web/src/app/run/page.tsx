@@ -1,7 +1,7 @@
 import { PasteToAI } from "@/components/PasteToAI";
 
 export const metadata = {
-  title: "Run a benchmark · PipelineScore",
+  title: "Run a benchmark",
   description:
     "One npx command, your own API key, a deterministic PipelineScore in under five minutes.",
 };
@@ -48,7 +48,60 @@ export default function RunPage() {
       </div>
 
       <section className="mt-16">
-        <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">
+        <h2 className="text-2xl font-bold tracking-tight text-[var(--color-ink)]">
+          Power user? Install the skill or MCP.
+        </h2>
+        <p className="text-sm text-[var(--color-ink)] mt-2 mb-6 leading-relaxed">
+          If you live in Claude Code, Codex, OpenCode, OpenClaw, Cursor, or any
+          MCP-compatible client, you can install PipelineScore as a tool. Your
+          AI will run benchmarks for you without you ever leaving the editor.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-[var(--color-line-2)] bg-[var(--color-surface)] p-6">
+            <div className="text-xs uppercase tracking-wider text-[var(--color-emerald)] font-semibold mb-2">
+              Skill
+            </div>
+            <h3 className="text-lg font-bold text-[var(--color-ink)]">Drop-in markdown</h3>
+            <p className="text-sm text-[var(--color-ink)] mt-2 leading-relaxed">
+              Single <code className="font-mono text-[var(--color-emerald)]">SKILL.md</code> file
+              that any AI reads at session start. Works in Claude Code, Codex,
+              OpenCode, OpenClaw, Cursor.
+            </p>
+            <pre className="mt-4 rounded-xl bg-[var(--color-ink)] text-white text-xs p-3 overflow-x-auto font-mono">
+{`mkdir -p ~/.claude/skills/pipelinescore
+curl -L https://pipelinescore.ai/skills/\\
+  pipelinescore/SKILL.md \\
+  -o ~/.claude/skills/pipelinescore/SKILL.md`}
+            </pre>
+          </div>
+          <div className="rounded-2xl border border-[var(--color-line-2)] bg-[var(--color-surface)] p-6">
+            <div className="text-xs uppercase tracking-wider text-[var(--color-emerald)] font-semibold mb-2">
+              MCP server
+            </div>
+            <h3 className="text-lg font-bold text-[var(--color-ink)]">Three structured tools</h3>
+            <p className="text-sm text-[var(--color-ink)] mt-2 leading-relaxed">
+              <code className="font-mono text-[var(--color-emerald)]">run_benchmark</code>,{" "}
+              <code className="font-mono text-[var(--color-emerald)]">get_user_leaderboard</code>,{" "}
+              <code className="font-mono text-[var(--color-emerald)]">get_user_profile</code>.
+              Stdio transport, npm-installed.
+            </p>
+            <pre className="mt-4 rounded-xl bg-[var(--color-ink)] text-white text-xs p-3 overflow-x-auto font-mono">
+{`// ~/.claude/settings.json
+{
+  "mcpServers": {
+    "pipelinescore": {
+      "command": "npx",
+      "args": ["@pipelinescore/mcp"]
+    }
+  }
+}`}
+            </pre>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-16">
+        <h2 className="text-2xl font-bold tracking-tight text-[var(--color-ink)]">
           Supported providers
         </h2>
         <p className="text-sm text-[var(--color-ink-2)] mt-2 mb-6">
@@ -75,12 +128,12 @@ export default function RunPage() {
       </section>
 
       <section className="mt-16">
-        <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)] mb-8">
+        <h2 className="text-2xl font-bold tracking-tight text-[var(--color-ink)] mb-8">
           What happens when you run it
         </h2>
         <ol className="flex flex-col gap-6">
           <Step n={1} title="Fetch today's signed test pack">
-            The CLI pulls the rotating 30-task pack from{" "}
+            The CLI pulls the rotating 25-task pack from{" "}
             <code className="font-mono text-[var(--color-emerald)]">
               api.pipelinescore.ai/v1/testpack
             </code>{" "}
