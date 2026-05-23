@@ -65,7 +65,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           config_tag: {
             type: 'string',
-            description: 'Optional. Differentiator for this configuration vs the base model — examples: "system-prompt-coder", "lora-yetti-v8", "temp-zero", "tools-enabled". Persists alongside the nickname.',
+            description: 'Optional. Differentiator for this configuration vs the base model — examples: "system-prompt-coder", "lora-domain-finance", "temp-zero", "tools-enabled". Persists alongside the nickname.',
           },
           endpoint: {
             type: 'string',

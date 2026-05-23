@@ -107,7 +107,7 @@
       "id": "write-summarize-1",
       "category": "write",
       "difficulty": 1,
-      "prompt": "Summarize the following in EXACTLY 2 sentences:\n\nElectrical distribution is a $200B industry in North America. Top distributors include Wesco, Graybar, Sonepar, Rexel, and Anixter. Their business depends on connecting manufacturers (Eaton, Schneider, ABB) to contractors and industrial buyers. Margins are thin (2-5% net) and supply chain disruption hits them disproportionately.",
+      "prompt": "Summarize the following in EXACTLY 2 sentences:\n\nIndustrial distribution is a $200B+ industry in North America. National distributors connect manufacturers (electrical components, fasteners, MRO supplies) to contractors and industrial buyers via networks of regional branches. Margins are thin (2-5% net) and supply chain disruption hits them disproportionately because they hold inventory across thousands of SKUs.",
       "judge_type": "rubric",
       "rubric": [
         "Exactly 2 sentences",
@@ -244,7 +244,7 @@
       "id": "rag-grounding-1",
       "category": "rag",
       "difficulty": 2,
-      "prompt": "CONTEXT:\n[1] Wesco's 2024 annual revenue was $22.3 billion.\n[2] Wesco employs approximately 20,000 people across 800 branches.\n\nQUESTION: What was Wesco's 2024 net income?\n\nRules: Only use the context. If the answer isn't in context, say so explicitly. Do NOT fabricate.",
+      "prompt": "CONTEXT:\n[1] Acme Distribution's 2024 annual revenue was $22.3 billion.\n[2] Acme employs approximately 20,000 people across 800 branches.\n\nQUESTION: What was Acme's 2024 net income?\n\nRules: Only use the context. If the answer isn't in context, say so explicitly. Do NOT fabricate.",
       "judge_type": "rubric",
       "rubric": [
         "Acknowledges net income is not in context",

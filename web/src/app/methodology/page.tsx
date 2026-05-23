@@ -111,7 +111,7 @@ weights sum to 1.0`}
           <code className="font-mono text-[var(--color-emerald)]">--config-tag</code>{" "}
           flag — a short, free-form string like{" "}
           <code className="font-mono text-[var(--color-emerald)]">system-prompt-coder</code>,{" "}
-          <code className="font-mono text-[var(--color-emerald)]">lora-yetti-v8</code>,
+          <code className="font-mono text-[var(--color-emerald)]">lora-domain-finance</code>,
           or{" "}
           <code className="font-mono text-[var(--color-emerald)]">temp-zero</code>.
           The leaderboard shows it as a separate row from the base-model run,

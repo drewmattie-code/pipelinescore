@@ -4,3 +4,8 @@ node_modules/
 dist/
 backend/.data/
 .env
+.env.*
+!.env.example
+.DS_Store
+# Internal design + handoff docs — kept locally, not published
+docs/superpowers/
