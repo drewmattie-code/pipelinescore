@@ -28,10 +28,10 @@ COPY benchmarks /benchmarks
 # Trim the build toolchain now that better-sqlite3 is compiled
 RUN apt-get purge -y --auto-remove python3 build-essential
 
-# The benchmarks dir is loaded by seed.ts via a relative path. Symlink so the
-# path inside the image matches the repo layout.
-RUN ln -s /benchmarks /benchmarks-link && \
-    mkdir -p .data && \
+# seed.ts + testpack.ts resolve benchmarks via ../../benchmarks from src/ —
+# our /benchmarks COPY above lands at exactly that path. Just chown + prep
+# the data dir for the persistent disk.
+RUN mkdir -p .data && \
     chown -R node:node /app /benchmarks
 
 ENV NODE_ENV=production

@@ -1,0 +1,35 @@
+# Keep the Docker image small + reproducible. Anything below is excluded
+# from the build context.
+
+# Dependency trees (rebuilt fresh inside the image via npm ci)
+**/node_modules/
+
+# Local dev data
+backend/.data/
+**/.next/
+**/dist/
+**/.turbo/
+
+# Editor + OS junk
+.DS_Store
+.vscode/
+.idea/
+
+# Git internals
+.git/
+.gitignore
+
+# Web (Next.js) lives in a separate deploy — Cloudflare Pages
+web/
+
+# CLI + MCP are npm packages, not part of the backend image
+cli/
+mcp/
+
+# Tests + spec/docs aren't needed at runtime
+**/__tests__/
+**/*.test.ts
+docs/
+
+# Logs
+*.log
