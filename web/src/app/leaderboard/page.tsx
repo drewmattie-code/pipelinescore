@@ -1,4 +1,4 @@
-import { MOCK_MODELS } from "@/lib/mockData";
+import { getLeaderboardModels } from "@/lib/api";
 import { LeaderboardTable } from "@/components/LeaderboardTable";
 
 export const metadata = {
@@ -6,7 +6,8 @@ export const metadata = {
   description: "Full PipelineScore leaderboard — every model ranked by composite score and by category.",
 };
 
-export default function LeaderboardPage() {
+export default async function LeaderboardPage() {
+  const models = await getLeaderboardModels();
   return (
     <div className="max-w-7xl mx-auto px-6 md:px-10 py-20">
       <div className="max-w-3xl mb-12">
@@ -21,7 +22,7 @@ export default function LeaderboardPage() {
           actually wins at code, who can reason, and who&apos;s just fast.
         </p>
       </div>
-      <LeaderboardTable models={MOCK_MODELS} />
+      <LeaderboardTable models={models} />
     </div>
   );
 }

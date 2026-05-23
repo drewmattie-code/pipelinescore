@@ -1,12 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { MOCK_MODELS } from "@/lib/mockData";
+import { getLeaderboardModels } from "@/lib/api";
 import { ScoreNumber } from "@/components/ScoreNumber";
 import { TierBadge } from "@/components/TierBadge";
 import { CategoryBarsInline } from "@/components/CategoryBars";
 
-export default function Home() {
-  const top5 = MOCK_MODELS.slice(0, 5);
+export default async function Home() {
+  const models = await getLeaderboardModels();
+  const top5 = models.slice(0, 5);
 
   return (
     <div className="flex flex-col">

@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MOCK_MODELS, SAMPLE_TASKS, getModelBySlug } from "@/lib/mockData";
+import { getLeaderboardModels, getModel, SAMPLE_TASKS } from "@/lib/api";
 import { ScoreNumber } from "@/components/ScoreNumber";
 import { TierBadge } from "@/components/TierBadge";
 import { CategoryBars } from "@/components/CategoryBars";
 import { CATEGORY_LABELS } from "@/lib/tiers";
 
 export async function generateStaticParams() {
-  return MOCK_MODELS.map((m) => ({ slug: m.slug }));
+  const models = await getLeaderboardModels();
+  return models.map((m) => ({ slug: m.slug }));
 }
 
 export async function generateMetadata({
@@ -16,7 +17,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const model = getModelBySlug(slug);
+  const model = await getModel(slug);
   if (!model) return { title: "Model not found · PipelineScore" };
   return {
     title: `${model.displayName} · PipelineScore`,
@@ -30,10 +31,10 @@ export default async function ModelPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const model = getModelBySlug(slug);
+  const [model, allModels] = await Promise.all([getModel(slug), getLeaderboardModels()]);
   if (!model) notFound();
 
-  const otherModels = MOCK_MODELS.filter((m) => m.slug !== model.slug).slice(0, 5);
+  const otherModels = allModels.filter((m) => m.slug !== model.slug).slice(0, 5);
 
   return (
     <div className="max-w-7xl mx-auto px-6 md:px-10 py-16 md:py-20">

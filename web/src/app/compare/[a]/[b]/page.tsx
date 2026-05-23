@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MOCK_MODELS, getModelBySlug } from "@/lib/mockData";
+import { getModel } from "@/lib/api";
 import { ScoreNumber } from "@/components/ScoreNumber";
 import { TierBadge } from "@/components/TierBadge";
 import { CATEGORY_LABELS, TIER_BY_ID, tierForScore } from "@/lib/tiers";
@@ -14,8 +14,7 @@ export async function generateMetadata({
   params: Promise<{ a: string; b: string }>;
 }) {
   const { a, b } = await params;
-  const ma = getModelBySlug(a);
-  const mb = getModelBySlug(b);
+  const [ma, mb] = await Promise.all([getModel(a), getModel(b)]);
   if (!ma || !mb) return { title: "Comparison · PipelineScore" };
   return {
     title: `${ma.displayName} vs ${mb.displayName} · PipelineScore`,
@@ -29,8 +28,7 @@ export default async function ComparePage({
   params: Promise<{ a: string; b: string }>;
 }) {
   const { a, b } = await params;
-  const ma = getModelBySlug(a);
-  const mb = getModelBySlug(b);
+  const [ma, mb] = await Promise.all([getModel(a), getModel(b)]);
   if (!ma || !mb) notFound();
 
   const winner: Model | null =
