@@ -17,7 +17,10 @@ export function Header() {
         </Link>
         <nav className="flex items-center gap-7 text-sm text-[var(--color-ink-2)]">
           <Link href="/leaderboard" className="hover:text-[var(--color-ink)] transition-colors">
-            Leaderboard
+            Models
+          </Link>
+          <Link href="/leaderboard/users" className="hover:text-[var(--color-ink)] transition-colors">
+            Users
           </Link>
           <Link href="/methodology" className="hover:text-[var(--color-ink)] transition-colors">
             Methodology

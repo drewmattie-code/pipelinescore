@@ -36,6 +36,12 @@ const SubmissionInput = z.object({
   task_results: z.array(TaskResultInput).default([]),
   raw_transcripts: z.unknown().optional(),
   cli_version: z.string(),
+  user_nickname: z
+    .string()
+    .min(2)
+    .max(40)
+    .regex(/^[a-zA-Z0-9._-]+$/, 'nickname: alphanum + . _ - only')
+    .optional(),
   notes: z.string().nullable().optional(),
 });
 
@@ -77,8 +83,8 @@ router.post('/v1/submissions', (req, res) => {
       const tier = body.tier ?? tierForScore(body.pipeline_score);
 
       db.prepare(
-        `INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, user_nickname, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(
         submissionId,
         modelId,
@@ -89,6 +95,7 @@ router.post('/v1/submissions', (req, res) => {
         JSON.stringify(body.raw_transcripts ?? null),
         body.cli_version,
         req.ip ?? null,
+        body.user_nickname ?? null,
         body.notes ?? null
       );
 

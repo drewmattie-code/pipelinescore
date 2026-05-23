@@ -23,7 +23,7 @@ router.get('/v1/leaderboard', (req, res) => {
   }
 
   const sql = `
-    SELECT s.id, s.pipeline_score, s.tier, s.category_scores, s.lab_verified, s.created_at,
+    SELECT s.id, s.pipeline_score, s.tier, s.category_scores, s.lab_verified, s.user_nickname, s.created_at,
            m.slug AS model_slug, m.display_name AS model_display_name, m.provider AS model_provider,
            m.family AS model_family
     FROM submissions s
@@ -44,6 +44,7 @@ router.get('/v1/leaderboard', (req, res) => {
       tier: r.tier,
       category_scores: cs,
       lab_verified: Boolean(r.lab_verified),
+      user_nickname: (r.user_nickname as string | null) ?? null,
       created_at: r.created_at,
       model: {
         slug: r.model_slug,

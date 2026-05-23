@@ -217,3 +217,79 @@ export const SAMPLE_TASKS = [
     prompt: "Context lacks the answer — does the model fabricate or correctly say it can't?",
   },
 ];
+
+// ---- User mock data (fallback when backend is unreachable) -------------------
+import type { UserLeaderboardEntry, UserDirectoryEntry } from './types';
+
+const MOCK_NICKS = [
+  'karpathy_lite', 'goose-engineer', 'rust_witch', 'forklift', 'mira-shen',
+  'devnull', 'pipelinepilot', 'dr_inference', 'tokenwrangler', 'shipfastly',
+  'silicon-djinn', 'cli-native', 'haiku_or_die', 'opus-believer', 'gpt-cynic',
+  'gemini-fan', 'localmodels', 'edge_runner', 'agentic_dad', 'context-window',
+  'judgemental', 'rag-doll', 'tool-caller', 'reason-first', 'temp-zero',
+  'frontiermodel', 'open-weights', 'mistral-maxi', 'qwen-stan', 'deepseek-wins',
+  'cohere-cult', 'llama-llama', 'kimi-curious', 'benchmark-rat', 'lab',
+];
+
+function pickNick(seed: number): string {
+  return MOCK_NICKS[seed % MOCK_NICKS.length];
+}
+
+export const MOCK_USER_ENTRIES: UserLeaderboardEntry[] = (() => {
+  const out: UserLeaderboardEntry[] = [];
+  let n = 0;
+  for (const m of MOCK_MODELS) {
+    const submissionCount = 12;
+    for (let i = 0; i < submissionCount; i++) {
+      const driftPct = (Math.sin(n * 1.31) * 2.5) / 100;
+      const score = Math.max(0, Math.min(100, m.pipelineScore * (1 + driftPct)));
+      const drift = (k: number) => Math.max(0, Math.min(100, k * (1 + driftPct)));
+      const isLab = i === 0;
+      const daysAgo = (n * 7919) % 28;
+      const date = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .replace('T', ' ')
+        .slice(0, 19);
+      out.push({
+        submissionId: `mock-${m.slug}-${i + 1}`,
+        userNickname: isLab ? 'lab' : pickNick(n * 13 + 7),
+        pipelineScore: Number(score.toFixed(2)),
+        tier: tierForScore(score),
+        categoryScores: {
+          code: Number(drift(m.categoryScores.code).toFixed(2)),
+          reason: Number(drift(m.categoryScores.reason).toFixed(2)),
+          write: Number(drift(m.categoryScores.write).toFixed(2)),
+          tool_use: Number(drift(m.categoryScores.tool_use).toFixed(2)),
+          rag: Number(drift(m.categoryScores.rag).toFixed(2)),
+          speed: Number(drift(m.categoryScores.speed).toFixed(2)),
+        },
+        labVerified: isLab,
+        submittedAt: date,
+        cliVersion: '0.1.0',
+        model: {
+          slug: m.slug,
+          displayName: m.displayName,
+          provider: m.provider,
+          family: m.family,
+        },
+      });
+      n++;
+    }
+  }
+  return out;
+})();
+
+export const MOCK_USER_DIRECTORY: UserDirectoryEntry[] = (() => {
+  const agg: Record<string, { count: number; best: number }> = {};
+  for (const e of MOCK_USER_ENTRIES) {
+    const cur = agg[e.userNickname];
+    if (!cur) agg[e.userNickname] = { count: 1, best: e.pipelineScore };
+    else {
+      cur.count++;
+      if (e.pipelineScore > cur.best) cur.best = e.pipelineScore;
+    }
+  }
+  return Object.entries(agg)
+    .map(([userNickname, v]) => ({ userNickname, submissionCount: v.count, bestScore: v.best }))
+    .sort((a, b) => b.bestScore - a.bestScore);
+})();

@@ -9,6 +9,7 @@ import submissions from './routes/submissions.js';
 import leaderboard from './routes/leaderboard.js';
 import models from './routes/models.js';
 import compare from './routes/compare.js';
+import users from './routes/users.js';
 
 const PORT = parseInt(process.env.PORT ?? '4601', 10);
 const ALLOWED_ORIGINS = ['http://localhost:4600', 'http://localhost:4500'];
@@ -34,6 +35,7 @@ app.use(submissions);
 app.use(leaderboard);
 app.use(models);
 app.use(compare);
+app.use(users);
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'not_found' });

@@ -40,6 +40,7 @@ export function migrate(): void {
       cli_version      TEXT NOT NULL,
       submitter_ip     TEXT,
       user_id          TEXT,
+      user_nickname    TEXT,
       lab_verified     INTEGER DEFAULT 0,
       notes            TEXT,
       created_at       TEXT DEFAULT CURRENT_TIMESTAMP
@@ -64,6 +65,15 @@ export function migrate(): void {
 
     CREATE INDEX IF NOT EXISTS idx_task_results_sub ON task_results(submission_id);
   `);
+
+  // Idempotent column add for older DBs that pre-date user_nickname.
+  // SQLite won't add a column twice; we catch and ignore the "duplicate column" error.
+  try {
+    db.exec(`ALTER TABLE submissions ADD COLUMN user_nickname TEXT`);
+  } catch (err) {
+    if (!String(err).includes('duplicate column')) throw err;
+  }
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_subs_user ON submissions(user_nickname, created_at DESC)`);
 }
 
 export function uid(): string {

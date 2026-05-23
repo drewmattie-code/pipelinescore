@@ -207,11 +207,49 @@ function randomDaysAgoISO(maxDays: number): string {
   return d.toISOString().replace('T', ' ').slice(0, 19);
 }
 
+// Realistic dev nicknames — what you'd actually see if devs were submitting.
+const SEED_NICKNAMES = [
+  'karpathy_lite', 'goose-engineer', 'rust_witch', 'forklift', 'mira-shen',
+  'devnull', 'pipelinepilot', 'dr_inference', 'tokenwrangler', 'shipfastly',
+  'silicon-djinn', 'cli-native', 'haiku_or_die', 'opus-believer', 'gpt-cynic',
+  'gemini-fan', 'localmodels', 'edge_runner', 'agentic_dad', 'context-window',
+  'judgemental', 'rag-doll', 'tool-caller', 'reason-first', 'one-shot-only',
+  'temp-zero', 'frontiermodel', 'open-weights', 'mistral-maxi', 'qwen-stan',
+  'deepseek-wins', 'cohere-cult', 'llama-llama', 'kimi-curious', 'benchmark-rat',
+];
+
+function pickNickname(): string {
+  return SEED_NICKNAMES[Math.floor(Math.random() * SEED_NICKNAMES.length)];
+}
+
+// Many more synthetic submissions per model so the user leaderboard has volume.
+const SUBMISSIONS_PER_MODEL = 12;
+
+// Backfill: any submission missing a user_nickname gets one. Lab-verified rows get "lab".
+function backfillNicknames(): void {
+  const missing = db
+    .prepare(
+      `SELECT id, lab_verified FROM submissions WHERE user_nickname IS NULL OR user_nickname = ''`
+    )
+    .all() as Array<{ id: string; lab_verified: number }>;
+  if (missing.length === 0) return;
+  console.log(`[seed] backfilling user_nickname on ${missing.length} existing submissions`);
+  const update = db.prepare(`UPDATE submissions SET user_nickname = ? WHERE id = ?`);
+  const txn = db.transaction(() => {
+    for (const row of missing) {
+      const nick = row.lab_verified ? 'lab' : pickNickname();
+      update.run(nick, row.id);
+    }
+  });
+  txn();
+}
+
 export function seedIfEmpty(): void {
+  backfillNicknames();
   const modelCount = (db.prepare('SELECT COUNT(*) AS c FROM models').get() as { c: number }).c;
   if (modelCount > 0) return;
 
-  console.log('[seed] empty DB — seeding 10 models + 30 submissions');
+  console.log(`[seed] empty DB — seeding ${MODELS.length} models + ${MODELS.length * SUBMISSIONS_PER_MODEL} submissions`);
 
   const insertModel = db.prepare(`
     INSERT INTO models (id, slug, display_name, provider, provider_model, family, released_at, context_window, metadata)
@@ -219,8 +257,8 @@ export function seedIfEmpty(): void {
   `);
 
   const insertSubmission = db.prepare(`
-    INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, lab_verified, notes, created_at)
-    VALUES (@id, @model_id, @testpack_version, @pipeline_score, @tier, @category_scores, @raw_transcripts, @cli_version, @submitter_ip, @lab_verified, @notes, @created_at)
+    INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, user_nickname, lab_verified, notes, created_at)
+    VALUES (@id, @model_id, @testpack_version, @pipeline_score, @tier, @category_scores, @raw_transcripts, @cli_version, @submitter_ip, @user_nickname, @lab_verified, @notes, @created_at)
   `);
 
   const insertTaskResult = db.prepare(`
@@ -249,9 +287,9 @@ export function seedIfEmpty(): void {
       });
     }
 
-    // 30 submissions distributed roughly evenly across 10 models = 3 each
+    // 120 submissions distributed across 10 models = 12 each
     for (const m of MODELS) {
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < SUBMISSIONS_PER_MODEL; i++) {
         const submissionId = uid();
         const target = clamp(jitter(m.target_score, 1.5));
         const categoryScores = generateCategoryScores(target);
@@ -269,6 +307,7 @@ export function seedIfEmpty(): void {
           raw_transcripts: JSON.stringify({ note: 'seed data' }),
           cli_version: '0.1.0',
           submitter_ip: 'seed',
+          user_nickname: i === 0 ? 'lab' : pickNickname(),
           lab_verified: i === 0 ? 1 : 0,
           notes: i === 0 ? 'Lab-verified canonical run' : null,
           created_at: createdAt,
