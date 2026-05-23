@@ -16,7 +16,17 @@ import { eventLogger } from './lib/event-log.js';
 import { startRetention } from './lib/retention.js';
 
 const PORT = parseInt(process.env.PORT ?? '4601', 10);
-const ALLOWED_ORIGINS = ['http://localhost:4600', 'http://localhost:4500'];
+
+// CORS allowlist. Defaults to localhost dev ports; production hosts (Render,
+// Fly, etc.) set ALLOWED_ORIGINS as a comma-separated list:
+//   ALLOWED_ORIGINS=https://pipelinescore.ai,https://pipelinescore.pages.dev
+const DEFAULT_ORIGINS = ['http://localhost:4600', 'http://localhost:4500'];
+const ALLOWED_ORIGINS = (
+  process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
+    : DEFAULT_ORIGINS
+);
+console.log(`[pipelinescore-api] CORS allowlist: ${ALLOWED_ORIGINS.join(', ')}`);
 
 migrate();
 seedIfEmpty();
