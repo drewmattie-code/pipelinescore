@@ -49,6 +49,12 @@ const SubmissionInput = z.object({
     .max(60)
     .regex(/^[a-zA-Z0-9._-]+$/, 'config_tag: alphanum + . _ - only')
     .optional(),
+  hardware_tag: z
+    .string()
+    .min(2)
+    .max(60)
+    .regex(/^[a-zA-Z0-9._-]+$/, 'hardware_tag: alphanum + . _ - only')
+    .optional(),
   notes: z.string().nullable().optional(),
 });
 
@@ -90,8 +96,8 @@ router.post('/v1/submissions', (req, res) => {
       const tier = body.tier ?? tierForScore(body.pipeline_score);
 
       db.prepare(
-        `INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, user_nickname, config_tag, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, user_nickname, config_tag, hardware_tag, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(
         submissionId,
         modelId,
@@ -104,6 +110,7 @@ router.post('/v1/submissions', (req, res) => {
         req.ip ?? null,
         body.user_nickname ?? null,
         body.config_tag ?? null,
+        body.hardware_tag ?? null,
         body.notes ?? null
       );
 

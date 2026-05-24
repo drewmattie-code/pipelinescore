@@ -242,6 +242,27 @@ function pickConfigTag(): string | null {
   return CONFIG_TAGS[Math.floor(Math.random() * CONFIG_TAGS.length)];
 }
 
+// Hardware tags people would actually use. Heavy on consumer rigs.
+const HARDWARE_TAGS = [
+  null, null,                              // some folks don't tag their hardware
+  'm3-max-128gb',
+  'm2-ultra-192gb',
+  'm4-pro-48gb',
+  'rtx-4090-24gb',
+  'rtx-3090-24gb',
+  'rtx-3080-10gb',
+  'a100-80gb',
+  'h100-80gb',
+  'ryzen-7950x-cpu-only',
+  'ryzen-5950x-rtx-3060',
+  'cloud-api',                             // no local hardware — pure API
+  'cloud-api',                             // 2x weight: most cloud runs
+];
+
+function pickHardwareTag(): string | null {
+  return HARDWARE_TAGS[Math.floor(Math.random() * HARDWARE_TAGS.length)];
+}
+
 // Backfill: any submission missing a user_nickname gets one. Lab-verified rows get "lab".
 function backfillNicknames(): void {
   const missing = db
@@ -274,8 +295,8 @@ export function seedIfEmpty(): void {
   `);
 
   const insertSubmission = db.prepare(`
-    INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, user_nickname, config_tag, lab_verified, notes, created_at)
-    VALUES (@id, @model_id, @testpack_version, @pipeline_score, @tier, @category_scores, @raw_transcripts, @cli_version, @submitter_ip, @user_nickname, @config_tag, @lab_verified, @notes, @created_at)
+    INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, user_nickname, config_tag, hardware_tag, lab_verified, notes, created_at)
+    VALUES (@id, @model_id, @testpack_version, @pipeline_score, @tier, @category_scores, @raw_transcripts, @cli_version, @submitter_ip, @user_nickname, @config_tag, @hardware_tag, @lab_verified, @notes, @created_at)
   `);
 
   const insertTaskResult = db.prepare(`
@@ -326,6 +347,7 @@ export function seedIfEmpty(): void {
           submitter_ip: 'seed',
           user_nickname: i === 0 ? 'lab' : pickNickname(),
           config_tag: i === 0 ? null : pickConfigTag(),
+          hardware_tag: i === 0 ? 'lab-baseline' : pickHardwareTag(),
           lab_verified: i === 0 ? 1 : 0,
           notes: i === 0 ? 'Lab-verified canonical run' : null,
           created_at: createdAt,

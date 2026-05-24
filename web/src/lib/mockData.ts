@@ -258,6 +258,16 @@ export const MOCK_USER_ENTRIES: UserLeaderboardEntry[] = (() => {
         'temp-zero',
         'cot-style',
       ];
+      const MOCK_HARDWARE: (string | null)[] = [
+        null,
+        'm3-max-128gb',
+        'm2-ultra-192gb',
+        'rtx-4090-24gb',
+        'rtx-3090-24gb',
+        'a100-80gb',
+        'cloud-api',
+        'cloud-api',
+      ];
       out.push({
         submissionId: `mock-${m.slug}-${i + 1}`,
         userNickname: isLab ? 'lab' : pickNick(n * 13 + 7),
@@ -273,8 +283,14 @@ export const MOCK_USER_ENTRIES: UserLeaderboardEntry[] = (() => {
         },
         labVerified: isLab,
         configTag: isLab ? null : MOCK_TAGS[(n * 7) % MOCK_TAGS.length],
+        hardwareTag: isLab ? 'lab-baseline' : MOCK_HARDWARE[(n * 11) % MOCK_HARDWARE.length],
         submittedAt: date,
         cliVersion: '0.1.0',
+        efficiency: {
+          totalTokens: 4000 + Math.floor((n * 137) % 4000),
+          avgLatencyMs: 400 + Math.floor((n * 73) % 800),
+          taskCount: 25,
+        },
         model: {
           slug: m.slug,
           displayName: m.displayName,

@@ -67,6 +67,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             type: 'string',
             description: 'Optional. Differentiator for this configuration vs the base model — examples: "system-prompt-coder", "lora-domain-finance", "temp-zero", "tools-enabled". Persists alongside the nickname.',
           },
+          hardware_tag: {
+            type: 'string',
+            description: 'Optional but STRONGLY RECOMMENDED for local-model runs. Hardware the model is running on — examples: "m3-max-128gb", "rtx-4090-24gb", "ryzen-7950x-cpu-only", "a100-80gb", "cloud-api". The leaderboard groups by (model, hardware) so this is what makes hardware-vs-hardware comparisons possible.',
+          },
           endpoint: {
             type: 'string',
             description: 'Required when provider=local. The OpenAI-compatible base URL.',
@@ -98,6 +102,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           user: {
             type: 'string',
             description: 'Filter to a specific nickname.',
+          },
+          hardware: {
+            type: 'string',
+            description: 'Filter to a specific hardware tag (e.g. "m3-max-128gb", "rtx-4090-24gb").',
           },
           lab_verified: {
             type: 'boolean',
@@ -168,6 +176,7 @@ interface RunArgs {
   model: string;
   user?: string;
   config_tag?: string;
+  hardware_tag?: string;
   endpoint?: string;
   api_key?: string;
 }
@@ -192,6 +201,7 @@ async function runBenchmark(args: RunArgs): Promise<{ content: Array<{ type: 'te
   ];
   if (args.user) cliArgs.push('--user', args.user);
   if (args.config_tag) cliArgs.push('--config-tag', args.config_tag);
+  if (args.hardware_tag) cliArgs.push('--hardware-tag', args.hardware_tag);
   if (args.endpoint) cliArgs.push('--endpoint', args.endpoint);
   if (args.api_key) cliArgs.push('--api-key', args.api_key);
 
@@ -236,6 +246,7 @@ interface LeaderboardArgs {
   provider?: string;
   tier?: string;
   user?: string;
+  hardware?: string;
   lab_verified?: boolean;
   sort?: string;
   dir?: string;
@@ -247,6 +258,7 @@ async function getUserLeaderboard(args: LeaderboardArgs): Promise<{ content: Arr
   if (args.provider) params.set('provider', args.provider);
   if (args.tier) params.set('tier', args.tier);
   if (args.user) params.set('user', args.user);
+  if (args.hardware) params.set('hardware', args.hardware);
   if (args.lab_verified) params.set('lab_verified', '1');
   if (args.sort) params.set('sort', args.sort);
   if (args.dir) params.set('dir', args.dir);
@@ -261,6 +273,7 @@ async function getUserLeaderboard(args: LeaderboardArgs): Promise<{ content: Arr
       pipeline_score: number;
       tier: string;
       config_tag: string | null;
+      hardware_tag: string | null;
       model: { display_name: string; provider: string };
       created_at: string;
     }>;
@@ -270,8 +283,9 @@ async function getUserLeaderboard(args: LeaderboardArgs): Promise<{ content: Arr
     `Showing ${data.entries.length} of ${data.total} submissions:`,
     '',
     ...data.entries.map((e, i) => {
-      const tag = e.config_tag ? ` [${e.config_tag}]` : '';
-      return `  ${String(i + 1).padStart(3)}. ${e.user_nickname.padEnd(20)} ${e.model.display_name.padEnd(28)} ${e.pipeline_score.toFixed(1).padStart(6)} ${e.tier.toUpperCase().padEnd(10)} ${e.model.provider}${tag}`;
+      const cfg = e.config_tag ? ` cfg=${e.config_tag}` : '';
+      const hw = e.hardware_tag ? ` hw=${e.hardware_tag}` : '';
+      return `  ${String(i + 1).padStart(3)}. ${e.user_nickname.padEnd(20)} ${e.model.display_name.padEnd(28)} ${e.pipeline_score.toFixed(1).padStart(6)} ${e.tier.toUpperCase().padEnd(10)} ${e.model.provider}${hw}${cfg}`;
     }),
   ];
   return { content: [{ type: 'text', text: lines.join('\n') }] };

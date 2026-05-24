@@ -13,6 +13,43 @@ const SORT_COLUMNS: Record<string, string> = {
   tier: 's.pipeline_score', // tier follows from score, so sorting by score == tier
 };
 
+// Per-submission efficiency aggregates pulled from task_results. Done in a
+// single query so we can map submission_id -> totals/averages cheaply.
+interface SubmissionEfficiency {
+  total_tokens: number;
+  avg_latency_ms: number | null;
+  task_count: number;
+}
+function efficiencyBySubmission(submissionIds: string[]): Record<string, SubmissionEfficiency> {
+  if (submissionIds.length === 0) return {};
+  const placeholders = submissionIds.map(() => '?').join(',');
+  const rows = db
+    .prepare(
+      `SELECT submission_id,
+              COALESCE(SUM(tokens_used), 0) AS total_tokens,
+              CASE WHEN COUNT(latency_ms) > 0 THEN AVG(latency_ms) ELSE NULL END AS avg_latency_ms,
+              COUNT(*) AS task_count
+         FROM task_results
+        WHERE submission_id IN (${placeholders})
+        GROUP BY submission_id`
+    )
+    .all(...submissionIds) as Array<{
+      submission_id: string;
+      total_tokens: number;
+      avg_latency_ms: number | null;
+      task_count: number;
+    }>;
+  const out: Record<string, SubmissionEfficiency> = {};
+  for (const r of rows) {
+    out[r.submission_id] = {
+      total_tokens: r.total_tokens,
+      avg_latency_ms: r.avg_latency_ms !== null ? Math.round(r.avg_latency_ms) : null,
+      task_count: r.task_count,
+    };
+  }
+  return out;
+}
+
 // ---- /v1/leaderboard/users ----------------------------------------------------
 // Long, sortable, filterable feed of submissions w/ user nicknames.
 // cpu.userbenchmark.com analogue.
@@ -23,6 +60,7 @@ router.get('/v1/leaderboard/users', (req, res) => {
   const user = typeof q.user === 'string' ? q.user : undefined;
   // search is partial-match across user_nickname; user is exact match
   const search = typeof q.search === 'string' ? q.search.trim() : undefined;
+  const hardware = typeof q.hardware === 'string' ? q.hardware : undefined;
   const labVerified = q.lab_verified === '1' || q.lab_verified === 'true';
   const sort = typeof q.sort === 'string' && SORT_COLUMNS[q.sort] ? q.sort : 'score';
   const dir = q.dir === 'asc' ? 'ASC' : 'DESC';
@@ -36,6 +74,7 @@ router.get('/v1/leaderboard/users', (req, res) => {
   if (provider) { where.push('m.provider = ?'); params.push(provider); }
   if (tier) { where.push('LOWER(s.tier) = ?'); params.push(tier); }
   if (user) { where.push('s.user_nickname = ?'); params.push(user); }
+  if (hardware) { where.push('s.hardware_tag = ?'); params.push(hardware); }
   if (search) {
     // Escape LIKE wildcards in user input, then wrap in %...% for partial match.
     const escaped = search.replace(/[\\%_]/g, (m) => `\\${m}`);
@@ -52,7 +91,7 @@ router.get('/v1/leaderboard/users', (req, res) => {
 
   const sortCol = SORT_COLUMNS[sort];
   const sql = `
-    SELECT s.id, s.pipeline_score, s.tier, s.category_scores, s.lab_verified, s.user_nickname, s.config_tag, s.created_at, s.cli_version,
+    SELECT s.id, s.pipeline_score, s.tier, s.category_scores, s.lab_verified, s.user_nickname, s.config_tag, s.hardware_tag, s.created_at, s.cli_version,
            m.slug AS model_slug, m.display_name AS model_display_name, m.provider AS model_provider, m.family AS model_family
     FROM submissions s
     JOIN models m ON s.model_id = m.id
@@ -62,6 +101,8 @@ router.get('/v1/leaderboard/users', (req, res) => {
   `;
   const rows = db.prepare(sql).all(...params, limit, offset) as Array<Record<string, unknown>>;
 
+  const efficiency = efficiencyBySubmission(rows.map((r) => r.id as string));
+
   const entries = rows.map((r) => ({
     submission_id: r.id as string,
     pipeline_score: r.pipeline_score as number,
@@ -70,8 +111,10 @@ router.get('/v1/leaderboard/users', (req, res) => {
     lab_verified: Boolean(r.lab_verified),
     user_nickname: r.user_nickname as string,
     config_tag: (r.config_tag as string | null) ?? null,
+    hardware_tag: (r.hardware_tag as string | null) ?? null,
     created_at: toIsoDate(r.created_at as string),
     cli_version: r.cli_version as string,
+    efficiency: efficiency[r.id as string] ?? { total_tokens: 0, avg_latency_ms: null, task_count: 0 },
     model: {
       slug: r.model_slug as string,
       display_name: r.model_display_name as string,
@@ -85,7 +128,7 @@ router.get('/v1/leaderboard/users', (req, res) => {
     count: entries.length,
     limit,
     offset,
-    filters: { provider, tier, user, search, lab_verified: labVerified, days, sort, dir },
+    filters: { provider, tier, user, search, hardware, lab_verified: labVerified, days, sort, dir },
     entries,
   }));
 });
@@ -98,7 +141,7 @@ router.get('/v1/users/:nickname', (req, res) => {
 
   const subs = db
     .prepare(
-      `SELECT s.id, s.pipeline_score, s.tier, s.category_scores, s.lab_verified, s.config_tag, s.created_at, s.cli_version,
+      `SELECT s.id, s.pipeline_score, s.tier, s.category_scores, s.lab_verified, s.config_tag, s.hardware_tag, s.created_at, s.cli_version,
               m.slug AS model_slug, m.display_name AS model_display_name, m.provider AS model_provider, m.family AS model_family
        FROM submissions s
        JOIN models m ON s.model_id = m.id
@@ -111,6 +154,8 @@ router.get('/v1/users/:nickname', (req, res) => {
     return res.status(404).json(stamp({ error: 'user_not_found', nickname: nick }));
   }
 
+  const efficiency = efficiencyBySubmission(subs.map((r) => r.id as string));
+
   const entries = subs.map((r) => ({
     submission_id: r.id as string,
     pipeline_score: r.pipeline_score as number,
@@ -118,8 +163,10 @@ router.get('/v1/users/:nickname', (req, res) => {
     category_scores: JSON.parse(r.category_scores as string) as Record<string, number>,
     lab_verified: Boolean(r.lab_verified),
     config_tag: (r.config_tag as string | null) ?? null,
+    hardware_tag: (r.hardware_tag as string | null) ?? null,
     created_at: toIsoDate(r.created_at as string),
     cli_version: r.cli_version as string,
+    efficiency: efficiency[r.id as string] ?? { total_tokens: 0, avg_latency_ms: null, task_count: 0 },
     model: {
       slug: r.model_slug as string,
       display_name: r.model_display_name as string,
@@ -147,6 +194,24 @@ router.get('/v1/users/:nickname', (req, res) => {
     providerCounts[e.model.provider] = (providerCounts[e.model.provider] ?? 0) + 1;
   }
 
+  // Hardware distribution + most-used rig
+  const hardwareCounts: Record<string, number> = {};
+  for (const e of entries) {
+    const h = e.hardware_tag ?? 'unspecified';
+    hardwareCounts[h] = (hardwareCounts[h] ?? 0) + 1;
+  }
+
+  // Efficiency aggregates across all this user's runs
+  const totalTokens = entries.reduce((s, e) => s + (e.efficiency.total_tokens ?? 0), 0);
+  const latencySamples = entries
+    .map((e) => e.efficiency.avg_latency_ms)
+    .filter((v): v is number => v !== null);
+  const avgLatencyMs =
+    latencySamples.length > 0
+      ? Math.round(latencySamples.reduce((a, b) => a + b, 0) / latencySamples.length)
+      : null;
+  const totalTasksRun = entries.reduce((s, e) => s + (e.efficiency.task_count ?? 0), 0);
+
   // First-seen — find min on the raw entries (already ISO at this point)
   const firstSeen = entries.reduce(
     (min, e) => ((e.created_at ?? '') < (min ?? '') ? e.created_at : min),
@@ -162,6 +227,12 @@ router.get('/v1/users/:nickname', (req, res) => {
     avg_score: avgScore,
     models_tried: modelsTried,
     provider_counts: providerCounts,
+    hardware_counts: hardwareCounts,
+    efficiency: {
+      total_tokens: totalTokens,
+      total_tasks_run: totalTasksRun,
+      avg_latency_ms: avgLatencyMs,
+    },
     first_seen: firstSeen,
     submissions: entries,
   }));

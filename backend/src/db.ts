@@ -45,6 +45,7 @@ export function migrate(): void {
       user_id          TEXT,
       user_nickname    TEXT,
       config_tag       TEXT,
+      hardware_tag     TEXT,
       lab_verified     INTEGER DEFAULT 0,
       notes            TEXT,
       created_at       TEXT DEFAULT CURRENT_TIMESTAMP
@@ -91,7 +92,7 @@ export function migrate(): void {
 
   // Idempotent column adds for older DBs. SQLite won't add a column twice;
   // we catch and ignore the "duplicate column" error.
-  for (const col of ['user_nickname TEXT', 'config_tag TEXT']) {
+  for (const col of ['user_nickname TEXT', 'config_tag TEXT', 'hardware_tag TEXT']) {
     try {
       db.exec(`ALTER TABLE submissions ADD COLUMN ${col}`);
     } catch (err) {
@@ -100,6 +101,7 @@ export function migrate(): void {
   }
   db.exec(`CREATE INDEX IF NOT EXISTS idx_subs_user ON submissions(user_nickname, created_at DESC)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_subs_config ON submissions(config_tag)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_subs_hardware ON submissions(hardware_tag)`);
 }
 
 export function uid(): string {

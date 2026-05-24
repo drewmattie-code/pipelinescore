@@ -58,6 +58,11 @@ export default async function UserDashboardPage({
   };
 
   const sortedProviders = Object.entries(profile.providerCounts).sort((a, b) => b[1] - a[1]);
+  const sortedHardware = Object.entries(profile.hardwareCounts).sort((a, b) => b[1] - a[1]);
+
+  // Format big numbers as e.g. "53.3K"
+  const fmtBig = (n: number): string =>
+    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : String(n);
 
   return (
     <div className="max-w-7xl mx-auto px-6 md:px-10 py-16 md:py-20">
@@ -115,8 +120,32 @@ export default async function UserDashboardPage({
         </div>
       </div>
 
+      {/* Efficiency strip — total tokens, avg latency, tasks run */}
+      <section className="mt-12 rounded-3xl border border-[var(--color-line-2)] bg-[var(--color-ink)] text-white p-6 md:p-8 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+        <Efficiency
+          label="Total tokens"
+          value={fmtBig(profile.efficiency.totalTokens)}
+          hint="Across every task this user has run"
+        />
+        <Efficiency
+          label="Avg latency"
+          value={profile.efficiency.avgLatencyMs !== null ? `${profile.efficiency.avgLatencyMs}ms` : "—"}
+          hint="Per task, across all submissions"
+        />
+        <Efficiency
+          label="Tasks run"
+          value={fmtBig(profile.efficiency.totalTasksRun)}
+          hint={`${profile.submissionCount} submission${profile.submissionCount === 1 ? "" : "s"} x ~25 tasks`}
+        />
+        <Efficiency
+          label="Rigs used"
+          value={String(Object.keys(profile.hardwareCounts).length)}
+          hint="Distinct hardware tags"
+        />
+      </section>
+
       {/* Category signature */}
-      <section className="mt-16 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-12">
+      <section className="mt-12 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-12">
         <div className="rounded-3xl border border-[var(--color-line-2)] bg-[var(--color-surface)] p-8 md:p-10">
           <h2 className="text-xl font-semibold text-[var(--color-ink)] tracking-tight">
             Category signature
@@ -128,35 +157,72 @@ export default async function UserDashboardPage({
           <CategoryBars scores={avgCategoryScores} />
         </div>
 
-        <div className="rounded-3xl border border-[var(--color-line-2)] bg-[var(--color-surface)] p-8 md:p-10">
-          <h2 className="text-xl font-semibold text-[var(--color-ink)] tracking-tight">
-            Provider mix
-          </h2>
-          <p className="text-sm text-[var(--color-ink-2)] mt-1 mb-6">
-            Where they spend their tokens.
-          </p>
-          <div className="flex flex-col gap-3">
-            {sortedProviders.map(([provider, count]) => {
-              const pct = (count / profile.submissionCount) * 100;
-              return (
-                <div key={provider}>
-                  <div className="flex justify-between items-baseline mb-1">
-                    <span className="text-sm uppercase tracking-wider text-[var(--color-ink-2)]">
-                      {provider}
-                    </span>
-                    <span className="font-mono text-xs text-[var(--color-ink-3)]">
-                      {count} ({pct.toFixed(0)}%)
-                    </span>
+        <div className="rounded-3xl border border-[var(--color-line-2)] bg-[var(--color-surface)] p-8 md:p-10 flex flex-col gap-6">
+          <div>
+            <h2 className="text-xl font-bold text-[var(--color-ink)] tracking-tight">
+              Hardware mix
+            </h2>
+            <p className="text-sm text-[var(--color-ink-2)] mt-1 mb-4">
+              Rigs this user benchmarked on.
+            </p>
+            <div className="flex flex-col gap-2">
+              {sortedHardware.map(([hardware, count]) => {
+                const pct = (count / profile.submissionCount) * 100;
+                const isUnspec = hardware === "unspecified";
+                return (
+                  <div key={hardware}>
+                    <div className="flex justify-between items-baseline mb-1">
+                      <span
+                        className={`text-xs font-mono ${isUnspec ? "text-[var(--color-ink-3)] italic" : "text-[var(--color-ink)]"}`}
+                      >
+                        {isUnspec ? "no hardware tag" : hardware}
+                      </span>
+                      <span className="font-mono text-xs text-[var(--color-ink-3)]">
+                        {count} ({pct.toFixed(0)}%)
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-[var(--color-line-2)] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[var(--color-ink)] rounded-full"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-1.5 bg-[var(--color-line-2)] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[var(--color-emerald)] rounded-full"
-                      style={{ width: `${pct}%` }}
-                    />
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-bold text-[var(--color-ink)] tracking-tight">
+              Provider mix
+            </h2>
+            <p className="text-sm text-[var(--color-ink-2)] mt-1 mb-4">
+              Where they spend their tokens.
+            </p>
+            <div className="flex flex-col gap-2">
+              {sortedProviders.map(([provider, count]) => {
+                const pct = (count / profile.submissionCount) * 100;
+                return (
+                  <div key={provider}>
+                    <div className="flex justify-between items-baseline mb-1">
+                      <span className="text-sm uppercase tracking-wider text-[var(--color-ink)]">
+                        {provider}
+                      </span>
+                      <span className="font-mono text-xs text-[var(--color-ink-3)]">
+                        {count} ({pct.toFixed(0)}%)
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-[var(--color-line-2)] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[var(--color-emerald)] rounded-full"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>
@@ -240,13 +306,16 @@ export default async function UserDashboardPage({
                 <tr className="text-left text-[var(--color-ink-3)] uppercase tracking-wider text-[11px]">
                   <th className="px-4 py-3 w-12">#</th>
                   <th className="px-4 py-3">Model</th>
+                  <th className="px-4 py-3 hidden lg:table-cell">Hardware</th>
                   <th className="px-4 py-3 text-right">Score</th>
                   <th className="px-4 py-3">Tier</th>
                   {CATEGORIES.map((c) => (
-                    <th key={c} className="px-3 py-3 text-right hidden md:table-cell">
+                    <th key={c} className="px-3 py-3 text-right hidden xl:table-cell">
                       {CATEGORY_LABELS[c]}
                     </th>
                   ))}
+                  <th className="px-4 py-3 text-right hidden md:table-cell">Tokens</th>
+                  <th className="px-4 py-3 text-right hidden md:table-cell">Avg ms</th>
                   <th className="px-4 py-3 hidden lg:table-cell">Date</th>
                 </tr>
               </thead>
@@ -269,6 +338,15 @@ export default async function UserDashboardPage({
                           {s.model.displayName}
                         </Link>
                       </td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        {s.hardwareTag ? (
+                          <span className="inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-[color:var(--color-line-2)] text-[var(--color-ink)]">
+                            {s.hardwareTag}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] uppercase tracking-wider text-[var(--color-ink-3)]">—</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right font-mono tabular-nums font-semibold text-[var(--color-ink)]">
                         {s.pipelineScore.toFixed(1)}
                       </td>
@@ -283,11 +361,17 @@ export default async function UserDashboardPage({
                       {CATEGORIES.map((c) => (
                         <td
                           key={c}
-                          className="px-3 py-3 text-right hidden md:table-cell text-[var(--color-ink-2)] font-mono text-xs tabular-nums"
+                          className="px-3 py-3 text-right hidden xl:table-cell text-[var(--color-ink-2)] font-mono text-xs tabular-nums"
                         >
                           {s.categoryScores[c].toFixed(1)}
                         </td>
                       ))}
+                      <td className="px-4 py-3 text-right hidden md:table-cell text-[var(--color-ink-2)] font-mono text-xs tabular-nums">
+                        {fmtBig(s.efficiency.totalTokens)}
+                      </td>
+                      <td className="px-4 py-3 text-right hidden md:table-cell text-[var(--color-ink-2)] font-mono text-xs tabular-nums">
+                        {s.efficiency.avgLatencyMs ?? "—"}
+                      </td>
                       <td className="px-4 py-3 hidden lg:table-cell text-[var(--color-ink-3)] font-mono text-xs">
                         {s.submittedAt.slice(0, 10)}
                       </td>
@@ -299,6 +383,22 @@ export default async function UserDashboardPage({
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function Efficiency({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[10px] md:text-xs uppercase tracking-[0.18em] text-[var(--color-emerald-light)] font-semibold">
+        {label}
+      </span>
+      <span className="font-mono text-2xl md:text-3xl font-bold tabular-nums text-white">
+        {value}
+      </span>
+      <span className="text-[10px] text-[color:var(--color-line)] mt-0.5 leading-snug">
+        {hint}
+      </span>
     </div>
   );
 }

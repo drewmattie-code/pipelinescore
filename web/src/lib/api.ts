@@ -178,8 +178,14 @@ interface BackendUserEntry {
   category_scores: Record<string, number>;
   lab_verified: boolean;
   config_tag?: string | null;
+  hardware_tag?: string | null;
   created_at: string;
   cli_version: string;
+  efficiency?: {
+    total_tokens?: number;
+    avg_latency_ms?: number | null;
+    task_count?: number;
+  };
   model: {
     slug: string;
     display_name: string;
@@ -204,8 +210,14 @@ function adaptUserEntry(e: BackendUserEntry): UserLeaderboardEntry {
     },
     labVerified: !!e.lab_verified,
     configTag: e.config_tag ?? null,
+    hardwareTag: e.hardware_tag ?? null,
     submittedAt: e.created_at,
     cliVersion: e.cli_version,
+    efficiency: {
+      totalTokens: e.efficiency?.total_tokens ?? 0,
+      avgLatencyMs: e.efficiency?.avg_latency_ms ?? null,
+      taskCount: e.efficiency?.task_count ?? 0,
+    },
     model: {
       slug: e.model.slug,
       displayName: e.model.display_name,
@@ -278,6 +290,12 @@ export async function getUserProfile(nickname: string): Promise<UserProfile | un
       avg_score: number;
       models_tried: BackendUserEntry[];
       provider_counts: Record<string, number>;
+      hardware_counts?: Record<string, number>;
+      efficiency?: {
+        total_tokens?: number;
+        total_tasks_run?: number;
+        avg_latency_ms?: number | null;
+      };
       first_seen: string;
       submissions: BackendUserEntry[];
     };
@@ -295,6 +313,12 @@ export async function getUserProfile(nickname: string): Promise<UserProfile | un
       avgScore: data.avg_score,
       modelsTried: data.models_tried.map(adaptUserEntry),
       providerCounts: data.provider_counts,
+      hardwareCounts: data.hardware_counts ?? {},
+      efficiency: {
+        totalTokens: data.efficiency?.total_tokens ?? 0,
+        totalTasksRun: data.efficiency?.total_tasks_run ?? 0,
+        avgLatencyMs: data.efficiency?.avg_latency_ms ?? null,
+      },
       firstSeen: data.first_seen,
       submissions: data.submissions.map(adaptUserEntry),
     };
@@ -370,7 +394,22 @@ function mockUserProfile(nickname: string): UserProfile | undefined {
     if (!cur || e.pipelineScore > cur.pipelineScore) bestPerModel[e.model.slug] = e;
   }
   const providerCounts: Record<string, number> = {};
-  for (const e of subs) providerCounts[e.model.provider] = (providerCounts[e.model.provider] ?? 0) + 1;
+  const hardwareCounts: Record<string, number> = {};
+  let totalTokens = 0;
+  let totalTasksRun = 0;
+  const latencySamples: number[] = [];
+  for (const e of subs) {
+    providerCounts[e.model.provider] = (providerCounts[e.model.provider] ?? 0) + 1;
+    const h = e.hardwareTag ?? 'unspecified';
+    hardwareCounts[h] = (hardwareCounts[h] ?? 0) + 1;
+    totalTokens += e.efficiency.totalTokens ?? 0;
+    totalTasksRun += e.efficiency.taskCount ?? 0;
+    if (e.efficiency.avgLatencyMs !== null) latencySamples.push(e.efficiency.avgLatencyMs);
+  }
+  const avgLatencyMs =
+    latencySamples.length > 0
+      ? Math.round(latencySamples.reduce((a, b) => a + b, 0) / latencySamples.length)
+      : null;
   return {
     nickname,
     submissionCount: subs.length,
@@ -380,6 +419,8 @@ function mockUserProfile(nickname: string): UserProfile | undefined {
     avgScore: Math.round((subs.reduce((s, e) => s + e.pipelineScore, 0) / subs.length) * 100) / 100,
     modelsTried: Object.values(bestPerModel).sort((a, b) => b.pipelineScore - a.pipelineScore),
     providerCounts,
+    hardwareCounts,
+    efficiency: { totalTokens, totalTasksRun, avgLatencyMs },
     firstSeen: subs.reduce((min, e) => (e.submittedAt < min ? e.submittedAt : min), subs[0].submittedAt),
     submissions: sorted,
   };

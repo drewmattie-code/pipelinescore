@@ -47,6 +47,12 @@ export interface Submission {
   userNickname?: string | null;
 }
 
+export interface SubmissionEfficiency {
+  totalTokens: number;
+  avgLatencyMs: number | null;
+  taskCount: number;
+}
+
 // Long-form user leaderboard entry — joined w/ model display data.
 export interface UserLeaderboardEntry {
   submissionId: string;
@@ -56,8 +62,10 @@ export interface UserLeaderboardEntry {
   categoryScores: CategoryScores;
   labVerified: boolean;
   configTag: string | null;
+  hardwareTag: string | null;
   submittedAt: string;
   cliVersion: string;
+  efficiency: SubmissionEfficiency;
   model: {
     slug: string;
     displayName: string;
@@ -98,6 +106,12 @@ export interface UserProfile {
   avgScore: number;
   modelsTried: UserLeaderboardEntry[];
   providerCounts: Record<string, number>;
+  hardwareCounts: Record<string, number>;
+  efficiency: {
+    totalTokens: number;
+    totalTasksRun: number;
+    avgLatencyMs: number | null;
+  };
   firstSeen: string;
   submissions: UserLeaderboardEntry[];
 }

@@ -18,10 +18,12 @@ import type { LLMProvider } from './types.js';
 const CONFIG_PATH = resolve(homedir(), '.config', 'pipelinescore', 'config.json');
 const NICKNAME_RE = /^[a-zA-Z0-9._-]{2,40}$/;
 const CONFIG_TAG_RE = /^[a-zA-Z0-9._-]{2,60}$/;
+const HARDWARE_TAG_RE = /^[a-zA-Z0-9._-]{2,60}$/;
 
 interface SavedConfig {
   user_nickname?: string;
   config_tag?: string;
+  hardware_tag?: string;
 }
 
 function loadSavedConfig(): SavedConfig {
@@ -98,6 +100,10 @@ program
     '--config-tag <tag>',
     'differentiator for this configuration (LoRA adapter, system prompt, skill, persona, etc.)'
   )
+  .option(
+    '--hardware-tag <tag>',
+    "your hardware (e.g. 'm3-max-128gb', 'rtx-3090', 'ryzen-7950x-cpu-only', 'a100-80gb')"
+  )
   .option('--no-submit', 'do not POST results to the backend')
   .option(
     '--no-open',
@@ -126,6 +132,7 @@ interface RunCommandOptions {
   site: string;
   user?: string;
   configTag?: string;
+  hardwareTag?: string;
   submit: boolean;
   open: boolean;
 }
@@ -133,7 +140,7 @@ interface RunCommandOptions {
 async function runCommand(opts: RunCommandOptions): Promise<void> {
   const providerName = opts.provider.toLowerCase();
 
-  // Resolve nickname + config_tag: flag > saved config > none. Validate + persist.
+  // Resolve nickname + config_tag + hardware_tag: flag > saved config > none. Validate + persist.
   const saved = loadSavedConfig();
   let nickname: string | undefined = opts.user ?? saved.user_nickname;
   if (nickname && !NICKNAME_RE.test(nickname)) {
@@ -143,20 +150,26 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
   if (configTag && !CONFIG_TAG_RE.test(configTag)) {
     throw new Error(`Invalid --config-tag "${configTag}". Use 2-60 chars of [a-zA-Z0-9._-].`);
   }
+  let hardwareTag: string | undefined = opts.hardwareTag ?? saved.hardware_tag;
+  if (hardwareTag && !HARDWARE_TAG_RE.test(hardwareTag)) {
+    throw new Error(`Invalid --hardware-tag "${hardwareTag}". Use 2-60 chars of [a-zA-Z0-9._-].`);
+  }
   const persist: SavedConfig = {};
   if (opts.user && nickname) persist.user_nickname = nickname;
   if (opts.configTag && configTag) persist.config_tag = configTag;
+  if (opts.hardwareTag && hardwareTag) persist.hardware_tag = hardwareTag;
   if (Object.keys(persist).length > 0) saveConfig(persist);
 
   // Banner
   process.stdout.write(
     boxen(
       `${chalk.bold('PipelineScore')} ${chalk.dim('v0.1.0')}\n` +
-        `${chalk.dim('Provider:')}   ${providerName}\n` +
-        `${chalk.dim('Model:')}      ${opts.model}\n` +
-        `${chalk.dim('Config tag:')} ${configTag ?? chalk.italic.dim('— (base model, no customization)')}\n` +
-        `${chalk.dim('User:')}       ${nickname ?? chalk.italic.dim('anonymous (use --user to claim a nickname)')}\n` +
-        `${chalk.dim('Submit:')}     ${opts.submit ? 'yes' : 'no'}`,
+        `${chalk.dim('Provider:')}     ${providerName}\n` +
+        `${chalk.dim('Model:')}        ${opts.model}\n` +
+        `${chalk.dim('Hardware:')}     ${hardwareTag ?? chalk.italic.dim('— (use --hardware-tag for local-hardware comparisons)')}\n` +
+        `${chalk.dim('Config tag:')}   ${configTag ?? chalk.italic.dim('— (base model, no customization)')}\n` +
+        `${chalk.dim('User:')}         ${nickname ?? chalk.italic.dim('anonymous (use --user to claim a nickname)')}\n` +
+        `${chalk.dim('Submit:')}       ${opts.submit ? 'yes' : 'no'}`,
       { padding: { top: 0, bottom: 0, left: 1, right: 1 }, borderStyle: 'round', borderColor: 'cyan' },
     ) + '\n',
   );
@@ -186,7 +199,12 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
   // Submit (optional)
   let shareUrl: string | undefined;
   if (opts.submit) {
-    const payload = { ...summary, user_nickname: nickname, config_tag: configTag };
+    const payload = {
+      ...summary,
+      user_nickname: nickname,
+      config_tag: configTag,
+      hardware_tag: hardwareTag,
+    };
     try {
       const res = await fetch(`${opts.backend}/v1/submissions`, {
         method: 'POST',
