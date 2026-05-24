@@ -31,8 +31,8 @@ export const LOCAL_MODELS: LocalSeedModel[] = [
   { slug: 'llama-3-1-8b-instruct',  display_name: 'Llama 3.1 8B Instruct',  provider: 'meta', provider_model: 'llama-3.1-8b-instruct',  family: 'llama', released_at: '2024-07-23', context_window: 128000, target_score: 64.7, size_class: 'medium' },
   { slug: 'llama-3-1-70b-instruct', display_name: 'Llama 3.1 70B Instruct', provider: 'meta', provider_model: 'llama-3.1-70b-instruct', family: 'llama', released_at: '2024-07-23', context_window: 128000, target_score: 78.9, size_class: 'huge' },
   { slug: 'llama-3-3-70b-instruct', display_name: 'Llama 3.3 70B Instruct', provider: 'meta', provider_model: 'llama-3.3-70b-instruct', family: 'llama', released_at: '2024-12-06', context_window: 128000, target_score: 81.6, size_class: 'huge' },
-  { slug: 'llama-4-8b-instruct',    display_name: 'Llama 4 8B Instruct',    provider: 'meta', provider_model: 'llama-4-8b-instruct',    family: 'llama', released_at: '2026-01-20', context_window: 256000, target_score: 70.3, size_class: 'medium' },
-  { slug: 'llama-4-70b-instruct',   display_name: 'Llama 4 70B Instruct',   provider: 'meta', provider_model: 'llama-4-70b-instruct',   family: 'llama', released_at: '2026-01-20', context_window: 256000, target_score: 83.1, size_class: 'huge' },
+  // Llama 4 not yet released as open weights as of mid-2025 — leaving out
+  // of the sample seed to keep every row truthfully downloadable today.
 
   // ---- QWEN FAMILY (Alibaba) ----
   { slug: 'qwen-2-5-0-5b-instruct', display_name: 'Qwen 2.5 0.5B Instruct', provider: 'alibaba', provider_model: 'qwen2.5-0.5b-instruct', family: 'qwen', released_at: '2024-09-19', context_window: 32768,  target_score: 31.2, size_class: 'small' },
@@ -60,7 +60,8 @@ export const LOCAL_MODELS: LocalSeedModel[] = [
   { slug: 'deepseek-r1-distill-llama-8b', display_name: 'DeepSeek R1 Distill Llama 8B', provider: 'deepseek', provider_model: 'deepseek-r1-distill-llama-8b', family: 'deepseek', released_at: '2025-01-20', context_window: 128000, target_score: 71.3, size_class: 'medium' },
   { slug: 'deepseek-r1-distill-qwen-32b', display_name: 'DeepSeek R1 Distill Qwen 32B', provider: 'deepseek', provider_model: 'deepseek-r1-distill-qwen-32b', family: 'deepseek', released_at: '2025-01-20', context_window: 131072, target_score: 81.8, size_class: 'large' },
   { slug: 'deepseek-r1',            display_name: 'DeepSeek R1 671B-A37B',  provider: 'deepseek', provider_model: 'deepseek-r1',             family: 'deepseek', released_at: '2025-01-20', context_window: 128000, target_score: 86.4, size_class: 'huge' },
-  { slug: 'deepseek-v4',            display_name: 'DeepSeek V4',            provider: 'deepseek', provider_model: 'deepseek-v4-2026-04',     family: 'deepseek', released_at: '2026-04-22', context_window: 256000, target_score: 87.2, size_class: 'huge' },
+  // DeepSeek V4 not yet released — sample seed sticks to V3 + R1 which are the
+  // current state-of-the-art downloadable releases.
 
   // ---- MISTRAL FAMILY ----
   { slug: 'mistral-7b-instruct-v0-3',  display_name: 'Mistral 7B Instruct v0.3', provider: 'mistral', provider_model: 'mistral-7b-instruct-v0.3',  family: 'mistral', released_at: '2024-05-22', context_window: 32768,  target_score: 60.4, size_class: 'medium' },
@@ -106,7 +107,7 @@ export const LOCAL_MODELS: LocalSeedModel[] = [
   { slug: 'codellama-34b-instruct', display_name: 'Code Llama 34B Instruct', provider: 'meta',  provider_model: 'codellama-34b-instruct', family: 'llama',    released_at: '2024-01-29', context_window: 16384, target_score: 67.5, size_class: 'large' },
 
   // ---- KIMI / MOONSHOT ----
-  { slug: 'kimi-k2-7',           display_name: 'Kimi K2.7',           provider: 'moonshot',    provider_model: 'kimi-k2.7',             family: 'kimi',       released_at: '2026-05-01', context_window: 200000, target_score: 76.9, size_class: 'huge' },
+  { slug: 'kimi-k2-instruct',   display_name: 'Kimi K2 Instruct',     provider: 'moonshot',    provider_model: 'kimi-k2-instruct',      family: 'kimi',       released_at: '2024-11-15', context_window: 200000, target_score: 76.4, size_class: 'huge' },
 
   // ---- SMALL UTILITY ----
   { slug: 'smollm-1-7b',         display_name: 'SmolLM 1.7B',         provider: 'huggingface', provider_model: 'smollm-1.7b',           family: 'smollm',     released_at: '2024-07-15', context_window: 2048,   target_score: 32.6, size_class: 'small' },

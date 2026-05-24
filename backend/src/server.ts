@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { migrate } from './db.js';
-import { seedIfEmpty, augmentIfMissing } from './seed.js';
+import { seedIfEmpty, augmentIfMissing, purgeClosedModelsIfPresent } from './seed.js';
 import health from './routes/health.js';
 import testpack from './routes/testpack.js';
 import submissions from './routes/submissions.js';
@@ -29,6 +29,11 @@ const ALLOWED_ORIGINS = (
 console.log(`[pipelinescore-api] CORS allowlist: ${ALLOWED_ORIGINS.join(', ')}`);
 
 migrate();
+// One-time scrub: removes seed submissions of closed-weights API models
+// (Claude / GPT / Gemini / etc.) that earlier seed versions populated.
+// Closed-weights models can't run on local hardware tags — keeping the
+// sample leaderboard honest. Idempotent.
+purgeClosedModelsIfPresent();
 seedIfEmpty();
 // Non-destructive: adds any models from LOCAL_MODELS that aren't already
 // in the DB, plus a few hardware-distributed sample submissions per new

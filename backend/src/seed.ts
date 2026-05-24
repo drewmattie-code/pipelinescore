@@ -20,107 +20,130 @@ type SeedModel = {
   target_score: number;
 };
 
+// Foundation seed models — all downloadable open-weights you can pull from
+// Ollama / LM Studio / Hugging Face. NO frontier API (Claude / GPT / Gemini)
+// in the sample data, because those don't run on hardware tags like
+// "m3-max-128gb" or "rtx-4090-24gb" — you only access them via cloud API.
+// Keeping the sample leaderboard honest about what's actually local-runnable.
 const MODELS: SeedModel[] = [
+  // The 10 most popular local models 2026 — covers the size + family
+  // distribution most likely to appear in real submissions.
   {
-    slug: 'claude-opus-4-7',
-    display_name: 'Claude Opus 4.7',
-    provider: 'anthropic',
-    provider_model: 'claude-opus-4-7-20260301',
-    family: 'claude',
-    released_at: '2026-03-01',
-    context_window: 1_000_000,
-    target_score: 91.5,
-  },
-  {
-    slug: 'gpt-5-5',
-    display_name: 'GPT-5.5',
-    provider: 'openai',
-    provider_model: 'gpt-5.5-2026-04',
-    family: 'gpt',
-    released_at: '2026-04-15',
-    context_window: 512_000,
-    target_score: 89.4,
-  },
-  {
-    slug: 'gemini-2-5-pro',
-    display_name: 'Gemini 2.5 Pro',
-    provider: 'google',
-    provider_model: 'gemini-2.5-pro',
-    family: 'gemini',
-    released_at: '2026-02-10',
-    context_window: 2_000_000,
-    target_score: 86.2,
-  },
-  {
-    slug: 'claude-haiku-4-5',
-    display_name: 'Claude Haiku 4.5',
-    provider: 'anthropic',
-    provider_model: 'claude-haiku-4-5-20251001',
-    family: 'claude',
-    released_at: '2025-10-01',
-    context_window: 200_000,
-    target_score: 67.8,
-  },
-  {
-    slug: 'llama-4-405b',
-    display_name: 'Llama 4 405B',
+    slug: 'llama-3-3-70b-instruct',
+    display_name: 'Llama 3.3 70B Instruct',
     provider: 'meta',
-    provider_model: 'llama-4-405b-instruct',
+    provider_model: 'llama-3.3-70b-instruct',
     family: 'llama',
-    released_at: '2026-01-20',
+    released_at: '2024-12-06',
     context_window: 128_000,
-    target_score: 73.1,
+    target_score: 81.6,
   },
   {
-    slug: 'mistral-large-2',
-    display_name: 'Mistral Large 2',
-    provider: 'mistral',
-    provider_model: 'mistral-large-2-2026',
-    family: 'mistral',
-    released_at: '2026-02-28',
-    context_window: 128_000,
+    slug: 'qwen-2-5-72b-instruct',
+    display_name: 'Qwen 2.5 72B Instruct',
+    provider: 'alibaba',
+    provider_model: 'qwen2.5-72b-instruct',
+    family: 'qwen',
+    released_at: '2024-09-19',
+    context_window: 131_072,
+    target_score: 82.4,
+  },
+  {
+    slug: 'qwen-2-5-32b-instruct',
+    display_name: 'Qwen 2.5 32B Instruct',
+    provider: 'alibaba',
+    provider_model: 'qwen2.5-32b-instruct',
+    family: 'qwen',
+    released_at: '2024-09-19',
+    context_window: 131_072,
     target_score: 78.6,
   },
   {
-    slug: 'command-r-plus',
-    display_name: 'Command R+',
-    provider: 'cohere',
-    provider_model: 'command-r-plus-08-2026',
-    family: 'command',
-    released_at: '2026-03-20',
-    context_window: 128_000,
-    target_score: 71.4,
-  },
-  {
-    slug: 'qwen3-6-72b',
-    display_name: 'Qwen 3.6 72B',
+    slug: 'qwen-2-5-coder-32b',
+    display_name: 'Qwen 2.5 Coder 32B',
     provider: 'alibaba',
-    provider_model: 'qwen3.6-72b-instruct',
+    provider_model: 'qwen2.5-coder-32b',
     family: 'qwen',
-    released_at: '2026-04-05',
-    context_window: 256_000,
-    target_score: 80.3,
+    released_at: '2024-11-12',
+    context_window: 131_072,
+    target_score: 82.1,
   },
   {
-    slug: 'deepseek-v4',
-    display_name: 'DeepSeek V4',
+    slug: 'deepseek-r1',
+    display_name: 'DeepSeek R1 671B-A37B',
     provider: 'deepseek',
-    provider_model: 'deepseek-v4-2026-04',
+    provider_model: 'deepseek-r1',
     family: 'deepseek',
-    released_at: '2026-04-22',
-    context_window: 256_000,
-    target_score: 82.7,
+    released_at: '2025-01-20',
+    context_window: 128_000,
+    target_score: 86.4,
   },
   {
-    slug: 'kimi-k2-7',
-    display_name: 'Kimi K2.7',
-    provider: 'moonshot',
-    provider_model: 'kimi-k2.7',
-    family: 'kimi',
-    released_at: '2026-05-01',
-    context_window: 200_000,
+    slug: 'deepseek-v3',
+    display_name: 'DeepSeek V3 671B-A37B',
+    provider: 'deepseek',
+    provider_model: 'deepseek-v3',
+    family: 'deepseek',
+    released_at: '2024-12-26',
+    context_window: 128_000,
+    target_score: 84.7,
+  },
+  {
+    slug: 'mistral-nemo-12b-instruct',
+    display_name: 'Mistral Nemo 12B Instruct',
+    provider: 'mistral',
+    provider_model: 'mistral-nemo-12b-instruct',
+    family: 'mistral',
+    released_at: '2024-07-18',
+    context_window: 131_072,
+    target_score: 68.2,
+  },
+  {
+    slug: 'mixtral-8x22b-instruct',
+    display_name: 'Mixtral 8x22B Instruct',
+    provider: 'mistral',
+    provider_model: 'mixtral-8x22b-instruct',
+    family: 'mistral',
+    released_at: '2024-04-10',
+    context_window: 65_536,
+    target_score: 78.3,
+  },
+  {
+    slug: 'gemma-3-27b-it',
+    display_name: 'Gemma 3 27B IT',
+    provider: 'google',
+    provider_model: 'gemma-3-27b-it',
+    family: 'gemma',
+    released_at: '2025-03-12',
+    context_window: 131_072,
     target_score: 76.9,
   },
+  {
+    slug: 'phi-4',
+    display_name: 'Phi 4 14B',
+    provider: 'microsoft',
+    provider_model: 'phi-4-14b',
+    family: 'phi',
+    released_at: '2024-12-12',
+    context_window: 16_384,
+    target_score: 71.6,
+  },
+];
+
+// Closed-weights / API-only model slugs that should NEVER appear in the
+// sample leaderboard (you can't download + run them on local hardware).
+// purgeClosedModelsIfPresent() removes any of these from the DB on startup
+// — fixes pre-existing seeds from before we tightened this rule.
+const CLOSED_API_ONLY_SLUGS = [
+  'claude-opus-4-7',
+  'claude-opus-4-7-20250514',
+  'claude-haiku-4-5',
+  'claude-haiku-4-5-20251001',
+  'gpt-5-5',
+  'gpt-5-5-2026-04',
+  'gemini-2-5-pro',
+  'gemini-2-0-pro',
+  'kimi-k2-7', // Kimi K2.7 is API-only; earlier K2 weights were open but we want only confidently-downloadable in samples
 ];
 
 const CATEGORIES = ['code', 'reason', 'write', 'tool_use', 'rag', 'speed'] as const;
@@ -536,4 +559,69 @@ export function augmentIfMissing(): void {
 
   txn();
   console.log('[augment] done');
+}
+
+// ----------------------------------------------------------------------------
+// purgeClosedModelsIfPresent — one-time scrub.
+//
+// Earlier seed versions populated the leaderboard with frontier API models
+// (Claude Opus 4.7, GPT-5.5, Gemini 2.5 Pro, etc.) showing fake "ran on
+// m3-max-128gb" hardware tags. Closed-weights models can't run on local
+// hardware, so the rows were misleading.
+//
+// This function removes those models + their submissions + their task_results
+// from the DB. Safe to call on every boot — does nothing if the rows are
+// already gone.
+//
+// Preserves REAL user submissions (submitter_ip != 'seed') against these
+// model slugs in case anyone ran a cloud-API benchmark before this scrub.
+// ----------------------------------------------------------------------------
+export function purgeClosedModelsIfPresent(): void {
+  // First, find any model IDs for closed-weights slugs that have only
+  // seeded submissions (no real user data). Those we delete entirely.
+  // Models with real user submissions we leave intact — those users
+  // intentionally tagged them as cloud-api.
+  const placeholders = CLOSED_API_ONLY_SLUGS.map(() => '?').join(',');
+  const closedModels = db
+    .prepare(`SELECT id, slug FROM models WHERE slug IN (${placeholders})`)
+    .all(...CLOSED_API_ONLY_SLUGS) as Array<{ id: string; slug: string }>;
+
+  if (closedModels.length === 0) {
+    return;
+  }
+
+  let totalPurged = 0;
+  const txn = db.transaction(() => {
+    for (const m of closedModels) {
+      // Delete only seed-marked submissions for this model.
+      const seededSubs = db
+        .prepare(`SELECT id FROM submissions WHERE model_id = ? AND submitter_ip = 'seed'`)
+        .all(m.id) as Array<{ id: string }>;
+      if (seededSubs.length > 0) {
+        const subIds = seededSubs.map((s) => s.id);
+        const subPlaceholders = subIds.map(() => '?').join(',');
+        db.prepare(`DELETE FROM task_results WHERE submission_id IN (${subPlaceholders})`).run(...subIds);
+        db.prepare(`DELETE FROM submissions WHERE id IN (${subPlaceholders})`).run(...subIds);
+        totalPurged += seededSubs.length;
+      }
+
+      // If the model now has zero submissions of any kind, drop the model row too.
+      const remaining = db
+        .prepare(`SELECT COUNT(*) AS c FROM submissions WHERE model_id = ?`)
+        .get(m.id) as { c: number };
+      if (remaining.c === 0) {
+        db.prepare(`DELETE FROM models WHERE id = ?`).run(m.id);
+        console.log(`[purge] removed closed-weights model "${m.slug}" (no real submissions)`);
+      } else {
+        console.log(
+          `[purge] kept closed-weights model "${m.slug}" — ${remaining.c} real user submissions present`
+        );
+      }
+    }
+  });
+  txn();
+
+  if (totalPurged > 0) {
+    console.log(`[purge] removed ${totalPurged} seeded submissions of closed-weights models`);
+  }
 }
