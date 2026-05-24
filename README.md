@@ -188,9 +188,9 @@ The CLI fetches the day's signed test pack from `:4601/v1/testpack`, calls your 
 ╰──────────────────────────────────╯
 ```
 
-Other providers wired (untested but typecheck-clean):
+Other providers wired:
 - `--provider openai --model gpt-4o-mini` (uses `OPENAI_API_KEY`)
-- `--provider local --model qwen3.6-27b --endpoint http://192.168.0.20:8080/v1`
+- `--provider local --model llama-3.3-70b --endpoint http://localhost:11434` (Ollama default; works with LM Studio, llama.cpp, MLX-Omni, LiteLLM)
 
 ## The score
 
