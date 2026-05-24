@@ -220,4 +220,4 @@ To be determined. MIT-leaning.
 
 ## Authors
 
-Drew Mattie (Charles & Roe), with build orchestration by Claudia.
+Drew Mattie (Charles & Roe)
