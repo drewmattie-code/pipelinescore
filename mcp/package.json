@@ -1,16 +1,54 @@
 {
   "name": "@pipelinescore/mcp",
   "version": "0.1.0",
-  "description": "MCP server for the PipelineScore LLM benchmark — expose run_benchmark / get_user_leaderboard / get_user_profile to any MCP-compatible client (Claude Code, Codex, Cursor, etc.).",
+  "description": "MCP server for the PipelineScore LLM benchmark — exposes run_benchmark / get_user_leaderboard / get_user_profile tools to any MCP-compatible client (Claude Code, Codex, Cursor, Continue, Cline). Lets your AI drive local-first LLM benchmarking on your hardware.",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "./dist/index.js",
   "bin": {
-    "pipelinescore-mcp": "dist/index.js"
+    "pipelinescore-mcp": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts"
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "llm",
+    "benchmark",
+    "leaderboard",
+    "local-llm",
+    "ollama",
+    "lm-studio",
+    "ai-evaluation",
+    "claude-code",
+    "cursor",
+    "codex"
+  ],
+  "author": "Drew Mattie <drew.mattie@gmail.com> (https://github.com/drewmattie-code)",
+  "license": "Apache-2.0",
+  "homepage": "https://pipelinescore.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/drewmattie-code/pipelinescore.git",
+    "directory": "mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/drewmattie-code/pipelinescore/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

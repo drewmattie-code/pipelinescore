@@ -1,19 +1,58 @@
 {
   "name": "@pipelinescore/cli",
   "version": "0.1.0",
-  "description": "PipelineScore CLI — run a standardized LLM benchmark against any model.",
+  "description": "PipelineScore CLI — benchmark LLMs on your own hardware. Runs a standardized 25-task suite against any local server (Ollama, LM Studio, MLX, llama.cpp) or frontier API (Anthropic, OpenAI), publishes to the hardware-aware public leaderboard at pipelinescore.ai.",
   "type": "module",
+  "main": "./dist/index.js",
   "bin": {
-    "ps-bench": "./dist/index.js"
+    "ps-bench": "./dist/index.js",
+    "pipelinescore": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
   "engines": {
     "node": ">=22"
+  },
+  "keywords": [
+    "llm",
+    "benchmark",
+    "leaderboard",
+    "local-llm",
+    "ollama",
+    "lm-studio",
+    "mlx",
+    "llama-cpp",
+    "vllm",
+    "ai-evaluation",
+    "anthropic",
+    "openai",
+    "hardware-comparison",
+    "local-first",
+    "cli"
+  ],
+  "author": "Drew Mattie <drew.mattie@gmail.com> (https://github.com/drewmattie-code)",
+  "license": "Apache-2.0",
+  "homepage": "https://pipelinescore.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/drewmattie-code/pipelinescore.git",
+    "directory": "cli"
+  },
+  "bugs": {
+    "url": "https://github.com/drewmattie-code/pipelinescore/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",

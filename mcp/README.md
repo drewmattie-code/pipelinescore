@@ -1,26 +1,31 @@
 # @pipelinescore/mcp
 
-MCP server for the PipelineScore LLM benchmark. Exposes three tools to any MCP-compatible client (Claude Code, Codex, Cursor, Continue, etc.).
+**MCP server for the PipelineScore LLM benchmark.** Lets any MCP-compatible AI client (Claude Code, Codex, Cursor, Continue, Cline) drive benchmarking on your local hardware + read the public leaderboard.
+
+[![Live at pipelinescore.ai](https://img.shields.io/badge/live-pipelinescore.ai-0F766E?style=flat-square)](https://pipelinescore.ai)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square)](LICENSE)
+[![npm version](https://img.shields.io/npm/v/@pipelinescore/mcp?style=flat-square)](https://www.npmjs.com/package/@pipelinescore/mcp)
+[![MCP](https://img.shields.io/badge/MCP-Model_Context_Protocol-7057ff?style=flat-square)](https://modelcontextprotocol.io)
+
+---
 
 ## Tools
 
-| Tool | What it does |
+| Tool | Description |
 |---|---|
-| `run_benchmark` | Run the PipelineScore CLI against any LLM, publish to the public leaderboard |
-| `get_user_leaderboard` | Read the public user leaderboard, filterable + sortable |
-| `get_user_profile` | Read one user's full dashboard |
+| `run_benchmark` | Runs `@pipelinescore/cli` against an LLM (local or frontier API), publishes the result to the public leaderboard |
+| `get_user_leaderboard` | Reads the sortable/filterable user leaderboard (filter by model, provider, hardware, tier) |
+| `get_user_profile` | Reads a specific user's full dashboard (best score, models tried, hardware mix, efficiency aggregates) |
 
 ## Install
 
 ```bash
 npm install -g @pipelinescore/mcp
-```
-
-Or run via npx without installing:
-
-```bash
+# or run on-demand without installing
 npx @pipelinescore/mcp
 ```
+
+The server speaks the MCP stdio protocol — it's spawned by your AI client, not run directly.
 
 ## Wire into Claude Code
 
@@ -31,36 +36,19 @@ Add to `~/.claude/settings.json`:
   "mcpServers": {
     "pipelinescore": {
       "command": "npx",
-      "args": ["@pipelinescore/mcp"],
-      "env": {
-        "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}",
-        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
-      }
-    }
-  }
-}
-```
-
-Restart Claude Code. The three tools become available.
-
-## Wire into Codex CLI
-
-```json
-// ~/.codex/config.json
-{
-  "mcpServers": {
-    "pipelinescore": {
-      "command": "npx",
       "args": ["@pipelinescore/mcp"]
     }
   }
 }
 ```
+
+Restart Claude Code. The three tools become available to your model.
 
 ## Wire into Cursor
 
+Add to `.cursor/mcp.json` in your workspace:
+
 ```json
-// .cursor/mcp.json
 {
   "mcpServers": {
     "pipelinescore": {
@@ -71,23 +59,63 @@ Restart Claude Code. The three tools become available.
 }
 ```
 
-## Environment
+## Wire into Codex CLI
+
+Add to `~/.codex/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "pipelinescore": {
+      "command": "npx",
+      "args": ["@pipelinescore/mcp"]
+    }
+  }
+}
+```
+
+## Wire into other clients
+
+Any MCP client that supports stdio servers can use it. The command is the same: `npx @pipelinescore/mcp`.
+
+## Environment variables
 
 | Var | Default | Purpose |
 |---|---|---|
-| `PIPELINESCORE_BACKEND` | `https://api.pipelinescore.ai` | API endpoint. Override for self-hosted instances or local dev (`http://localhost:4601`). |
-| `ANTHROPIC_API_KEY` | (none) | Forwarded to the CLI for anthropic provider runs. |
-| `OPENAI_API_KEY` | (none) | Forwarded to the CLI for openai provider runs. |
+| `PIPELINESCORE_BACKEND` | `https://api.pipelinescore.ai` | API endpoint. Override for self-hosted instances or local dev (e.g. `http://localhost:4601`). |
+| `ANTHROPIC_API_KEY` | (none) | Forwarded to the CLI for `provider=anthropic` runs. Never sent to PipelineScore backend. |
+| `OPENAI_API_KEY` | (none) | Forwarded to the CLI for `provider=openai` runs. Never sent to PipelineScore backend. |
 
-## How `run_benchmark` works internally
+## How `run_benchmark` works
 
-It spawns `npx @pipelinescore/cli run --provider <p> --model <m> ...` with the args forwarded. The CLI does the LLM calls + scoring + submission; the MCP server is just a thin transport.
+Internally, the MCP server spawns `npx @pipelinescore/cli run ...` with the args forwarded. The CLI does the actual provider call + scoring + submission. The MCP server is just a thin protocol adapter.
 
-## Why MCP?
+This means:
+- Local runs need **no API key** — the CLI just hits your local model server
+- Frontier runs use your `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` env vars (or `api_key` arg)
+- Your key never reaches our backend (CLI calls the provider directly)
 
-The Claude Code skill (in `dist/skills/pipelinescore/SKILL.md`) and this MCP server cover two complementary distribution paths:
+## Example AI prompt
 
-- **Skill** — pure markdown, zero runtime, the AI reads instructions and runs `npx`. Works in any AI that supports skills/rules files.
-- **MCP** — programmatic interface, returns structured data. Used when the AI wants to query leaderboard data (read) or trigger benchmarks (write) without parsing CLI output.
+Once installed, try saying to your AI:
+> "Benchmark Llama 3.3 70B on my M3 Max against PipelineScore"
 
-Together they cover Claude Code, Codex, Cursor, Continue, Cline, Aider, OpenCode, OpenClaw, and anyone else who supports either pattern.
+Your AI should:
+1. Call `run_benchmark` with `provider=local`, `endpoint=http://localhost:11434`, `model=llama-3.3-70b`, `hardware_tag=m3-max-128gb`
+2. Wait for the CLI to complete
+3. Show you the score card + the public URL to your run
+
+## Why local-first?
+
+PipelineScore's whole pitch is **hardware-aware** ranking. Same model on M3 Max vs RTX 4090 vs A100 = three different rows. The MCP tool defaults to `--provider local` when possible — see your AI's response in [SKILL.md](https://github.com/drewmattie-code/pipelinescore/blob/main/dist/skills/pipelinescore/SKILL.md) for the default flow.
+
+## License
+
+[Apache 2.0](LICENSE). Drew Mattie, 2026.
+
+## Links
+
+- 🌐 [pipelinescore.ai](https://pipelinescore.ai) — public leaderboard
+- 📦 [GitHub](https://github.com/drewmattie-code/pipelinescore) — source
+- 🖥️ [CLI](https://www.npmjs.com/package/@pipelinescore/cli) — direct CLI usage
+- 🛡️ [SECURITY.md](https://github.com/drewmattie-code/pipelinescore/blob/main/SECURITY.md) — BYOK posture + retention
