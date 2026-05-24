@@ -309,8 +309,8 @@ If this repo is useful to you, a star is the easiest signal to send. It helps su
 
 ## License
 
-[Apache 2.0](LICENSE). Drew Mattie, 2026. Patent grant included — you're protected from filing-style nastiness.
+[Apache 2.0](LICENSE).
 
 ## Authors
 
-Drew Mattie (Charles & Roe)
+Drew Mattie (Charles & Roe Inc.)
