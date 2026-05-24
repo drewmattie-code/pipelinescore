@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "About · PipelineScore",
+  title: "About",
   description: "PipelineScore is a user-run LLM benchmark built by Charles & Roe.",
 };
 

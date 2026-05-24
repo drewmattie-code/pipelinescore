@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Privacy & Data · PipelineScore",
+  title: "Privacy & Data",
   description:
     "What PipelineScore stores, for how long, and how the retention policy is enforced. Plain English. No dark patterns.",
 };

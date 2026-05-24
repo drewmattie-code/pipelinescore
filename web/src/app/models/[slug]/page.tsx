@@ -18,9 +18,9 @@ export async function generateMetadata({
 }) {
   const { slug } = await params;
   const model = await getModel(slug);
-  if (!model) return { title: "Model not found · PipelineScore" };
+  if (!model) return { title: "Model not found" };
   return {
-    title: `${model.displayName} · PipelineScore`,
+    title: model.displayName,
     description: `PipelineScore: ${model.pipelineScore.toFixed(1)} (${model.tier.toUpperCase()}). Full category breakdown, sample tasks, and head-to-head comparisons for ${model.displayName}.`,
   };
 }

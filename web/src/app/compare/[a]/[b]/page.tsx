@@ -15,9 +15,9 @@ export async function generateMetadata({
 }) {
   const { a, b } = await params;
   const [ma, mb] = await Promise.all([getModel(a), getModel(b)]);
-  if (!ma || !mb) return { title: "Comparison · PipelineScore" };
+  if (!ma || !mb) return { title: "Comparison" };
   return {
-    title: `${ma.displayName} vs ${mb.displayName} · PipelineScore`,
+    title: `${ma.displayName} vs ${mb.displayName}`,
     description: `Head-to-head PipelineScore comparison: ${ma.displayName} (${ma.pipelineScore.toFixed(1)}) vs ${mb.displayName} (${mb.pipelineScore.toFixed(1)}). Category-by-category breakdown.`,
   };
 }

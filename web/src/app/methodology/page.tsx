@@ -3,7 +3,7 @@ import { TIERS, CATEGORY_LABELS } from "@/lib/tiers";
 import { TierBadge } from "@/components/TierBadge";
 
 export const metadata = {
-  title: "Methodology · PipelineScore",
+  title: "Methodology",
   description:
     "How the PipelineScore is computed. Six weighted categories, a deterministic 0–100 score, five tiers, and server-side anti-cheat re-judgment.",
 };

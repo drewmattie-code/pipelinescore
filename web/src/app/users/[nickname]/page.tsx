@@ -21,9 +21,9 @@ export async function generateMetadata({
   const { nickname } = await params;
   const profile = await getUserProfile(decodeURIComponent(nickname));
   if (!profile)
-    return { title: `${decodeURIComponent(nickname)} · PipelineScore` };
+    return { title: decodeURIComponent(nickname) };
   return {
-    title: `${profile.nickname} · PipelineScore`,
+    title: profile.nickname,
     description: `${profile.nickname}'s PipelineScore profile: ${profile.submissionCount} runs, best ${profile.bestScore.toFixed(1)} on ${profile.bestModel.displayName}. Models tried, category strengths, history.`,
   };
 }

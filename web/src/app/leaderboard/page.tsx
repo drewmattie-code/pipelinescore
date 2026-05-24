@@ -4,7 +4,7 @@ import { LeaderboardTable } from "@/components/LeaderboardTable";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Leaderboard · PipelineScore",
+  title: "Models Leaderboard",
   description: "Full PipelineScore leaderboard — every model ranked by composite score and by category.",
 };
 

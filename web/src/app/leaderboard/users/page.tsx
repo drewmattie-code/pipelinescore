@@ -7,7 +7,7 @@ import { SearchInput } from "@/components/SearchInput";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Users · PipelineScore",
+  title: "Users Leaderboard",
   description:
     "Every PipelineScore run, every user, every model. Sortable, filterable. The community board.",
 };
