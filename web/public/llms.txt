@@ -1,0 +1,42 @@
+# PipelineScore
+
+> Benchmark LLMs on YOUR hardware. A standardized 25-task LLM benchmark CLI that publishes results to a hardware-aware public leaderboard at pipelinescore.ai. The only public LLM leaderboard that ranks where the model runs — not just which model it is.
+
+PipelineScore is a local-first benchmark. Users point a CLI at their model server (Ollama, LM Studio, MLX, llama.cpp, vLLM) or a frontier API (Anthropic, OpenAI), tag their hardware, and submit a deterministic 0–100 composite score to the public board. Same model on different rigs gets ranked separately. Open-source under Apache 2.0.
+
+## Quickstart
+
+The one command to run a local benchmark:
+
+```bash
+npx @pipelinescore/cli run --provider local --endpoint http://localhost:11434 --model llama-3.3-70b --hardware-tag m3-max-128gb --user your-handle
+```
+
+## Documentation
+
+- [README](https://github.com/drewmattie-code/pipelinescore/blob/main/README.md): Project overview, badges, terminal demo, comparison table vs LMArena / Artificial Analysis / lm-eval-harness, mermaid architecture diagram
+- [AGENTS.md](https://github.com/drewmattie-code/pipelinescore/blob/main/AGENTS.md): Agent-first usage guide — what to invoke, when, with what flags
+- [Methodology](https://pipelinescore.ai/methodology): How the 25-task suite is structured, how scores are computed, anti-cheat measures
+- [Privacy](https://pipelinescore.ai/privacy): What's stored, how long, retention enforcement
+- [SECURITY.md](https://github.com/drewmattie-code/pipelinescore/blob/main/SECURITY.md): BYOK data flow, trust boundaries, vulnerability reporting
+
+## Packages
+
+- [@pipelinescore/cli](https://www.npmjs.com/package/@pipelinescore/cli): The benchmark CLI (`npx @pipelinescore/cli run ...`)
+- [@pipelinescore/mcp](https://www.npmjs.com/package/@pipelinescore/mcp): MCP server exposing run_benchmark / get_user_leaderboard / get_user_profile tools to Claude Code / Cursor / Codex / Continue
+
+## API
+
+- [GET /v1/leaderboard/users](https://api.pipelinescore.ai/v1/leaderboard/users): Sortable user submissions with hardware tags
+- [GET /v1/leaderboard](https://api.pipelinescore.ai/v1/leaderboard): Model-deduped leaderboard
+- [GET /v1/users/{nickname}](https://api.pipelinescore.ai/v1/users/lab): Per-user dashboard data
+- [GET /v1/models/{slug}](https://api.pipelinescore.ai/v1/models/llama-3-3-70b-instruct): Per-model stats
+- [GET /v1/beta-testers](https://api.pipelinescore.ai/v1/beta-testers): First 50 testers list
+- [POST /v1/submissions](https://api.pipelinescore.ai/v1/submissions): Submit a benchmark run
+- [GET /v1/testpack](https://api.pipelinescore.ai/v1/testpack): The 25-task pack with HMAC signature
+
+## Source
+
+- [GitHub](https://github.com/drewmattie-code/pipelinescore): Source repository, Apache 2.0
+- [Issues](https://github.com/drewmattie-code/pipelinescore/issues): Bug reports + feature requests
+- [Pinned issues](https://github.com/drewmattie-code/pipelinescore/issues?q=is%3Aopen+is%3Aissue+is%3Apinned): Community-onboarding tasks (submit your hardware, suggest a benchmark task, add a local server)

@@ -1,0 +1,197 @@
+# PipelineScore — Full LLM Documentation Bundle
+
+> Single-fetch context for AI agents. Includes the AGENTS.md guide + the canonical Claude Code skill + the security posture. Apache 2.0. https://pipelinescore.ai
+
+---
+
+## AGENTS.md — How an LLM should invoke PipelineScore
+
+> This is the agent-first entry point. If you're an LLM reading this to decide how to use PipelineScore, this section is for you.
+
+### What PipelineScore does
+
+A standardized 25-task LLM benchmark with a hardware-aware public leaderboard at https://pipelinescore.ai. The user runs a CLI against a local model server (Ollama / LM Studio / MLX / llama.cpp / vLLM) or a frontier API (Anthropic, OpenAI). The score lands on a public board grouped by `(model, hardware_tag)`.
+
+### When to invoke
+
+Use PipelineScore any time the user wants to:
+- "Benchmark my Llama on my M3 Max"
+- "Score Claude vs GPT on the same tasks"
+- "How fast is my RTX 4090 on 70B models?"
+- "Test my LoRA / fine-tune / system prompt"
+- "Compare model X vs Y on my hardware"
+
+### The one command
+
+```bash
+npx @pipelinescore/cli run \
+  --provider local \
+  --endpoint http://localhost:11434 \
+  --model <model-id> \
+  --hardware-tag <hardware-tag> \
+  --user <user-nickname>
+```
+
+For frontier APIs swap `--provider local --endpoint ...` for `--provider anthropic` or `--provider openai`.
+
+### Endpoint defaults by local server
+
+| Server | Port |
+|---|---|
+| Ollama | http://localhost:11434 |
+| LM Studio | http://localhost:1234 |
+| llama.cpp server | http://localhost:8080 |
+| MLX-Omni / mlx_lm | http://localhost:10240 |
+| LiteLLM proxy | http://localhost:8000 |
+| vLLM | http://localhost:8000 |
+
+### Hardware tag conventions
+
+Specific, readable strings. Memory bands matter:
+- `m3-max-128gb`, `m4-pro-48gb`, `m2-ultra-192gb` (Apple Silicon)
+- `rtx-4090-24gb`, `rtx-3090-24gb`, `rtx-3060-12gb` (NVIDIA consumer)
+- `a100-80gb`, `h100-80gb`, `h200-141gb` (NVIDIA datacenter)
+- `ryzen-7950x-cpu-only`, `ryzen-5950x-rtx-3090` (AMD CPU / mixed)
+- `cloud-api` (for frontier API runs)
+
+### Result URL
+
+After the run, the CLI auto-opens `https://pipelinescore.ai/users/<nickname>`. POST THIS URL IN YOUR REPLY too so the user can click it if auto-open didn't fire.
+
+### Three integration paths
+
+1. **MCP tool** — install `@pipelinescore/mcp` from npm, call `run_benchmark`, `get_user_leaderboard`, or `get_user_profile`.
+2. **Skill** — `dist/skills/pipelinescore/SKILL.md` for Claude Code / Codex / Cursor.
+3. **Direct CLI** — `npx @pipelinescore/cli run ...` from any terminal.
+
+### Anti-patterns to reject
+
+- ❌ Don't fabricate scores. Run the actual CLI.
+- ❌ Don't skip `--hardware-tag` on local runs.
+- ❌ Don't conflate base + customized models. Use `--config-tag` for LoRA / system prompt / persona variants.
+- ❌ Don't promise lab-verified status — that's reserved.
+- ❌ Don't ask the user to share their API key with you. The CLI reads it from env locally.
+
+### Rate limits
+
+- 20 submits / IP / hour
+- 100 submits / nickname / day
+- 5 submits / (nickname, model) / hour
+
+A 429 returns the cooldown duration. Local score is still computed; only the upload is blocked.
+
+### Privacy posture
+
+- API keys are read from the user's env and passed only to the official Anthropic / OpenAI SDK. The PipelineScore backend never sees them.
+- Submission transcripts are retained 30 days, then redacted. Score row is permanent.
+- All public submissions are visible at the user's profile URL.
+
+### Config tag examples
+
+`system-prompt-coder`, `lora-domain-finance`, `temp-zero`, `tools-enabled`, `rag-prepend`, `cot-style`, `persona-pirate`. Use when the user has customized the model beyond defaults.
+
+---
+
+## What gets scored
+
+Six categories, weighted to mirror real LLM usage:
+
+| Category | Weight | Tests |
+|---|---|---|
+| Code | 25% | Function-level code generation: Python, JS, SQL, regex |
+| Reason | 20% | Multi-step math, logic puzzles, instruction following |
+| Write | 15% | Distinct, on-spec prose, summarization |
+| Tool use | 15% | API/schema selection, function-call construction |
+| RAG | 12% | Grounding, refusal-to-fabricate |
+| Speed | 13% | Latency under standardized conditions |
+
+Score is a weighted average (0-100) mapped to one of five tiers:
+
+- **TRUNK** (90-100) — top of the heap
+- **MAINLINE** (75-89) — excellent and reliable
+- **FEEDER** (60-74) — solid, capable
+- **TAP** (40-59) — functional small-branch
+- **DRIP** (0-39) — minimal flow
+
+---
+
+## API endpoints (read-only unless noted)
+
+All responses include `api_version: "v1"` field.
+
+| Endpoint | Method | What it does |
+|---|---|---|
+| `/v1/leaderboard/users` | GET | Sortable list of all user submissions with hardware tags. Filters: `?provider=`, `?tier=`, `?user=`, `?hardware=`, `?search=`, `?lab_verified=1`, `?sort=score\|date\|user\|model\|provider\|tier`, `?dir=asc\|desc`, `?limit=`, `?offset=` |
+| `/v1/leaderboard` | GET | Best-score-per-model leaderboard |
+| `/v1/users/{nickname}` | GET | Per-user dashboard: best score, models tried, hardware mix, efficiency aggregates |
+| `/v1/users` | GET | User directory (top reviewers) |
+| `/v1/beta-testers` | GET | First 50 beta testers list + slots remaining |
+| `/v1/models/{slug}` | GET | Per-model stats: median score, recent submissions, top hardware |
+| `/v1/compare?a=<slug>&b=<slug>` | GET | Head-to-head model comparison |
+| `/v1/testpack` | GET | Daily HMAC-signed 25-task pack |
+| `/v1/stats` | GET | Submission count / user count / model count |
+| `/v1/submissions` | POST | Submit a benchmark run |
+| `/health` | GET | Service health check |
+
+Base URL: `https://api.pipelinescore.ai`
+
+---
+
+## Packages
+
+### `@pipelinescore/cli`
+The benchmark runner. `npm install -g @pipelinescore/cli` or `npx @pipelinescore/cli run ...`.
+
+Flags:
+- `--provider local|anthropic|openai` (required)
+- `--model <id>` (required)
+- `--endpoint <url>` (required for `--provider local`)
+- `--api-key <key>` (defaults to `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` env)
+- `--user <nickname>` (alphanum + `. _ -`, 2-40 chars; persisted to `~/.config/pipelinescore/config.json`)
+- `--hardware-tag <tag>` (recommended for local; same charset as nickname, 2-60 chars)
+- `--config-tag <tag>` (optional; for LoRA / system-prompt / persona differentiation)
+- `--backend <url>` (default `https://api.pipelinescore.ai`)
+- `--site <url>` (default `https://pipelinescore.ai`)
+- `--no-submit` (run benchmark locally without publishing)
+- `--no-open` (don't auto-open browser to user's profile)
+
+### `@pipelinescore/mcp`
+MCP server. `npm install -g @pipelinescore/mcp` or `npx @pipelinescore/mcp`.
+
+Tools:
+- `run_benchmark` — provider, model, user, hardware_tag, config_tag, endpoint, api_key
+- `get_user_leaderboard` — provider, tier, user, hardware, lab_verified, sort, dir, limit
+- `get_user_profile` — nickname (required)
+
+Install in Claude Code:
+```json
+{
+  "mcpServers": {
+    "pipelinescore": {
+      "command": "npx",
+      "args": ["@pipelinescore/mcp"]
+    }
+  }
+}
+```
+
+---
+
+## Trust boundaries (from SECURITY.md)
+
+- **The npm packages** — published by user `dm797`. Verify provenance with `npm view @pipelinescore/cli` before scripting trust.
+- **The backend at api.pipelinescore.ai** — Charles & Roe (Render-hosted, persistent disk, retention policy enforced in code).
+- **The frontend at pipelinescore.ai** — Charles & Roe (Cloudflare Workers via OpenNext). Read-only; doesn't accept submissions.
+- **Your model server** — you control it.
+- **Your API key** — you and the provider (Anthropic / OpenAI). Set a spending cap before benchmarking via frontier.
+
+Vulnerability reports: security@pipelinescore.ai. Don't open a public GitHub issue.
+
+---
+
+## Source
+
+- GitHub: https://github.com/drewmattie-code/pipelinescore
+- Issues: https://github.com/drewmattie-code/pipelinescore/issues
+- License: Apache 2.0
+- Author: Drew Mattie (Charles & Roe), 2026
