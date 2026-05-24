@@ -29,10 +29,8 @@ COPY benchmarks /benchmarks
 RUN apt-get purge -y --auto-remove python3 build-essential
 
 # seed.ts + testpack.ts resolve benchmarks via ../../benchmarks from src/ —
-# our /benchmarks COPY above lands at exactly that path. Just chown + prep
-# the data dir for the persistent disk.
-RUN mkdir -p .data && \
-    chown -R node:node /app /benchmarks
+# our /benchmarks COPY above lands at exactly that path.
+RUN mkdir -p .data
 
 ENV NODE_ENV=production
 ENV PORT=4601
@@ -41,7 +39,10 @@ EXPOSE 4601
 # Persistent data dir — Render disk mounts here. Override via env if needed.
 ENV DB_DIR=/data
 
-USER node
+# Run as root. Render's persistent disks mount with root ownership and there's
+# no Render-side hook to chown to a non-root user before the entrypoint runs —
+# a non-root USER hits EACCES on mkdir /data. Container isolation is the
+# security boundary here, not the in-container UID.
 
 # tsx run, not watch — production runs the entry point directly
 CMD ["node", "node_modules/.bin/tsx", "src/server.ts"]

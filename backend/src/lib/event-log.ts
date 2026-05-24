@@ -6,15 +6,25 @@
 //
 // Retention: 90 days (see retention.ts).
 import type { Request, Response, NextFunction } from 'express';
+import type { Statement } from 'better-sqlite3';
 import { db, uid } from '../db.js';
 
 // Skip noisy endpoints that would flood the table with no analytic value.
 const SKIP_PATHS = new Set<string>(['/health', '/favicon.ico']);
 
-const insertEvent = db.prepare(`
-  INSERT INTO events (id, ts, method, path, status, latency_ms, ip, user_nickname, ua, bytes_out)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`);
+// Lazy-init the prepared statement. We can't prepare at module load time
+// because that runs BEFORE server.ts calls migrate(), and on a fresh DB the
+// events table doesn't exist yet.
+let insertEvent: Statement | null = null;
+function getInsertEvent(): Statement {
+  if (!insertEvent) {
+    insertEvent = db.prepare(`
+      INSERT INTO events (id, ts, method, path, status, latency_ms, ip, user_nickname, ua, bytes_out)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+  }
+  return insertEvent;
+}
 
 function extractNickname(req: Request): string | null {
   const body = req.body as { user_nickname?: unknown } | undefined;
@@ -41,7 +51,7 @@ export function eventLogger(req: Request, res: Response, next: NextFunction): vo
           : typeof bytesOutHeader === 'number'
             ? bytesOutHeader
             : null;
-      insertEvent.run(
+      getInsertEvent().run(
         uid(),
         new Date().toISOString(),
         req.method,
