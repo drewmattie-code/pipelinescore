@@ -8,10 +8,10 @@ import { TIER_BY_ID, CATEGORY_LABELS } from "@/lib/tiers";
 
 const CATEGORIES = ["code", "reason", "write", "tool_use", "rag", "speed"] as const;
 
-export async function generateStaticParams() {
-  const dir = await getUserDirectory();
-  return dir.slice(0, 50).map((u) => ({ nickname: u.userNickname }));
-}
+// Render on-demand at request time. User dashboards change constantly as
+// submissions land, and new nicknames appear without notice — force-dynamic
+// avoids stale data + 404s on freshly-submitted users.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

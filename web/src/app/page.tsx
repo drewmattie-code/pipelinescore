@@ -5,6 +5,10 @@ import { ScoreNumber } from "@/components/ScoreNumber";
 import { TierBadge } from "@/components/TierBadge";
 import { CategoryBarsInline } from "@/components/CategoryBars";
 
+// Stats strip + top-of-leaderboard reflect live submission state. force-dynamic
+// keeps both fresh on every request — no stale cached homepage.
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const [models, stats] = await Promise.all([getLeaderboardModels(), getStats()]);
   const top25 = models.slice(0, 25);

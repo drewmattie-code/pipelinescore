@@ -6,10 +6,10 @@ import { TierBadge } from "@/components/TierBadge";
 import { CategoryBars } from "@/components/CategoryBars";
 import { CATEGORY_LABELS } from "@/lib/tiers";
 
-export async function generateStaticParams() {
-  const models = await getLeaderboardModels();
-  return models.map((m) => ({ slug: m.slug }));
-}
+// Model stats refresh constantly as community submissions land — force-dynamic
+// so the median + best-score + per-category bars stay current. New models
+// (added via CLI submission) also become reachable without a rebuild.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

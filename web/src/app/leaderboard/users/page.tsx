@@ -4,6 +4,8 @@ import type { UserLeaderboardQuery } from "@/lib/api";
 import { TIER_BY_ID } from "@/lib/tiers";
 import { SearchInput } from "@/components/SearchInput";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Users · PipelineScore",
   description:
