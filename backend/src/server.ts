@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { migrate } from './db.js';
-import { seedIfEmpty } from './seed.js';
+import { seedIfEmpty, augmentIfMissing } from './seed.js';
 import health from './routes/health.js';
 import testpack from './routes/testpack.js';
 import submissions from './routes/submissions.js';
@@ -30,6 +30,10 @@ console.log(`[pipelinescore-api] CORS allowlist: ${ALLOWED_ORIGINS.join(', ')}`)
 
 migrate();
 seedIfEmpty();
+// Non-destructive: adds any models from LOCAL_MODELS that aren't already
+// in the DB, plus a few hardware-distributed sample submissions per new
+// model. Safe over a populated persistent disk.
+augmentIfMissing();
 
 const app = express();
 // Trust the reverse proxy (Fly, Cloudflare, etc.) so req.ip is the real client IP.

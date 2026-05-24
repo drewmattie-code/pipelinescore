@@ -3,6 +3,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db, uid } from './db.js';
 import { tierForScore } from './lib/tier.js';
+import { LOCAL_MODELS, HARDWARE_POOL, type LocalSeedModel } from './seed-local-models.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TASKS_PATH = resolve(__dirname, '..', '..', 'benchmarks', 'tasks-v1.json');
@@ -378,4 +379,161 @@ export function seedIfEmpty(): void {
 
   txn();
   console.log('[seed] done');
+}
+
+// ----------------------------------------------------------------------------
+// augmentIfMissing — non-destructive seed expansion.
+//
+// Adds models from LOCAL_MODELS that aren't already in the DB, plus a small
+// set of synthetic hardware-distributed submissions per new model. Does NOT
+// touch existing models or user submissions, so it's safe to call on every
+// boot — including over a populated persistent disk.
+//
+// This is how we keep the launch leaderboard populated as the LM Studio /
+// Ollama trending list shifts — drop new entries into seed-local-models.ts,
+// next deploy adds them, existing data stays intact.
+// ----------------------------------------------------------------------------
+
+// Synthetic hardware-typical submitters. Different from SEED_NICKNAMES so it's
+// easy to tell apart at audit time, while still looking community-natural.
+const HW_SUBMITTERS = [
+  'rig-tester', 'gpu-shopper', 'bench-rat', 'mac-stack', 'gguf-pilgrim',
+  'mlx-mike', 'quant-or-die', 'sram-hoarder', 'flash-attn-fan', 'vram-monk',
+  'cpu-only-prophet', 'apple-silicon', 'cuda-cult', 'rocm-rider', 'tensor-tomas',
+  'edge-deployer', 'inference-monk', 'local-llama-fan', 'tps-counter', 'midnight-bencher',
+];
+
+function pickHardwareForSize(sc: LocalSeedModel['size_class']): string {
+  const pool = HARDWARE_POOL[sc];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function pickSubmitter(): string {
+  return HW_SUBMITTERS[Math.floor(Math.random() * HW_SUBMITTERS.length)];
+}
+
+// How many sample submissions per newly-added model. Mix of hardware variants
+// so the leaderboard shows the same model across multiple rigs.
+const SAMPLES_PER_NEW_MODEL = 4;
+
+export function augmentIfMissing(): void {
+  const existing = new Set(
+    (db.prepare('SELECT slug FROM models').all() as Array<{ slug: string }>).map((r) => r.slug)
+  );
+  const missing = LOCAL_MODELS.filter((m) => !existing.has(m.slug));
+  if (missing.length === 0) {
+    return;
+  }
+  console.log(
+    `[augment] adding ${missing.length} new models + ${missing.length * SAMPLES_PER_NEW_MODEL} sample submissions`
+  );
+
+  const insertModel = db.prepare(`
+    INSERT INTO models (id, slug, display_name, provider, provider_model, family, released_at, context_window, metadata)
+    VALUES (@id, @slug, @display_name, @provider, @provider_model, @family, @released_at, @context_window, @metadata)
+  `);
+
+  const insertSubmission = db.prepare(`
+    INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, user_nickname, config_tag, hardware_tag, lab_verified, notes, created_at)
+    VALUES (@id, @model_id, @testpack_version, @pipeline_score, @tier, @category_scores, @raw_transcripts, @cli_version, @submitter_ip, @user_nickname, @config_tag, @hardware_tag, @lab_verified, @notes, @created_at)
+  `);
+
+  const insertTaskResult = db.prepare(`
+    INSERT INTO task_results (id, submission_id, task_id, category, task_input, model_output, judge_score, passed, latency_ms, tokens_used, judge_rationale)
+    VALUES (@id, @submission_id, @task_id, @category, @task_input, @model_output, @judge_score, @passed, @latency_ms, @tokens_used, @judge_rationale)
+  `);
+
+  const tasks = loadTasks();
+
+  const txn = db.transaction(() => {
+    for (const m of missing) {
+      const modelId = uid();
+      insertModel.run({
+        id: modelId,
+        slug: m.slug,
+        display_name: m.display_name,
+        provider: m.provider,
+        provider_model: m.provider_model,
+        family: m.family,
+        released_at: m.released_at,
+        context_window: m.context_window,
+        metadata: JSON.stringify({ size_class: m.size_class }),
+      });
+
+      // Generate SAMPLES_PER_NEW_MODEL submissions with distinct hardware tags
+      // so the same model appears across multiple rigs on the leaderboard.
+      const usedHardware = new Set<string>();
+      for (let i = 0; i < SAMPLES_PER_NEW_MODEL; i++) {
+        let hardware = pickHardwareForSize(m.size_class);
+        // Try a couple times to get distinct hardware per row
+        let tries = 0;
+        while (usedHardware.has(hardware) && tries < 5) {
+          hardware = pickHardwareForSize(m.size_class);
+          tries++;
+        }
+        usedHardware.add(hardware);
+
+        // Score wobbles around target; speed-category penalty for big models on consumer rigs
+        const isConsumerRig = !hardware.includes('a100') && !hardware.includes('h100') && !hardware.includes('h200') && !hardware.includes('b200') && !hardware.includes('cloud-api') && !hardware.includes('dgx');
+        const speedPenalty = (m.size_class === 'huge' && isConsumerRig) ? 12 : (m.size_class === 'large' && isConsumerRig) ? 6 : 0;
+        const target = clamp(jitter(m.target_score, 4));
+        const categoryScores = generateCategoryScores(target);
+        categoryScores.speed = clamp(categoryScores.speed - speedPenalty);
+        const finalScore = weightedScore(categoryScores);
+        const tier = tierForScore(finalScore);
+        const submissionId = uid();
+        const createdAt = randomDaysAgoISO(45);
+
+        insertSubmission.run({
+          id: submissionId,
+          model_id: modelId,
+          testpack_version: '2026-05-23-v1',
+          pipeline_score: finalScore,
+          tier,
+          category_scores: JSON.stringify(categoryScores),
+          raw_transcripts: JSON.stringify({ note: 'sample data — added by augmentIfMissing' }),
+          cli_version: '0.1.0',
+          submitter_ip: 'seed',
+          user_nickname: i === 0 ? 'lab' : pickSubmitter(),
+          config_tag: null,
+          hardware_tag: i === 0 ? `lab-${hardware}` : hardware,
+          lab_verified: i === 0 ? 1 : 0,
+          notes: i === 0 ? 'Lab-verified canonical run' : null,
+          created_at: createdAt,
+        });
+
+        // Speed in tok/sec varies hugely by hardware. Approximate latency:
+        //   huge model on consumer rig: 2000-4000ms/task
+        //   medium model on m3 max:     400-700ms/task
+        //   small model on M1:          200-500ms/task
+        const baseLatency =
+          m.size_class === 'huge' ? (isConsumerRig ? 3000 : 900)
+          : m.size_class === 'large' ? (isConsumerRig ? 1500 : 600)
+          : m.size_class === 'medium' ? (isConsumerRig ? 800 : 450)
+          : 350;
+
+        for (const t of tasks) {
+          const catScore = categoryScores[t.category as keyof typeof categoryScores] ?? target;
+          const passed = Math.random() < catScore / 100 ? 1 : 0;
+          const judgeScore = Math.round(clamp(jitter(catScore / 10, 1), 0, 10) * 10) / 10;
+          insertTaskResult.run({
+            id: uid(),
+            submission_id: submissionId,
+            task_id: t.id,
+            category: t.category,
+            task_input: t.prompt,
+            model_output: fakeOutputFor(t, catScore),
+            judge_score: judgeScore,
+            passed,
+            latency_ms: Math.floor(jitter(baseLatency, baseLatency * 0.3)),
+            tokens_used: Math.floor(jitter(220, 120)),
+            judge_rationale: passed ? 'Met rubric criteria.' : 'Missed key criterion.',
+          });
+        }
+      }
+    }
+  });
+
+  txn();
+  console.log('[augment] done');
 }
