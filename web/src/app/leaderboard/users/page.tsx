@@ -3,6 +3,7 @@ import { getUserLeaderboard, getUserDirectory } from "@/lib/api";
 import type { UserLeaderboardQuery } from "@/lib/api";
 import { TIER_BY_ID } from "@/lib/tiers";
 import { SearchInput } from "@/components/SearchInput";
+import { BetaBadge } from "@/components/BetaBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -181,6 +182,11 @@ export default async function UsersLeaderboardPage({
                       >
                         {e.userNickname}
                       </Link>
+                      {e.betaTesterRank && (
+                        <span className="ml-2 inline-block">
+                          <BetaBadge rank={e.betaTesterRank} size="sm" />
+                        </span>
+                      )}
                       {e.labVerified && (
                         <span className="ml-2 text-[10px] uppercase tracking-wider text-[var(--color-emerald)] font-semibold">
                           Lab

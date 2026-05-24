@@ -63,6 +63,7 @@ export interface UserLeaderboardEntry {
   labVerified: boolean;
   configTag: string | null;
   hardwareTag: string | null;
+  betaTesterRank: number | null;
   submittedAt: string;
   cliVersion: string;
   efficiency: SubmissionEfficiency;
@@ -107,6 +108,7 @@ export interface UserProfile {
   modelsTried: UserLeaderboardEntry[];
   providerCounts: Record<string, number>;
   hardwareCounts: Record<string, number>;
+  betaTesterRank: number | null;
   efficiency: {
     totalTokens: number;
     totalTasksRun: number;

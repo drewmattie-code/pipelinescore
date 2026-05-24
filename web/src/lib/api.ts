@@ -179,6 +179,7 @@ interface BackendUserEntry {
   lab_verified: boolean;
   config_tag?: string | null;
   hardware_tag?: string | null;
+  beta_tester_rank?: number | null;
   created_at: string;
   cli_version: string;
   efficiency?: {
@@ -211,6 +212,7 @@ function adaptUserEntry(e: BackendUserEntry): UserLeaderboardEntry {
     labVerified: !!e.lab_verified,
     configTag: e.config_tag ?? null,
     hardwareTag: e.hardware_tag ?? null,
+    betaTesterRank: e.beta_tester_rank ?? null,
     submittedAt: e.created_at,
     cliVersion: e.cli_version,
     efficiency: {
@@ -291,6 +293,7 @@ export async function getUserProfile(nickname: string): Promise<UserProfile | un
       models_tried: BackendUserEntry[];
       provider_counts: Record<string, number>;
       hardware_counts?: Record<string, number>;
+      beta_tester_rank?: number | null;
       efficiency?: {
         total_tokens?: number;
         total_tasks_run?: number;
@@ -314,6 +317,7 @@ export async function getUserProfile(nickname: string): Promise<UserProfile | un
       modelsTried: data.models_tried.map(adaptUserEntry),
       providerCounts: data.provider_counts,
       hardwareCounts: data.hardware_counts ?? {},
+      betaTesterRank: data.beta_tester_rank ?? null,
       efficiency: {
         totalTokens: data.efficiency?.total_tokens ?? 0,
         totalTasksRun: data.efficiency?.total_tasks_run ?? 0,
@@ -420,6 +424,7 @@ function mockUserProfile(nickname: string): UserProfile | undefined {
     modelsTried: Object.values(bestPerModel).sort((a, b) => b.pipelineScore - a.pipelineScore),
     providerCounts,
     hardwareCounts,
+    betaTesterRank: null,
     efficiency: { totalTokens, totalTasksRun, avgLatencyMs },
     firstSeen: subs.reduce((min, e) => (e.submittedAt < min ? e.submittedAt : min), subs[0].submittedAt),
     submissions: sorted,

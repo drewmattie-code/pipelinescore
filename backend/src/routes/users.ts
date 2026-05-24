@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { stamp, toIsoDate } from '../lib/api-version.js';
+import { getBetaTesterRank, getBetaTesterRankMap, BETA_TESTER_CAP } from '../lib/beta-testers.js';
 
 const router: Router = Router();
 
@@ -112,6 +113,7 @@ router.get('/v1/leaderboard/users', (req, res) => {
     user_nickname: r.user_nickname as string,
     config_tag: (r.config_tag as string | null) ?? null,
     hardware_tag: (r.hardware_tag as string | null) ?? null,
+    beta_tester_rank: getBetaTesterRank(r.user_nickname as string),
     created_at: toIsoDate(r.created_at as string),
     cli_version: r.cli_version as string,
     efficiency: efficiency[r.id as string] ?? { total_tokens: 0, avg_latency_ms: null, task_count: 0 },
@@ -228,6 +230,7 @@ router.get('/v1/users/:nickname', (req, res) => {
     models_tried: modelsTried,
     provider_counts: providerCounts,
     hardware_counts: hardwareCounts,
+    beta_tester_rank: getBetaTesterRank(nick),
     efficiency: {
       total_tokens: totalTokens,
       total_tasks_run: totalTasksRun,
@@ -252,7 +255,33 @@ router.get('/v1/users', (_req, res) => {
     )
     .all() as Array<{ user_nickname: string; submission_count: number; best_score: number }>;
 
-  res.json(stamp({ count: rows.length, users: rows }));
+  const withBeta = rows.map((r) => ({
+    ...r,
+    beta_tester_rank: getBetaTesterRank(r.user_nickname),
+  }));
+
+  res.json(stamp({ count: withBeta.length, users: withBeta }));
+});
+
+// ---- /v1/beta-testers --------------------------------------------------------
+// The First 50 Beta Testers — first 50 unique nicknames with a real submission,
+// ordered by first-submission time. Permanently capped at 50 once filled.
+router.get('/v1/beta-testers', (_req, res) => {
+  const map = getBetaTesterRankMap();
+  const slotsUsed = map.size;
+  const slotsRemaining = Math.max(0, BETA_TESTER_CAP - slotsUsed);
+  const list = Array.from(map.entries())
+    .sort((a, b) => a[1] - b[1])
+    .map(([nickname, rank]) => ({ rank, nickname }));
+
+  res.json(
+    stamp({
+      cap: BETA_TESTER_CAP,
+      slots_used: slotsUsed,
+      slots_remaining: slotsRemaining,
+      testers: list,
+    }),
+  );
 });
 
 export default router;

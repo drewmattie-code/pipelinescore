@@ -4,6 +4,7 @@ import { getUserProfile, getUserDirectory } from "@/lib/api";
 import { ScoreNumber } from "@/components/ScoreNumber";
 import { TierBadge } from "@/components/TierBadge";
 import { CategoryBars } from "@/components/CategoryBars";
+import { BetaBadge } from "@/components/BetaBadge";
 import { TIER_BY_ID, CATEGORY_LABELS } from "@/lib/tiers";
 
 const CATEGORIES = ["code", "reason", "write", "tool_use", "rag", "speed"] as const;
@@ -79,9 +80,14 @@ export default async function UserDashboardPage({
           <span className="text-xs uppercase tracking-[0.18em] text-[var(--color-emerald)] font-semibold">
             User profile
           </span>
-          <h1 className="display text-5xl md:text-6xl font-semibold tracking-tight text-[var(--color-ink)] mt-3">
-            {profile.nickname}
-          </h1>
+          <div className="mt-3 flex items-center gap-3 flex-wrap">
+            <h1 className="display text-5xl md:text-6xl font-bold tracking-tight text-[var(--color-ink)]">
+              {profile.nickname}
+            </h1>
+            {profile.betaTesterRank && (
+              <BetaBadge rank={profile.betaTesterRank} size="lg" />
+            )}
+          </div>
           <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-[var(--color-ink-2)]">
             <span>
               <span className="font-mono text-[var(--color-ink)]">

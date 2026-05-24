@@ -284,6 +284,7 @@ export const MOCK_USER_ENTRIES: UserLeaderboardEntry[] = (() => {
         labVerified: isLab,
         configTag: isLab ? null : MOCK_TAGS[(n * 7) % MOCK_TAGS.length],
         hardwareTag: isLab ? 'lab-baseline' : MOCK_HARDWARE[(n * 11) % MOCK_HARDWARE.length],
+        betaTesterRank: null,
         submittedAt: date,
         cliVersion: '0.1.0',
         efficiency: {

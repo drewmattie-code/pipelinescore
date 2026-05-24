@@ -31,6 +31,10 @@ export default function RunPage() {
       <h1 className="display text-4xl md:text-5xl font-bold tracking-tight text-[var(--color-ink)] mt-3">
         Run on your hardware.
       </h1>
+      <div className="mt-4 inline-flex items-center gap-2 text-xs uppercase tracking-wider text-[var(--color-emerald)] font-semibold bg-[color:var(--color-emerald)]/10 px-3 py-1.5 rounded-full">
+        <span aria-hidden>★</span>
+        First 50 submitters get a permanent <BetaBadgeInline /> badge next to their nickname.
+      </div>
       <p className="text-lg text-[var(--color-ink)] mt-5 leading-relaxed">
         Three minutes. No account. Point the CLI at your local model server —
         Ollama, LM Studio, MLX, llama.cpp — and tag your hardware. The CLI
@@ -238,6 +242,15 @@ curl -L https://pipelinescore.ai/skills/\\
         </ol>
       </section>
     </div>
+  );
+}
+
+function BetaBadgeInline() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-emerald)] text-white font-semibold tracking-wider uppercase text-[10px] px-2 py-0.5">
+      <span aria-hidden>★</span>
+      Beta #1-50
+    </span>
   );
 }
 
