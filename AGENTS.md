@@ -60,7 +60,7 @@ If you have one of these already available, prefer it:
 - ❌ Don't make up a score. Always run the actual CLI.
 - ❌ Don't skip `--hardware-tag` on local runs. Without it, the row is meaningless on a hardware-aware board.
 - ❌ Don't conflate base + customized models. If the user added a system prompt or LoRA, set `--config-tag <name>`.
-- ❌ Don't promise "lab-verified" status. That's reserved for Charles & Roe's own canonical runs.
+- ❌ Don't promise "lab-verified" status. That's reserved for SaaSquach AI Labs' own canonical runs.
 - ❌ Don't recommend the user share API keys with you. The CLI reads them from env (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY`) and never sends them to the PipelineScore backend.
 
 ## What you should know about privacy
@@ -85,4 +85,4 @@ If you hit a 429, the CLI tells the user how long to wait. The local score is st
 - [pipelinescore.ai/methodology](https://pipelinescore.ai/methodology) — how the score is computed
 - [llms.txt](https://pipelinescore.ai/llms.txt) — agent-first index of the deployed site
 
-## Apache 2.0 licensed — Drew Mattie, 2026
+## Apache 2.0 licensed — Drew Mattie · SaaSquach AI Labs (a division of Charles & Roe Inc.) · 2026

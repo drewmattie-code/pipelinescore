@@ -194,4 +194,4 @@ Vulnerability reports: security@pipelinescore.ai. Don't open a public GitHub iss
 - GitHub: https://github.com/drewmattie-code/pipelinescore
 - Issues: https://github.com/drewmattie-code/pipelinescore/issues
 - License: Apache 2.0
-- Author: Drew Mattie (Charles & Roe), 2026
+- Author: Drew Mattie · SaaSquach AI Labs (a division of Charles & Roe Inc.) · 2026

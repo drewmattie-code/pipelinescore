@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "About",
-  description: "PipelineScore is a user-run LLM benchmark built by Charles & Roe.",
+  description: "PipelineScore is a user-run LLM benchmark built by SaaSquach AI Labs (a division of Charles & Roe Inc.).",
 };
 
 export default function AboutPage() {

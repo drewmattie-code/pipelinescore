@@ -111,7 +111,7 @@ PipelineScore's whole pitch is **hardware-aware** ranking. Same model on M3 Max 
 
 ## License
 
-[Apache 2.0](LICENSE). Drew Mattie, 2026.
+[Apache 2.0](LICENSE). Drew Mattie · SaaSquach AI Labs (a division of Charles & Roe Inc.) · 2026.
 
 ## Links
 

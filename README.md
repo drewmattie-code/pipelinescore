@@ -165,4 +165,4 @@ If this repo is useful to you, a star is the easiest signal to send. It helps su
 
 ## Authors
 
-Drew Mattie (Charles & Roe Inc.)
+Drew Mattie · SaaSquach AI Labs (a division of Charles & Roe Inc.)
