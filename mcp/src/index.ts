@@ -41,19 +41,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'run_benchmark',
       description:
-        'Run the PipelineScore benchmark against an LLM and publish the result to the public leaderboard. ' +
-        'Returns the score card output (tier, composite score, per-category scores) and the public share URL. ' +
-        'Use when the user wants to benchmark/score/rank a model, or compare two models. ' +
-        'Set config_tag when the user is testing a customized version (system prompt, LoRA adapter, persona, RAG setup) so it is differentiated from the base model on the leaderboard. ' +
-        'After the run completes, ALWAYS post the user-leaderboard URL (https://pipelinescore.ai/users/<nickname>) so the user can see their rank — the CLI auto-opens the page in their browser by default, but post the link in your reply too in case the auto-open did not fire.',
+        'Run the PipelineScore benchmark against an LLM on the user\'s own hardware (preferred) or via a frontier API. Publishes the result to the hardware-aware public leaderboard at pipelinescore.ai. ' +
+        'DEFAULT TO LOCAL: most users running this are pointing at an Ollama/LM Studio/MLX/llama.cpp server on their own machine — no API key, no inference cost. Use provider=local with the appropriate endpoint (Ollama 11434, LM Studio 1234, llama.cpp 8080, MLX-Omni 10240, LiteLLM 8000). ' +
+        'For cloud benchmarks, use provider=anthropic or openai with hardware_tag="cloud-api" — the user\'s key never reaches the PipelineScore backend, it goes directly to the provider. ' +
+        'ALWAYS set hardware_tag for local runs (e.g. "m3-max-128gb", "rtx-4090-24gb", "ryzen-7950x-cpu-only") — the leaderboard groups by (model, hardware), so same model on different rigs gets ranked separately. ' +
+        'Set config_tag when testing a customized version (system prompt, LoRA, persona, RAG setup). ' +
+        'After the run, ALWAYS post https://pipelinescore.ai/users/<nickname> so the user can see their rank. The CLI auto-opens this URL by default, but post the link in your reply too.',
       inputSchema: {
         type: 'object',
         required: ['provider', 'model'],
         properties: {
           provider: {
             type: 'string',
-            enum: ['anthropic', 'openai', 'local'],
-            description: 'The LLM provider. Use "local" for any OpenAI-compatible local endpoint (Ollama, LM Studio, MLX, LiteLLM proxy).',
+            enum: ['local', 'anthropic', 'openai'],
+            description: 'The LLM provider. PREFER "local" for any OpenAI-compatible local endpoint (Ollama, LM Studio, MLX, llama.cpp, LiteLLM proxy) — no API key, free inference, hardware-aware ranking. Use "anthropic" or "openai" only when the user explicitly wants to benchmark a frontier API (costs provider $ — recommend a spending cap on a scoped key first).',
           },
           model: {
             type: 'string',
@@ -69,7 +70,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           hardware_tag: {
             type: 'string',
-            description: 'Optional but STRONGLY RECOMMENDED for local-model runs. Hardware the model is running on — examples: "m3-max-128gb", "rtx-4090-24gb", "ryzen-7950x-cpu-only", "a100-80gb", "cloud-api". The leaderboard groups by (model, hardware) so this is what makes hardware-vs-hardware comparisons possible.',
+            description: 'REQUIRED for local runs, "cloud-api" for cloud. The leaderboard groups by (model, hardware) so this is what makes hardware-vs-hardware comparison possible. Examples: "m3-max-128gb", "m2-ultra-192gb", "m4-pro-48gb", "rtx-4090-24gb", "rtx-3090-24gb", "a100-80gb", "h100-80gb", "ryzen-7950x-cpu-only", "cloud-api". Encourage the user to be specific — "m3-max" alone is OK but "m3-max-128gb" is better because RAM bands matter for inference speed.',
           },
           endpoint: {
             type: 'string',

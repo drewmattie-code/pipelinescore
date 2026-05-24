@@ -34,23 +34,23 @@ export default async function Home() {
             {/* Frosted card so the subhead stays readable over the pipe image. */}
             <div className="inline-flex flex-col gap-7 rounded-3xl backdrop-blur-md bg-[color:var(--color-bg)]/85 border border-[var(--color-line-2)] p-7 md:p-10 shadow-sm">
               <span className="text-xs uppercase tracking-[0.18em] text-[var(--color-emerald)] font-semibold">
-                LLM Benchmark · v1
+                Local-first LLM benchmark · v1
               </span>
               <h1 className="display text-5xl md:text-7xl font-extrabold text-[var(--color-ink)] leading-[1.02]">
-                How does your LLM actually rank?
+                Benchmark LLMs on YOUR hardware.
               </h1>
               <p className="text-lg md:text-xl text-[var(--color-ink)] leading-relaxed max-w-xl font-medium">
-                PipelineScore is the user-run benchmark. Bring your own API key,
-                run a standardized 25-task suite, get a deterministic score, a
-                tier badge, and a spot on the public leaderboard alongside
-                everyone else who&apos;s benchmarked.
+                M3 Max vs RTX 4090 vs A100 vs cloud API — same 25-task suite,
+                deterministic score, your environment. PipelineScore is the
+                only public LLM leaderboard that ranks <em>where</em> the
+                model is running, not just which model it is.
               </p>
               <div className="flex flex-wrap items-center gap-3 mt-1">
                 <Link
                   href="/run"
                   className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-[var(--color-ink)] text-white text-sm font-semibold hover:bg-[var(--color-emerald)] transition-colors"
                 >
-                  Get started
+                  Run on your hardware
                 </Link>
                 <Link
                   href="/leaderboard/users"
@@ -138,18 +138,18 @@ export default async function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-16">
           <Step
             n={1}
-            title="Install the CLI"
-            body="One npx command. No accounts, no setup. Bring your own provider key."
+            title="Point the CLI at your model"
+            body="Ollama, LM Studio, MLX, llama.cpp — anything with an OpenAI-compatible endpoint. Or pass --provider anthropic / openai with your own key."
           />
           <Step
             n={2}
-            title="Run the test pack"
-            body="25 tasks across code, reasoning, writing, tool use, RAG, and speed. Signed and rotated daily."
+            title="Tag your hardware"
+            body="--hardware-tag m3-max-128gb / rtx-4090-24gb / a100-80gb. Same model on different rigs gets ranked separately. Same rig with different models lets you compare apples to apples."
           />
           <Step
             n={3}
-            title="Get your score and tier"
-            body="A deterministic 0–100 PipelineScore, a tier badge, and a shareable result card."
+            title="Get your score + tier"
+            body="A deterministic 0–100 PipelineScore across 25 tasks, a tier badge, total tokens used, average latency, and a spot on the public hardware-aware leaderboard."
           />
         </div>
       </section>

@@ -1,13 +1,46 @@
 # PipelineScore
 
-**The user-run LLM benchmark.** Bring your own API key, run a standardized 30-task suite against any LLM, get a deterministic score (0–100) and a tier badge. Like `cpu.userbenchmark.com`, but for language models.
+**Benchmark LLMs on YOUR hardware.** Same 25 standardized tasks, deterministic 0–100 score, your environment. The only public LLM leaderboard that ranks where the model runs — not just which model it is.
 
-Built in the daylight that no existing leaderboard occupies:
+Public site: [pipelinescore.ai](https://pipelinescore.ai)
 
-- **LMArena** = preference votes, not runs.
-- **Artificial Analysis** = pro aggregator, centrally-run.
-- **Academic benchmarks** (MMLU, SWE-Bench, TerminalBench) = lab-flavored, single-shot, decay fast.
-- **PipelineScore** = run it yourself, on your model, with your prompt setup, against real tasks, then share the result card.
+## Quickstart — local model (30 seconds)
+
+If you have Ollama / LM Studio / MLX / llama.cpp running:
+
+```bash
+npx @pipelinescore/cli run \
+  --provider local \
+  --endpoint http://localhost:11434 \
+  --model llama-3.3-70b \
+  --hardware-tag m3-max-128gb \
+  --user your-handle
+```
+
+Swap port for LM Studio (`1234`), llama.cpp (`8080`), MLX-Omni (`10240`), or LiteLLM proxy (`8000`). Replace `m3-max-128gb` with your rig (`rtx-4090-24gb`, `ryzen-7950x-cpu-only`, `a100-80gb`, anything alphanum + `. _ -`).
+
+The CLI runs locally, calls your model server, scores the output, and publishes the result to https://pipelinescore.ai/users/your-handle.
+
+## Quickstart — frontier API (BYOK)
+
+```bash
+ANTHROPIC_API_KEY=sk-... npx @pipelinescore/cli run \
+  --provider anthropic --model claude-opus-4-7 \
+  --user your-handle
+```
+
+Or `--provider openai`. **Your key never reaches our backend** — it goes directly to the provider. See [Privacy](https://pipelinescore.ai/privacy) for the full data-flow.
+
+## Why this leaderboard exists
+
+Every other ranked LLM list ignores the rig:
+
+- **LMArena** = preference votes, not benchmark runs
+- **Artificial Analysis** = pro aggregator, centrally-run
+- **Academic benchmarks** (MMLU, SWE-Bench, TerminalBench) = lab-controlled, single-shot, decay fast
+- **PipelineScore** = you run it on your hardware, your rig joins a community board
+
+Same Llama 4 on an M3 Max vs an RTX 4090 vs an A100 produces three very different rows. Same RTX 4090 with three different models produces three apples-to-apples comparisons. The benchmark is reproducible, the hardware tag is preserved, the score lands on a public, searchable leaderboard.
 
 ## What's here
 
@@ -32,7 +65,7 @@ npm install
 npm run dev
 ```
 
-On first boot it auto-migrates and seeds the database (`~/Projects/pipelinescore/backend/.data/pipelinescore.db`) with 10 reference models + 30 sample submissions. Verify:
+On first boot it auto-migrates and seeds the database (`~/Projects/pipelinescore/backend/.data/pipelinescore.db`) with 10 reference models + 120 sample submissions across realistic hardware tags. Verify:
 ```bash
 curl http://localhost:4601/health
 curl http://localhost:4601/v1/leaderboard | jq '.entries[:5]'
