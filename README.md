@@ -11,7 +11,11 @@
 [![GitHub issues](https://img.shields.io/github/issues/drewmattie-code/pipelinescore?style=flat-square)](https://github.com/drewmattie-code/pipelinescore/issues)
 [![Local-first](https://img.shields.io/badge/local--first-Ollama_·_LM_Studio_·_MLX_·_llama.cpp-0F766E?style=flat-square)](https://pipelinescore.ai/run)
 
-[**Live leaderboard**](https://pipelinescore.ai) · [**Methodology**](https://pipelinescore.ai/methodology) · [**Privacy / BYOK posture**](https://pipelinescore.ai/privacy) · [**Run the CLI**](https://pipelinescore.ai/run)
+[**🚀 Live at pipelinescore.ai**](https://pipelinescore.ai)
+
+[Live leaderboard](https://pipelinescore.ai/leaderboard/users) · [Methodology](https://pipelinescore.ai/methodology) · [Privacy / BYOK posture](https://pipelinescore.ai/privacy) · [Run the CLI](https://pipelinescore.ai/run)
+
+[![PipelineScore live leaderboard — DeepSeek R1 / Qwen 3 / Llama 3.3 across A100, H100, M2 Ultra, B200 hardware tags](assets/leaderboard-screenshot.jpg)](https://pipelinescore.ai/leaderboard/users)
 
 </div>
 
