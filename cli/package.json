@@ -1,6 +1,6 @@
 {
   "name": "@pipelinescore/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "PipelineScore CLI — benchmark LLMs on your own hardware. Runs a standardized 25-task suite against any local server (Ollama, LM Studio, MLX, llama.cpp) or frontier API (Anthropic, OpenAI), publishes to the hardware-aware public leaderboard at pipelinescore.ai.",
   "type": "module",
   "main": "./dist/index.js",

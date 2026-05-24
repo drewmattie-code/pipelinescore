@@ -94,7 +94,7 @@ program
   .requiredOption('--model <id>', 'model id (e.g. claude-opus-4-7-20250514, gpt-4o-mini)')
   .option('--api-key <key>', 'API key (defaults to env)')
   .option('--endpoint <url>', 'override endpoint base URL (for local/OpenAI-compatible)')
-  .option('--backend <url>', 'PipelineScore backend URL', 'http://localhost:4601')
+  .option('--backend <url>', 'PipelineScore backend URL', 'https://api.pipelinescore.ai')
   .option('--user <nickname>', 'your public leaderboard nickname (alphanum + . _ -, 2–40 chars)')
   .option(
     '--config-tag <tag>',
@@ -112,7 +112,7 @@ program
   .option(
     '--site <url>',
     'PipelineScore web URL (used for the auto-opened profile page)',
-    'http://localhost:4600'
+    'https://pipelinescore.ai'
   )
   .action(async (opts) => {
     try {
