@@ -14,6 +14,7 @@ import { runBenchmark } from './runner.js';
 import { renderCard } from './card.js';
 import { determineTier } from './score.js';
 import type { LLMProvider } from './types.js';
+import { detectHardware, checkModelFit, type HardwareInfo } from './hardware.js';
 
 const CONFIG_PATH = resolve(homedir(), '.config', 'pipelinescore', 'config.json');
 const NICKNAME_RE = /^[a-zA-Z0-9._-]{2,40}$/;
@@ -102,7 +103,7 @@ program
   )
   .option(
     '--hardware-tag <tag>',
-    "your hardware (e.g. 'm3-max-128gb', 'rtx-3090', 'ryzen-7950x-cpu-only', 'a100-80gb')"
+    "your hardware (e.g. 'm3-max-128gb', 'rtx-3090', 'a100-80gb'); auto-detected on local runs if omitted"
   )
   .option('--no-submit', 'do not POST results to the backend')
   .option(
@@ -154,6 +155,20 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
   if (hardwareTag && !HARDWARE_TAG_RE.test(hardwareTag)) {
     throw new Error(`Invalid --hardware-tag "${hardwareTag}". Use 2-60 chars of [a-zA-Z0-9._-].`);
   }
+
+  // For local runs the model executes on this machine, so auto-detect a stable
+  // hardware tag when the user did not supply one. Frontier API runs execute in
+  // the provider's cloud, so we leave their hardware unspecified.
+  let hardwareAutoDetected = false;
+  let hardware: HardwareInfo | null = null;
+  if (providerName === 'local') {
+    hardware = detectHardware();
+    if (!hardwareTag && hardware.tag) {
+      hardwareTag = hardware.tag;
+      hardwareAutoDetected = true;
+    }
+  }
+
   const persist: SavedConfig = {};
   if (opts.user && nickname) persist.user_nickname = nickname;
   if (opts.configTag && configTag) persist.config_tag = configTag;
@@ -166,13 +181,29 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
       `${chalk.bold('PipelineScore')} ${chalk.dim('v0.1.0')}\n` +
         `${chalk.dim('Provider:')}     ${providerName}\n` +
         `${chalk.dim('Model:')}        ${opts.model}\n` +
-        `${chalk.dim('Hardware:')}     ${hardwareTag ?? chalk.italic.dim('— (use --hardware-tag for local-hardware comparisons)')}\n` +
+        `${chalk.dim('Hardware:')}     ${hardwareTag ? `${hardwareTag}${hardwareAutoDetected ? chalk.dim(' (auto-detected)') : ''}` : chalk.italic.dim('— (use --hardware-tag for local-hardware comparisons)')}\n` +
         `${chalk.dim('Config tag:')}   ${configTag ?? chalk.italic.dim('— (base model, no customization)')}\n` +
         `${chalk.dim('User:')}         ${nickname ?? chalk.italic.dim('anonymous (use --user to claim a nickname)')}\n` +
         `${chalk.dim('Submit:')}       ${opts.submit ? 'yes' : 'no'}`,
       { padding: { top: 0, bottom: 0, left: 1, right: 1 }, borderStyle: 'round', borderColor: 'cyan' },
     ) + '\n',
   );
+
+  // Lightweight model-fit heads-up for local runs (rough estimate; see llmfit
+  // for accurate scoring).
+  if (providerName === 'local' && hardware) {
+    const fit = checkModelFit(opts.model, hardware);
+    if (fit && !fit.fits) {
+      process.stderr.write(
+        chalk.yellow(
+          `Heads up: ${opts.model} looks like ~${fit.modelParamsB}B params ` +
+            `(~${fit.estRequiredGb}GB at q4), but this machine has ~${fit.budgetGb}GB ${fit.budgetKind.toUpperCase()}. ` +
+            `It may not load, or will run slowly.\n`,
+        ) +
+          chalk.dim('  Rough estimate. For accurate model-fit scoring see llmfit: https://github.com/AlexsJones/llmfit\n'),
+      );
+    }
+  }
 
   // Resolve provider
   const provider = buildProvider(providerName, opts);
