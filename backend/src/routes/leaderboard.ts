@@ -8,8 +8,8 @@ router.get('/v1/leaderboard', (req, res) => {
   const category = typeof req.query.category === 'string' ? req.query.category : undefined;
   const provider = typeof req.query.provider === 'string' ? req.query.provider : undefined;
   const labVerified = req.query.lab_verified === '1' || req.query.lab_verified === 'true';
-  const limit = Math.min(parseInt((req.query.limit as string) ?? '50', 10) || 50, 200);
-  const days = Math.min(parseInt((req.query.days as string) ?? '30', 10) || 30, 365);
+  const limit = Math.max(1, Math.min(parseInt((req.query.limit as string) ?? '50', 10) || 50, 200));
+  const days = Math.max(1, Math.min(parseInt((req.query.days as string) ?? '30', 10) || 30, 365));
 
   // Pull recent submissions (last N days) joined w/ models.
   const where: string[] = [`s.created_at >= datetime('now', ?)`];
@@ -22,6 +22,18 @@ router.get('/v1/leaderboard', (req, res) => {
   if (labVerified) {
     where.push(`s.lab_verified = 1`);
   }
+  // When a category is requested, filter and rank by that category's score IN
+  // SQL via json_extract. The old code took the top-N by OVERALL score and then
+  // filtered in memory, so a model strong in one category but mid-pack overall
+  // was wrongly dropped from the category board. The path is a bound parameter,
+  // so this stays injection-safe.
+  if (category) {
+    where.push(`json_extract(s.category_scores, '$.' || ?) IS NOT NULL`);
+    params.push(category);
+  }
+
+  const orderBy = category ? `json_extract(s.category_scores, '$.' || ?) DESC` : `s.pipeline_score DESC`;
+  if (category) params.push(category);
 
   const sql = `
     SELECT s.id, s.pipeline_score, s.tier, s.category_scores, s.lab_verified, s.user_nickname, s.created_at,
@@ -30,14 +42,14 @@ router.get('/v1/leaderboard', (req, res) => {
     FROM submissions s
     JOIN models m ON s.model_id = m.id
     WHERE ${where.join(' AND ')}
-    ORDER BY s.pipeline_score DESC
+    ORDER BY ${orderBy}
     LIMIT ?
   `;
   params.push(limit);
 
   const rows = db.prepare(sql).all(...params) as Array<Record<string, unknown>>;
 
-  let entries = rows.map((r) => {
+  const entries = rows.map((r) => {
     const cs = JSON.parse(r.category_scores as string) as Record<string, number>;
     return {
       submission_id: r.id,
@@ -55,12 +67,6 @@ router.get('/v1/leaderboard', (req, res) => {
       },
     };
   });
-
-  if (category) {
-    entries = entries
-      .filter((e) => category in e.category_scores)
-      .sort((a, b) => b.category_scores[category] - a.category_scores[category]);
-  }
 
   res.json(stamp({
     count: entries.length,
