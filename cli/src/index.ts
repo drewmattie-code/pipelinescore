@@ -208,14 +208,23 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
   // Resolve provider
   const provider = buildProvider(providerName, opts);
 
-  // Load testpack (try backend, fall back to local)
+  // Load testpack. The benchmark we EXECUTE is always the local, bundled,
+  // npm-integrity-checked testpack — never a network payload. The judges run
+  // task-defined Python (see judges/executePython*), so executing a fetched
+  // testpack would let a compromised or spoofed backend run arbitrary code on
+  // the user's machine. The backend fetch is used ONLY as a non-executing
+  // version check that nudges the user to upgrade when a newer pack is published.
   const taxonomy = await loadLocalTaxonomy();
-  let testpack = await fetchTestpack(opts.backend);
-  if (testpack) {
-    process.stdout.write(chalk.dim(`Fetched testpack ${testpack.version} from backend.\n`));
-  } else {
-    testpack = await loadLocalTestpack();
-    process.stdout.write(chalk.dim(`Backend unreachable; using local testpack ${testpack.version}.\n`));
+  const testpack = await loadLocalTestpack();
+  process.stdout.write(chalk.dim(`Using bundled testpack ${testpack.version}.\n`));
+  const remote = await fetchTestpack(opts.backend);
+  if (remote?.version && remote.version !== testpack.version) {
+    process.stdout.write(
+      chalk.yellow(
+        `A newer testpack (${remote.version}) is published; you're on ${testpack.version}. ` +
+        `Upgrade for the latest tasks: npm i -g @pipelinescore/cli\n`,
+      ),
+    );
   }
 
   // Run

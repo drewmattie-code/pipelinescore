@@ -8,16 +8,42 @@ export interface PyExecResult {
   exitCode: number;
 }
 
+// Minimal environment for the judge subprocess. We strip the parent process
+// env so model-generated code cannot read the user's secrets (e.g. their
+// ANTHROPIC_API_KEY / OPENAI_API_KEY) out of process.env and exfiltrate them;
+// only the handful of vars Python needs to launch are passed through.
+// NOTE: this is NOT full sandboxing — there is no network/filesystem isolation,
+// which would require an OS container/seccomp. The judge still runs the model's
+// generated code locally, by design (it's a code-execution benchmark).
+function safeEnv(): Record<string, string> {
+  const env: Record<string, string> = { PATH: process.env.PATH ?? '' };
+  for (const k of ['LANG', 'LC_ALL', 'LC_CTYPE', 'SystemRoot', 'PATHEXT', 'TEMP', 'TMP', 'HOME']) {
+    const v = process.env[k];
+    if (v) env[k] = v;
+  }
+  return env;
+}
+
+const MAX_CAPTURE = 512 * 1024; // cap stdout/stderr so a runaway print can't exhaust memory
+
 export function runPython(script: string, timeoutMs = 8000): Promise<PyExecResult> {
   return new Promise((resolve) => {
-    const proc = spawn(PYTHON, ['-c', script], { stdio: ['ignore', 'pipe', 'pipe'] });
+    // -I = isolated mode: ignore PYTHONPATH / user site-packages / env config.
+    const proc = spawn(PYTHON, ['-I', '-c', script], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: safeEnv(),
+    });
     let stdout = '';
     let stderr = '';
     const timer = setTimeout(() => {
       proc.kill('SIGKILL');
     }, timeoutMs);
-    proc.stdout.on('data', (d) => (stdout += d.toString()));
-    proc.stderr.on('data', (d) => (stderr += d.toString()));
+    proc.stdout.on('data', (d) => {
+      if (stdout.length < MAX_CAPTURE) stdout += d.toString();
+    });
+    proc.stderr.on('data', (d) => {
+      if (stderr.length < MAX_CAPTURE) stderr += d.toString();
+    });
     proc.on('close', (code) => {
       clearTimeout(timer);
       resolve({ stdout, stderr, exitCode: code ?? -1 });
