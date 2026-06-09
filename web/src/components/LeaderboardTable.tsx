@@ -86,6 +86,7 @@ export function LeaderboardTable({ models }: { models: Model[] }) {
                   <td className="py-4">
                     <Link
                       href={`/models/${m.slug}`}
+                      prefetch={false}
                       className="font-medium text-[var(--color-ink)] hover:text-[var(--color-emerald)] transition-colors"
                     >
                       {m.displayName}
@@ -111,6 +112,7 @@ export function LeaderboardTable({ models }: { models: Model[] }) {
                   <td className="py-4 pr-6 md:pr-4 text-right">
                     <Link
                       href={`/models/${m.slug}`}
+                      prefetch={false}
                       className="text-xs text-[var(--color-ink-2)] hover:text-[var(--color-ink)] transition-colors"
                     >
                       Detail →

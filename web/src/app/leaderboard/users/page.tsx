@@ -178,6 +178,7 @@ export default async function UsersLeaderboardPage({
                     <td className="px-4 py-3">
                       <Link
                         href={`/users/${encodeURIComponent(e.userNickname)}`}
+                        prefetch={false}
                         className="text-[var(--color-ink)] hover:text-[var(--color-emerald)] transition-colors font-medium"
                       >
                         {e.userNickname}
@@ -196,6 +197,7 @@ export default async function UsersLeaderboardPage({
                     <td className="px-4 py-3">
                       <Link
                         href={`/models/${e.model.slug}`}
+                        prefetch={false}
                         className="text-[var(--color-ink)] hover:text-[var(--color-emerald)] transition-colors"
                       >
                         {e.model.displayName}
@@ -261,6 +263,7 @@ export default async function UsersLeaderboardPage({
             {query.offset! > 0 && (
               <Link
                 href={pageHref(Math.max(0, query.offset! - PAGE_SIZE))}
+                prefetch={false}
                 className="px-3 py-1.5 rounded-full border border-[var(--color-line)] hover:border-[var(--color-emerald)] hover:text-[var(--color-emerald)] transition-colors"
               >
                 ← Previous
@@ -269,6 +272,7 @@ export default async function UsersLeaderboardPage({
             {query.offset! + PAGE_SIZE < page.total && (
               <Link
                 href={pageHref(query.offset! + PAGE_SIZE)}
+                prefetch={false}
                 className="px-3 py-1.5 rounded-full border border-[var(--color-line)] hover:border-[var(--color-emerald)] hover:text-[var(--color-emerald)] transition-colors"
               >
                 Next →
@@ -291,6 +295,7 @@ export default async function UsersLeaderboardPage({
             <Link
               key={u.userNickname}
               href={`/users/${encodeURIComponent(u.userNickname)}`}
+              prefetch={false}
               className="group flex items-center justify-between rounded-2xl border border-[var(--color-line-2)] bg-[var(--color-surface)] p-5 hover:border-[var(--color-emerald)] transition-colors"
             >
               <div>
@@ -336,6 +341,7 @@ function FilterChip({
   return (
     <Link
       href={href}
+      prefetch={false}
       className={`text-xs uppercase tracking-wider px-3 py-1.5 rounded-full border transition-colors ${
         active
           ? "border-[var(--color-emerald)] text-[var(--color-emerald)] font-semibold"
@@ -358,7 +364,7 @@ function SortLink({
   arrow: React.ReactNode;
 }) {
   return (
-    <Link href={href} className="inline-flex items-center gap-1 hover:text-[var(--color-ink)] transition-colors">
+    <Link href={href} prefetch={false} className="inline-flex items-center gap-1 hover:text-[var(--color-ink)] transition-colors">
       {label} {arrow}
     </Link>
   );
