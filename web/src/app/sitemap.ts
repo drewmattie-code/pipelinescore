@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
-import { getLeaderboardModels, getUserDirectory } from "@/lib/api";
+import { getHardwareBoard, getLeaderboardModels, getUserDirectory } from "@/lib/api";
+import { modelMatchups, rigMatchups } from "@/lib/matchups";
 
 const SITE_URL = "https://pipelinescore.ai";
 
@@ -22,9 +23,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // Per-model pages
-  const [models, users] = await Promise.all([
+  const [models, users, rigs] = await Promise.all([
     getLeaderboardModels(),
     getUserDirectory(),
+    getHardwareBoard(),
   ]);
 
   const modelPages = models.map((m) => ({
@@ -32,6 +34,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: now,
     changeFrequency: "weekly" as const,
     priority: 0.7,
+  }));
+
+  // Popular head-to-heads — same pair generator as the homepage strip, so
+  // crawlers land on pages users actually see linked.
+  const comparePages = modelMatchups(models, 12).map(([a, b]) => ({
+    url: `${SITE_URL}/compare/${a.slug}/${b.slug}`,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.6,
+  }));
+  const rigComparePages = rigMatchups(rigs, 6).map(([a, b]) => ({
+    url: `${SITE_URL}/compare/hardware/${encodeURIComponent(a.tag)}/${encodeURIComponent(b.tag)}`,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.6,
   }));
 
   // Per-user dashboards. Cap at 200 to keep the sitemap reasonable.
@@ -42,5 +59,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  return [...staticPages, ...modelPages, ...userPages];
+  return [...staticPages, ...modelPages, ...comparePages, ...rigComparePages, ...userPages];
 }

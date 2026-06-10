@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { getLeaderboardModels, getStats } from "@/lib/api";
+import { getHardwareBoard, getLeaderboardModels, getStats } from "@/lib/api";
 import { BenchTable } from "@/components/BenchTable";
 import { CopyCommand } from "@/components/CopyCommand";
 import { CATEGORY_LABELS, CATEGORY_WEIGHTS, TIERS } from "@/lib/tiers";
+import { modelMatchups, rigMatchups } from "@/lib/matchups";
 
 // The board reflects live submission state. force-dynamic keeps it fresh on
 // every request — no stale cached homepage.
@@ -12,7 +13,13 @@ const RUN_COMMAND =
   "npx @pipelinescore/cli run --provider local --endpoint http://localhost:11434 --model llama-3.3-70b --hardware-tag m3-max-128gb --user your-handle";
 
 export default async function Home() {
-  const [models, stats] = await Promise.all([getLeaderboardModels(), getStats()]);
+  const [models, stats, rigs] = await Promise.all([
+    getLeaderboardModels(),
+    getStats(),
+    getHardwareBoard(),
+  ]);
+  const modelPairs = modelMatchups(models);
+  const rigPairs = rigMatchups(rigs);
 
   return (
     <div className="flex flex-col">
@@ -97,6 +104,44 @@ export default async function Home() {
           </Link>
         </div>
         <BenchTable models={models} />
+      </section>
+
+      {/* Popular matchups — every chip is a live head-to-head */}
+      <section className="max-w-7xl mx-auto px-6 md:px-10 w-full mt-16 md:mt-20">
+        <h2 className="text-xl font-bold text-[var(--color-ink)] tracking-tight">
+          Popular matchups
+        </h2>
+        <p className="text-sm text-[var(--color-ink-2)] mt-1">
+          The rivalries worth settling. Every pair opens a live head-to-head.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {modelPairs.map(([a, b]) => (
+            <Link
+              key={`${a.slug}|${b.slug}`}
+              href={`/compare/${a.slug}/${b.slug}`}
+              prefetch={false}
+              className="px-3.5 py-2 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] text-sm text-[var(--color-ink)] hover:border-[var(--color-emerald)] hover:text-[var(--color-emerald)] transition-colors"
+            >
+              {a.displayName} <span className="text-[var(--color-ink-3)]">vs</span>{" "}
+              {b.displayName}
+            </Link>
+          ))}
+        </div>
+        {rigPairs.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {rigPairs.map(([a, b]) => (
+              <Link
+                key={`${a.tag}|${b.tag}`}
+                href={`/compare/hardware/${encodeURIComponent(a.tag)}/${encodeURIComponent(b.tag)}`}
+                prefetch={false}
+                className="px-3.5 py-2 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] text-sm font-mono text-[var(--color-ink)] hover:border-[var(--color-emerald)] hover:text-[var(--color-emerald)] transition-colors"
+              >
+                {a.tag} <span className="text-[var(--color-ink-3)] font-sans">vs</span>{" "}
+                {b.tag}
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Score anatomy: weights + tiers */}

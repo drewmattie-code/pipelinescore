@@ -369,8 +369,8 @@ export async function getUserDirectory(): Promise<UserDirectoryEntry[]> {
  * per rig. Built from the user leaderboard (the backend has no dedicated
  * endpoint); entries arrive score-desc so the first hit per tag is its best.
  */
-export async function getHardwareBoard(): Promise<HardwareBoardRow[]> {
-  const page = await getUserLeaderboard({ sort: 'score', dir: 'desc', limit: 500 });
+export async function getHardwareBoard(prefetched?: UserLeaderboardPage): Promise<HardwareBoardRow[]> {
+  const page = prefetched ?? (await getUserLeaderboard({ sort: 'score', dir: 'desc', limit: 500 }));
   const rows = new Map<
     string,
     HardwareBoardRow & { _users: Set<string>; _latencies: number[] }

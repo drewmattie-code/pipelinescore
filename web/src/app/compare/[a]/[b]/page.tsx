@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getModel } from "@/lib/api";
+import { DeltaChip } from "@/components/DeltaChip";
 import { ScoreNumber } from "@/components/ScoreNumber";
 import { TierBadge } from "@/components/TierBadge";
 import { CATEGORY_LABELS, TIER_BY_ID, tierForScore } from "@/lib/tiers";
@@ -172,24 +173,6 @@ export default async function ComparePage({
         <StatPanel model={mb} />
       </section>
     </div>
-  );
-}
-
-/** Signed point-difference chip: green when ahead, red when behind. */
-function DeltaChip({ delta }: { delta: number | null }) {
-  if (delta === null || delta === 0) return <span className="w-12 shrink-0" />;
-  const ahead = delta > 0;
-  return (
-    <span
-      className={`shrink-0 w-12 text-center font-mono tabular-nums text-[11px] font-bold px-1 py-0.5 rounded ${
-        ahead
-          ? "text-[var(--color-emerald)] bg-[color:var(--color-emerald)]/10"
-          : "text-[var(--color-red)] bg-[color:var(--color-red)]/10"
-      }`}
-    >
-      {ahead ? "+" : ""}
-      {delta.toFixed(1)}
-    </span>
   );
 }
 

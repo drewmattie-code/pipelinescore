@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getUserProfile, getUserDirectory } from "@/lib/api";
+import { getHardwareBoard, getUserLeaderboard, getUserProfile } from "@/lib/api";
 import { ScoreNumber } from "@/components/ScoreNumber";
 import { TierBadge } from "@/components/TierBadge";
 import { CategoryBars } from "@/components/CategoryBars";
 import { BetaBadge } from "@/components/BetaBadge";
 import { TIER_BY_ID, CATEGORY_LABELS } from "@/lib/tiers";
+import { beatsPct } from "@/lib/rank";
 
 const CATEGORIES = ["code", "reason", "tool_use", "rag", "speed"] as const;
 
@@ -36,8 +37,25 @@ export default async function UserDashboardPage({
 }) {
   const { nickname } = await params;
   const decoded = decodeURIComponent(nickname);
-  const profile = await getUserProfile(decoded);
+  const [profile, population] = await Promise.all([
+    getUserProfile(decoded),
+    getUserLeaderboard({ sort: "score", dir: "desc", limit: 500 }),
+  ]);
   if (!profile) notFound();
+
+  // Standing: where this user's best run sits in the whole population, and
+  // where their best rig sits on the hardware board.
+  const rigBoard = await getHardwareBoard(population);
+  const beats = beatsPct(
+    profile.bestScore,
+    population.entries.map((e) => e.pipelineScore)
+  );
+  const bestTagged = [...profile.submissions]
+    .filter((s) => s.hardwareTag)
+    .sort((a, b) => b.pipelineScore - a.pipelineScore)[0];
+  const rigRank = bestTagged
+    ? rigBoard.findIndex((r) => r.tag === bestTagged.hardwareTag) + 1
+    : 0;
 
   // Category strengths: average across all submissions to get user's signature pattern.
   const catTotals: Record<string, { sum: number; n: number }> = {};
@@ -124,6 +142,34 @@ export default async function UserDashboardPage({
           </div>
         </div>
       </div>
+
+      {/* Standing band — where this user sits in the population */}
+      <section className="mt-10 rounded-lg border border-[color:var(--color-emerald)]/40 bg-[color:var(--color-emerald)]/8 px-5 py-4 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
+        <span className="text-[var(--color-ink-2)]">
+          Best run beats{" "}
+          <span className="font-mono tabular-nums font-bold text-[var(--color-emerald)]">
+            {beats}%
+          </span>{" "}
+          of all {population.total.toLocaleString()} submissions
+        </span>
+        {rigRank > 0 && bestTagged && (
+          <span className="text-[var(--color-ink-2)]">
+            Best rig{" "}
+            <Link
+              href={`/leaderboard/users?hardware=${encodeURIComponent(bestTagged.hardwareTag!)}`}
+              prefetch={false}
+              className="font-mono text-[var(--color-ink)] hover:text-[var(--color-emerald)] transition-colors"
+            >
+              {bestTagged.hardwareTag}
+            </Link>{" "}
+            ranks{" "}
+            <span className="font-mono tabular-nums font-bold text-[var(--color-emerald)]">
+              #{rigRank}
+            </span>{" "}
+            of {rigBoard.length} rigs
+          </span>
+        )}
+      </section>
 
       {/* Efficiency strip — total tokens, avg latency, tasks run */}
       <section className="mt-12 rounded-3xl border border-[var(--color-line-2)] bg-[var(--color-ink)] text-white p-6 md:p-8 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
