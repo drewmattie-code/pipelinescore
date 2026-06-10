@@ -37,6 +37,13 @@ export default async function ComparePage({
       : ma.pipelineScore > mb.pipelineScore
       ? ma
       : mb;
+  const loser = winner === null ? null : winner === ma ? mb : ma;
+  const advantagePts =
+    winner && loser ? winner.pipelineScore - loser.pipelineScore : 0;
+  const advantagePct =
+    winner && loser && loser.pipelineScore > 0
+      ? (advantagePts / loser.pipelineScore) * 100
+      : null;
 
   return (
     <div className="max-w-7xl mx-auto px-6 md:px-10 py-16 md:py-20">
@@ -54,22 +61,32 @@ export default async function ComparePage({
         <h1 className="display text-4xl md:text-6xl font-semibold tracking-tight text-[var(--color-ink)] mt-3">
           {ma.displayName} <span className="text-[var(--color-ink-3)]">vs</span> {mb.displayName}
         </h1>
-        {winner && (
-          <p className="text-lg text-[var(--color-ink-2)] mt-4">
-            <span className="text-[var(--color-ink)] font-medium">{winner.displayName}</span>{" "}
-            leads on the composite by{" "}
-            <span className="font-mono text-[var(--color-ink)]">
-              {Math.abs(ma.pipelineScore - mb.pipelineScore).toFixed(1)}
-            </span>{" "}
-            points.
-          </p>
-        )}
       </div>
 
+      {/* Verdict banner */}
+      {winner ? (
+        <div className="mt-8 rounded-lg border border-[color:var(--color-emerald)]/40 bg-[color:var(--color-emerald)]/8 px-5 py-4 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-base md:text-lg font-bold text-[var(--color-ink)]">
+            {winner.displayName} wins
+          </span>
+          <span className="font-mono tabular-nums text-sm md:text-base font-bold text-[var(--color-emerald)]">
+            +{advantagePts.toFixed(1)} pts
+            {advantagePct !== null && ` (+${advantagePct.toFixed(0)}%)`}
+          </span>
+          <span className="text-sm text-[var(--color-ink-2)]">
+            on the balanced composite.
+          </span>
+        </div>
+      ) : (
+        <div className="mt-8 rounded-lg border border-[var(--color-line-2)] bg-[var(--color-surface-2)] px-5 py-4 text-sm text-[var(--color-ink-2)]">
+          Dead heat on the composite — check the category rows below.
+        </div>
+      )}
+
       {/* Two big score cards */}
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ScoreCard model={ma} />
-        <ScoreCard model={mb} />
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ScoreCard model={ma} winner={winner === ma} />
+        <ScoreCard model={mb} winner={winner === mb} />
       </div>
 
       {/* Category-by-category */}
@@ -93,7 +110,9 @@ export default async function ComparePage({
               const max = Math.max(va, vb, 100);
               const ca = TIER_BY_ID[tierForScore(va)].color;
               const cb = TIER_BY_ID[tierForScore(vb)].color;
-              const aWins = va > vb;
+              const delta = va - vb;
+              const aWins = delta > 0;
+              const bWins = delta < 0;
               return (
                 <div
                   key={cat}
@@ -101,6 +120,7 @@ export default async function ComparePage({
                 >
                   {/* A side bar */}
                   <div className="flex items-center justify-end gap-3">
+                    <DeltaChip delta={aWins ? delta : bWins ? delta : null} />
                     <span
                       className={`font-mono tabular-nums text-sm ${aWins ? "text-[var(--color-ink)] font-semibold" : "text-[var(--color-ink-2)]"}`}
                     >
@@ -134,10 +154,11 @@ export default async function ComparePage({
                       />
                     </div>
                     <span
-                      className={`font-mono tabular-nums text-sm ${!aWins ? "text-[var(--color-ink)] font-semibold" : "text-[var(--color-ink-2)]"}`}
+                      className={`font-mono tabular-nums text-sm ${bWins ? "text-[var(--color-ink)] font-semibold" : "text-[var(--color-ink-2)]"}`}
                     >
                       {vb.toFixed(1)}
                     </span>
+                    <DeltaChip delta={bWins ? -delta : aWins ? -delta : null} />
                   </div>
                 </div>
               );
@@ -154,11 +175,42 @@ export default async function ComparePage({
   );
 }
 
-function ScoreCard({ model }: { model: Model }) {
+/** Signed point-difference chip: green when ahead, red when behind. */
+function DeltaChip({ delta }: { delta: number | null }) {
+  if (delta === null || delta === 0) return <span className="w-12 shrink-0" />;
+  const ahead = delta > 0;
   return (
-    <div className="rounded-3xl border border-[var(--color-line-2)] bg-[var(--color-surface)] p-8 md:p-10 flex flex-col gap-4">
-      <div className="text-xs uppercase tracking-wider text-[var(--color-ink-3)]">
-        {model.provider}
+    <span
+      className={`shrink-0 w-12 text-center font-mono tabular-nums text-[11px] font-bold px-1 py-0.5 rounded ${
+        ahead
+          ? "text-[var(--color-emerald)] bg-[color:var(--color-emerald)]/10"
+          : "text-[var(--color-red)] bg-[color:var(--color-red)]/10"
+      }`}
+    >
+      {ahead ? "+" : ""}
+      {delta.toFixed(1)}
+    </span>
+  );
+}
+
+function ScoreCard({ model, winner = false }: { model: Model; winner?: boolean }) {
+  return (
+    <div
+      className={`rounded-3xl border bg-[var(--color-surface)] p-8 md:p-10 flex flex-col gap-4 ${
+        winner
+          ? "border-[var(--color-emerald)] shadow-[0_0_0_1px_var(--color-emerald)]"
+          : "border-[var(--color-line-2)]"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <div className="text-xs uppercase tracking-wider text-[var(--color-ink-3)]">
+          {model.provider}
+        </div>
+        {winner && (
+          <span className="text-[10px] uppercase tracking-[0.14em] font-bold text-[var(--color-emerald)]">
+            Winner
+          </span>
+        )}
       </div>
       <Link
         href={`/models/${model.slug}`}

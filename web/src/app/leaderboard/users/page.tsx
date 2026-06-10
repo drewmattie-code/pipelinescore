@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getUserLeaderboard, getUserDirectory } from "@/lib/api";
 import type { UserLeaderboardQuery } from "@/lib/api";
 import { TIER_BY_ID } from "@/lib/tiers";
+import { BenchBar } from "@/components/BenchBar";
 import { SearchInput } from "@/components/SearchInput";
 import { BetaBadge } from "@/components/BetaBadge";
 
@@ -25,6 +26,7 @@ export default async function UsersLeaderboardPage({
     provider: sp.provider,
     tier: sp.tier,
     search: sp.search,
+    hardware: sp.hardware,
     sort: (sp.sort as UserLeaderboardQuery["sort"]) ?? "score",
     dir: (sp.dir as "asc" | "desc") ?? "desc",
     labVerified: sp.lab === "1",
@@ -40,11 +42,12 @@ export default async function UsersLeaderboardPage({
   const providers = Array.from(new Set(page.entries.map((e) => e.model.provider))).sort();
   const tiers = ["trunk", "mainline", "feeder", "tap", "drip"];
 
-  const filtersActive = !!(query.provider || query.tier || query.labVerified || query.search);
+  const filtersActive = !!(query.provider || query.tier || query.labVerified || query.search || query.hardware);
   const baseParams = new URLSearchParams();
   if (query.provider) baseParams.set("provider", query.provider);
   if (query.tier) baseParams.set("tier", query.tier);
   if (query.search) baseParams.set("search", query.search);
+  if (query.hardware) baseParams.set("hardware", query.hardware);
   if (query.labVerified) baseParams.set("lab", "1");
 
   function sortHref(col: NonNullable<UserLeaderboardQuery["sort"]>) {
@@ -137,6 +140,17 @@ export default async function UsersLeaderboardPage({
           active={!!query.labVerified}
         />
 
+        {query.hardware && (
+          <>
+            <span className="text-[var(--color-line)]">|</span>
+            <FilterChip
+              label={`rig: ${query.hardware} ✕`}
+              href={filterHref("hardware", null)}
+              active
+            />
+          </>
+        )}
+
         {filtersActive && (
           <Link
             href="/leaderboard/users"
@@ -148,20 +162,21 @@ export default async function UsersLeaderboardPage({
       </div>
 
       {/* Table */}
-      <div className="mt-8 rounded-3xl border border-[var(--color-line-2)] bg-[var(--color-surface)] overflow-hidden">
+      <div className="mt-8 rounded-lg border border-[var(--color-line-2)] bg-[var(--color-surface)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-[color:var(--color-bg)]/60 border-b border-[var(--color-line-2)]">
+            <thead className="bg-[var(--color-surface-2)] border-b-2 border-[var(--color-line)]">
               <tr className="text-left text-[var(--color-ink-3)] uppercase tracking-wider text-[11px]">
-                <th className="px-4 py-3 w-12">#</th>
-                <th className="px-4 py-3"><SortLink href={sortHref("user")} label="User" arrow={arrow("user")} /></th>
-                <th className="px-4 py-3"><SortLink href={sortHref("model")} label="Model" arrow={arrow("model")} /></th>
-                <th className="px-4 py-3 hidden md:table-cell"><SortLink href={sortHref("provider")} label="Provider" arrow={arrow("provider")} /></th>
-                <th className="px-4 py-3 hidden lg:table-cell">Hardware</th>
-                <th className="px-4 py-3 hidden xl:table-cell">Config</th>
-                <th className="px-4 py-3 text-right"><SortLink href={sortHref("score")} label="Score" arrow={arrow("score")} /></th>
-                <th className="px-4 py-3"><SortLink href={sortHref("tier")} label="Tier" arrow={arrow("tier")} /></th>
-                <th className="px-4 py-3 hidden lg:table-cell"><SortLink href={sortHref("date")} label="Date" arrow={arrow("date")} /></th>
+                <th className="px-3 py-2.5 w-12 text-right">#</th>
+                <th className="px-3 py-2.5"><SortLink href={sortHref("user")} label="User" arrow={arrow("user")} /></th>
+                <th className="px-3 py-2.5"><SortLink href={sortHref("model")} label="Model" arrow={arrow("model")} /></th>
+                <th className="px-3 py-2.5 hidden md:table-cell"><SortLink href={sortHref("provider")} label="Provider" arrow={arrow("provider")} /></th>
+                <th className="px-3 py-2.5 hidden lg:table-cell">Hardware</th>
+                <th className="px-3 py-2.5 hidden xl:table-cell">Config</th>
+                <th className="px-3 py-2.5 w-[160px]"><SortLink href={sortHref("score")} label="Score" arrow={arrow("score")} /></th>
+                <th className="px-3 py-2.5"><SortLink href={sortHref("tier")} label="Tier" arrow={arrow("tier")} /></th>
+                <th className="px-3 py-2.5 hidden xl:table-cell text-right">Latency</th>
+                <th className="px-3 py-2.5 hidden lg:table-cell"><SortLink href={sortHref("date")} label="Date" arrow={arrow("date")} /></th>
               </tr>
             </thead>
             <tbody>
@@ -170,12 +185,12 @@ export default async function UsersLeaderboardPage({
                 return (
                   <tr
                     key={e.submissionId}
-                    className="border-b border-[var(--color-line-2)] last:border-b-0 hover:bg-[color:var(--color-bg)]/40 transition-colors"
+                    className="border-b border-[var(--color-line-2)] last:border-b-0 even:bg-[var(--color-surface-2)]/50 hover:bg-[color:var(--color-emerald)]/5 transition-colors"
                   >
-                    <td className="px-4 py-3 text-[var(--color-ink-3)] font-mono text-xs">
+                    <td className="px-3 py-2 text-right text-[var(--color-ink-3)] font-mono text-xs tabular-nums">
                       {query.offset! + i + 1}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       <Link
                         href={`/users/${encodeURIComponent(e.userNickname)}`}
                         prefetch={false}
@@ -194,7 +209,7 @@ export default async function UsersLeaderboardPage({
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       <Link
                         href={`/models/${e.model.slug}`}
                         prefetch={false}
@@ -203,19 +218,24 @@ export default async function UsersLeaderboardPage({
                         {e.model.displayName}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 hidden md:table-cell text-[var(--color-ink-2)] uppercase text-xs tracking-wider">
+                    <td className="px-3 py-2 hidden md:table-cell text-[var(--color-ink-2)] uppercase text-xs tracking-wider">
                       {e.model.provider}
                     </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
+                    <td className="px-3 py-2 hidden lg:table-cell">
                       {e.hardwareTag ? (
-                        <span className="inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-[color:var(--color-line-2)] text-[var(--color-ink)]">
+                        <Link
+                          href={`/leaderboard/users?hardware=${encodeURIComponent(e.hardwareTag)}`}
+                          prefetch={false}
+                          className="inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-[color:var(--color-line-2)] text-[var(--color-ink)] hover:bg-[color:var(--color-emerald)]/15 hover:text-[var(--color-emerald)] transition-colors"
+                          title={`All runs on ${e.hardwareTag}`}
+                        >
                           {e.hardwareTag}
-                        </span>
+                        </Link>
                       ) : (
                         <span className="text-[10px] uppercase tracking-wider text-[var(--color-ink-3)]">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 hidden xl:table-cell">
+                    <td className="px-3 py-2 hidden xl:table-cell">
                       {e.configTag ? (
                         <span className="inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-[color:var(--color-line-2)] text-[var(--color-ink-2)]">
                           {e.configTag}
@@ -224,10 +244,10 @@ export default async function UsersLeaderboardPage({
                         <span className="text-[10px] uppercase tracking-wider text-[var(--color-ink-3)]">base</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums font-semibold text-[var(--color-ink)]">
-                      {e.pipelineScore.toFixed(1)}
+                    <td className="px-3 py-2">
+                      <BenchBar value={e.pipelineScore} strong />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       <span
                         className="inline-block text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full"
                         style={{ color: tier.color, backgroundColor: `${tier.color}20` }}
@@ -235,7 +255,12 @@ export default async function UsersLeaderboardPage({
                         {tier.name}
                       </span>
                     </td>
-                    <td className="px-4 py-3 hidden lg:table-cell text-[var(--color-ink-3)] font-mono text-xs">
+                    <td className="px-3 py-2 hidden xl:table-cell text-right font-mono text-xs text-[var(--color-ink-2)] tabular-nums">
+                      {e.efficiency.avgLatencyMs !== null
+                        ? `${e.efficiency.avgLatencyMs.toLocaleString()}ms`
+                        : "—"}
+                    </td>
+                    <td className="px-3 py-2 hidden lg:table-cell text-[var(--color-ink-3)] font-mono text-xs">
                       {e.submittedAt.slice(0, 10)}
                     </td>
                   </tr>
@@ -243,7 +268,7 @@ export default async function UsersLeaderboardPage({
               })}
               {page.entries.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-[var(--color-ink-3)]">
+                  <td colSpan={10} className="px-4 py-12 text-center text-[var(--color-ink-3)]">
                     No submissions match the current filters.
                   </td>
                 </tr>

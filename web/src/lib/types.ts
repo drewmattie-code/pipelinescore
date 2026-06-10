@@ -31,6 +31,8 @@ export interface Model {
   tier: TierId;
   categoryScores: CategoryScores;
   labVerified: boolean;
+  /** Number of submissions backing this model's row (within the leaderboard window). */
+  samples?: number;
   notes?: string;
 }
 
@@ -84,12 +86,26 @@ export interface UserLeaderboardPage {
     tier?: string;
     user?: string;
     search?: string;
+    hardware?: string;
     lab_verified: boolean;
     days: number;
     sort: string;
     dir: string;
   };
   entries: UserLeaderboardEntry[];
+}
+
+// One row on the hardware board: every submission with this hardware tag,
+// collapsed to the rig's best showing.
+export interface HardwareBoardRow {
+  tag: string;
+  bestScore: number;
+  bestTier: TierId;
+  bestModel: { slug: string; displayName: string; provider: string };
+  bestCategoryScores: CategoryScores;
+  runs: number;
+  users: number;
+  avgLatencyMs: number | null;
 }
 
 export interface UserProfile {

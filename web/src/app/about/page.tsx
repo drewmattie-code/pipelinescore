@@ -34,18 +34,19 @@ export default function AboutPage() {
         <p>
           PipelineScore is the local-first benchmark. You point a CLI at your
           local model server (Ollama, LM Studio, MLX, llama.cpp), tag your
-          hardware, and the 25-task suite runs against your rig. The score and
+          hardware, and the 34-task suite runs against your rig. The score and
           tier land on a public leaderboard that&apos;s grouped by{" "}
           <span className="font-mono text-[var(--color-emerald)]">(model, hardware)</span>{" "}
           — so the M3 Max + Llama 4 cohort gets its own row, separate from the
           3090 + Llama 4 cohort.
         </p>
         <p>
-          Six categories — code, reasoning, writing, tool use, RAG, and speed —
-          weighted to reflect real-world LLM usage. Five tiers — TRUNK through
-          DRIP — borrowed from the language of actual pipelines. Frontier API
-          runs (Anthropic, OpenAI) work too, but the unique value lives in the
-          local-hardware comparisons no one else publishes.
+          Five categories — code, reasoning, tool use, RAG, and speed — every
+          one deterministic: code is executed, the rest is exact-match or
+          measured. Five tiers — TRUNK through DRIP — borrowed from the
+          language of actual pipelines. Frontier API runs (Anthropic, OpenAI)
+          work too, but the unique value lives in the local-hardware
+          comparisons no one else publishes.
         </p>
         <p>
           Open source under Apache 2.0. Code at{" "}

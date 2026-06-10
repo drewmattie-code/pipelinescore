@@ -8,6 +8,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages = [
     { path: "/", priority: 1.0, freq: "daily" as const },
     { path: "/leaderboard", priority: 0.9, freq: "daily" as const },
+    { path: "/leaderboard/hardware", priority: 0.9, freq: "daily" as const },
     { path: "/leaderboard/users", priority: 0.9, freq: "hourly" as const },
     { path: "/run", priority: 0.8, freq: "weekly" as const },
     { path: "/methodology", priority: 0.6, freq: "monthly" as const },

@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: "%s · PipelineScore",
   },
   description:
-    "User-run LLM benchmarking. Download the CLI, run a 25-task standardized test against any model, get a deterministic score, tier badge, and a place on the public leaderboard.",
+    "User-run LLM benchmarking. Run 34 deterministic tasks against any model on your own hardware — no judge model, no API key for local runs — and get a 0–100 score, tier badge, and a place on the public hardware-aware leaderboard.",
   applicationName: "PipelineScore",
   keywords: [
     "LLM benchmark",
@@ -43,14 +43,14 @@ export const metadata: Metadata = {
     siteName: "PipelineScore",
     title: "PipelineScore — How does your LLM actually rank?",
     description:
-      "Bring your own API key. Run a 25-task standardized benchmark. Get a deterministic score, tier badge, and a place on the public leaderboard.",
+      "Run a 34-task deterministic benchmark on your own hardware — no API key needed for local models. Get a score, tier badge, and a place on the public leaderboard.",
     images: [{ url: "/hero.jpg", width: 1920, height: 1080, alt: "PipelineScore" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "PipelineScore — User-run LLM benchmarking",
     description:
-      "The cpu.userbenchmark for LLMs. Run any model with your key, get a deterministic score, place on the public board.",
+      "The cpu.userbenchmark for LLMs. Run any model on your rig, get a deterministic score, place on the public board.",
     images: ["/hero.jpg"],
   },
 };

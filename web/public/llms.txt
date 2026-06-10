@@ -1,6 +1,6 @@
 # PipelineScore
 
-> Benchmark LLMs on YOUR hardware. A standardized 25-task LLM benchmark CLI that publishes results to a hardware-aware public leaderboard at pipelinescore.ai. The only public LLM leaderboard that ranks where the model runs — not just which model it is.
+> Benchmark LLMs on YOUR hardware. A standardized 34-task deterministic LLM benchmark CLI (no judge model, no API key for local runs) that publishes results to a hardware-aware public leaderboard at pipelinescore.ai. The only public LLM leaderboard that ranks where the model runs — not just which model it is.
 
 PipelineScore is a local-first benchmark. Users point a CLI at their model server (Ollama, LM Studio, MLX, llama.cpp, vLLM) or a frontier API (Anthropic, OpenAI), tag their hardware, and submit a deterministic 0–100 composite score to the public board. Same model on different rigs gets ranked separately. Open-source under Apache 2.0.
 
@@ -16,7 +16,8 @@ npx @pipelinescore/cli run --provider local --endpoint http://localhost:11434 --
 
 - [README](https://github.com/drewmattie-code/pipelinescore/blob/main/README.md): Project overview, badges, terminal demo, comparison table vs LMArena / Artificial Analysis / lm-eval-harness, mermaid architecture diagram
 - [AGENTS.md](https://github.com/drewmattie-code/pipelinescore/blob/main/AGENTS.md): Agent-first usage guide — what to invoke, when, with what flags
-- [Methodology](https://pipelinescore.ai/methodology): How the 25-task suite is structured, how scores are computed, anti-cheat measures
+- [Methodology](https://pipelinescore.ai/methodology): How the 34-task suite is structured, how scores are computed, anti-cheat measures
+- [Hardware board](https://pipelinescore.ai/leaderboard/hardware): Every rig ranked by its best PipelineScore
 - [Privacy](https://pipelinescore.ai/privacy): What's stored, how long, retention enforcement
 - [SECURITY.md](https://github.com/drewmattie-code/pipelinescore/blob/main/SECURITY.md): BYOK data flow, trust boundaries, vulnerability reporting
 
@@ -33,7 +34,7 @@ npx @pipelinescore/cli run --provider local --endpoint http://localhost:11434 --
 - [GET /v1/models/{slug}](https://api.pipelinescore.ai/v1/models/llama-3-3-70b-instruct): Per-model stats
 - [GET /v1/beta-testers](https://api.pipelinescore.ai/v1/beta-testers): First 50 testers list
 - [POST /v1/submissions](https://api.pipelinescore.ai/v1/submissions): Submit a benchmark run
-- [GET /v1/testpack](https://api.pipelinescore.ai/v1/testpack): The 25-task pack with HMAC signature
+- [GET /v1/testpack](https://api.pipelinescore.ai/v1/testpack): The 34-task pack with HMAC signature
 
 ## Source
 

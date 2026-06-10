@@ -1,30 +1,31 @@
 import { getLeaderboardModels } from "@/lib/api";
-import { LeaderboardTable } from "@/components/LeaderboardTable";
+import { BenchTable } from "@/components/BenchTable";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Models Leaderboard",
-  description: "Full PipelineScore leaderboard — every model ranked by composite score and by category.",
+  description:
+    "Every model ranked by deterministic PipelineScore — sortable by category, filterable by provider, any two models comparable head-to-head.",
 };
 
 export default async function LeaderboardPage() {
   const models = await getLeaderboardModels();
   return (
-    <div className="max-w-7xl mx-auto px-6 md:px-10 py-20">
-      <div className="max-w-3xl mb-12">
+    <div className="max-w-7xl mx-auto px-6 md:px-10 py-12 md:py-16">
+      <div className="max-w-3xl mb-8">
         <span className="text-xs uppercase tracking-[0.18em] text-[var(--color-emerald)] font-semibold">
           Live Leaderboard
         </span>
         <h1 className="display text-4xl md:text-5xl font-semibold mt-3 text-[var(--color-ink)] tracking-tight">
-          Every model ranked.
+          {models.length.toLocaleString()} models compared.
         </h1>
         <p className="text-lg text-[var(--color-ink-2)] mt-4 leading-relaxed">
-          Sorted by composite PipelineScore. Filter by category to see who
-          actually wins at code, who can reason, and who&apos;s just fast.
+          Best run per model. Click any column to re-rank, filter by provider,
+          re-weight for your use case, and pick two rows to go head-to-head.
         </p>
       </div>
-      <LeaderboardTable models={models} />
+      <BenchTable models={models} />
     </div>
   );
 }

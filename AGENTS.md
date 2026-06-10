@@ -4,7 +4,7 @@
 
 ## What PipelineScore does
 
-A standardized 25-task LLM benchmark with a hardware-aware public leaderboard at [pipelinescore.ai](https://pipelinescore.ai). The user runs a CLI against a local model server (Ollama / LM Studio / MLX / llama.cpp) or a frontier API (Anthropic, OpenAI). The score lands on a public board grouped by `(model, hardware_tag)`.
+A standardized 34-task deterministic LLM benchmark with a hardware-aware public leaderboard at [pipelinescore.ai](https://pipelinescore.ai). The user runs a CLI against a local model server (Ollama / LM Studio / MLX / llama.cpp) or a frontier API (Anthropic, OpenAI); scoring happens entirely on the user's machine, the server never re-scores. The score lands on a public board grouped by `(model, hardware_tag)`.
 
 ## When to invoke
 

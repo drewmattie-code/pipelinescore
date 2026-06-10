@@ -2,7 +2,7 @@
 
 # PipelineScore
 
-**Benchmark LLMs on YOUR hardware.** Same 25 standardized tasks, deterministic 0–100 score, your environment. The only public LLM leaderboard that ranks where the model runs — not just which model it is.
+**Benchmark LLMs on YOUR hardware.** Same 34 deterministic tasks, scored entirely on your machine — no judge model, no API key — one 0–100 score. The only public LLM leaderboard that ranks where the model runs — not just which model it is.
 
 [![Live at pipelinescore.ai](https://img.shields.io/badge/live-pipelinescore.ai-0F766E?style=flat-square)](https://pipelinescore.ai)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square)](LICENSE)
@@ -15,7 +15,7 @@
 
 [Live leaderboard](https://pipelinescore.ai/leaderboard/users) · [Methodology](https://pipelinescore.ai/methodology) · [Privacy / BYOK posture](https://pipelinescore.ai/privacy) · [Run the CLI](https://pipelinescore.ai/run)
 
-[![PipelineScore live leaderboard — DeepSeek R1 / Qwen 3 / Llama 3.3 across A100, H100, M2 Ultra, B200 hardware tags](assets/leaderboard-screenshot.jpg)](https://pipelinescore.ai/leaderboard/users)
+[![PipelineScore hardware board — every rig ranked by its best score: B200, DGX H100, A100, dual RTX 4090, M-series Macs and more](assets/leaderboard-screenshot.jpg)](https://pipelinescore.ai/leaderboard/hardware)
 
 </div>
 
@@ -29,7 +29,7 @@ $ npx @pipelinescore/cli run \
     --model llama-3.3-70b --hardware-tag m3-max-128gb \
     --user your-handle
 
-╭ PipelineScore v0.1.0 ──────────────────╮
+╭ PipelineScore v0.3.0 ──────────────────╮
 │ Provider:     local                    │
 │ Model:        llama-3.3-70b            │
 │ Hardware:     m3-max-128gb             │
@@ -38,8 +38,8 @@ $ npx @pipelinescore/cli run \
 │ Submit:       yes                      │
 ╰────────────────────────────────────────╯
 
-Fetched testpack 2026-05-24-v1 from backend.
-Running 25 tasks ... ████████████████████ 25/25
+Fetched testpack 2026-06-10-v3 from backend.
+Running 34 tasks ... ████████████████████ 34/34
 
 ╭──────────────────── PipelineScore ─────────────────────╮
 │                                                        │
@@ -48,7 +48,7 @@ Running 25 tasks ... ███████████████████�
 │                                                        │
 │   code ████████░░  79.1     tool_use ██████░░░░  61.4  │
 │   reason ███████░░ 75.8     rag      ████████░░  82.6  │
-│   write ████████░░ 81.2     speed    █████░░░░░  52.3  │
+│   speed █████░░░░░ 52.3                                │
 │                                                        │
 │   Total tokens: 4,827 · Avg latency: 712ms             │
 │   See your run: pipelinescore.ai/users/your-handle     │
@@ -125,7 +125,7 @@ flowchart LR
 
 ## The score
 
-Six categories, weighted to mirror real LLM usage. One headline number (0–100), category breakdown underneath. Score maps to one of five tiers — TRUNK / MAINLINE / FEEDER / TAP / DRIP — for at-a-glance readability.
+Five deterministic categories — code (executed), reason (exact-match), tool use + RAG (JSON-match), speed (measured throughput) — weighted to mirror real LLM usage. One headline number (0–100), category breakdown underneath. Score maps to one of five tiers — TRUNK / MAINLINE / FEEDER / TAP / DRIP — for at-a-glance readability.
 
 Full methodology + weights + anti-cheat: [pipelinescore.ai/methodology](https://pipelinescore.ai/methodology)
 

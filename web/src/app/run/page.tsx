@@ -38,7 +38,7 @@ export default function RunPage() {
       <p className="text-lg text-[var(--color-ink)] mt-5 leading-relaxed">
         Three minutes. No account. Point the CLI at your local model server —
         Ollama, LM Studio, MLX, llama.cpp — and tag your hardware. The CLI
-        runs 25 standardized tasks, submits the result with your hardware tag,
+        runs 34 standardized tasks, submits the result with your hardware tag,
         and your run lands on the public leaderboard alongside others
         running the same model on different rigs.
       </p>
@@ -220,7 +220,7 @@ curl -L https://pipelinescore.ai/skills/\\
         </h2>
         <ol className="flex flex-col gap-6">
           <Step n={1} title="Fetch today's signed test pack">
-            The CLI pulls the rotating 25-task pack from{" "}
+            The CLI pulls the rotating 34-task pack from{" "}
             <code className="font-mono text-[var(--color-emerald)]">
               api.pipelinescore.ai/v1/testpack
             </code>{" "}
@@ -230,10 +230,11 @@ curl -L https://pipelinescore.ai/skills/\\
             Each task is sent to the provider you chose. Inputs, outputs,
             timings, and token counts are captured locally.
           </Step>
-          <Step n={3} title="Submit for re-judgment">
-            Transcripts are uploaded and re-graded server-side by a held-out
-            judge model. Your local score is provisional; the server&apos;s is
-            canonical.
+          <Step n={3} title="Score locally, then submit">
+            Grading happens on your machine — code is executed, everything
+            else is exact-match or measured. The server stores and ranks your
+            client-computed score; it never re-scores. No judge model, no API
+            key.
           </Step>
           <Step n={4} title="See your card">
             You get a tier badge, a category breakdown, and a shareable URL —

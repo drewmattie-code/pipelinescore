@@ -2,6 +2,8 @@
 // is unreachable so the site stays demo-able locally without it.
 import { MOCK_MODELS, MOCK_SUBMISSIONS, getModelBySlug as getMockModelBySlug, SAMPLE_TASKS, MOCK_USER_ENTRIES, MOCK_USER_DIRECTORY } from './mockData';
 import type {
+  CategoryScores,
+  HardwareBoardRow,
   Model,
   Submission,
   TierId,
@@ -41,35 +43,32 @@ interface BackendLeaderboardEntry {
   };
 }
 
+// /v1/models/{slug} response. Medians are nested under `stats`; the
+// recent_submissions entries are bare (no nested model, `id` not
+// `submission_id`).
+interface BackendModelSubmission {
+  id: string;
+  pipeline_score: number;
+  tier: TierId;
+  category_scores: Record<string, number>;
+  lab_verified: boolean;
+  created_at: string;
+}
+
 interface BackendModelDetail {
   slug: string;
   display_name: string;
   provider: string;
   family?: string;
   context_window?: number;
-  median_pipeline_score?: number;
-  median_category_scores?: Record<string, number>;
-  recent_submissions?: BackendLeaderboardEntry[];
-}
-
-// Adapt a backend entry into the existing Submission shape used by the UI.
-function adaptEntryToSubmission(e: BackendLeaderboardEntry): Submission {
-  return {
-    id: e.submission_id,
-    modelSlug: e.model.slug,
-    pipelineScore: e.pipeline_score,
-    tier: e.tier,
-    categoryScores: {
-      code: e.category_scores.code ?? 0,
-      reason: e.category_scores.reason ?? 0,
-      tool_use: e.category_scores.tool_use ?? 0,
-      rag: e.category_scores.rag ?? 0,
-      speed: e.category_scores.speed ?? 0,
-    },
-    labVerified: !!e.lab_verified,
-    submittedAt: e.created_at,
-    cliVersion: 'unknown',
+  released_at?: string;
+  stats?: {
+    submission_count?: number;
+    median_pipeline_score?: number;
+    median_category_scores?: Record<string, number>;
+    best_pipeline_score?: number;
   };
+  recent_submissions?: BackendModelSubmission[];
 }
 
 // Build a Model record from a backend entry (used when we only have submission-with-model).
@@ -101,14 +100,18 @@ export async function getLeaderboardModels(): Promise<Model[]> {
   if (!res) return MOCK_MODELS;
   try {
     const data = await res.json() as { entries: BackendLeaderboardEntry[] };
-    // Keep highest score per slug.
+    // Keep highest score per slug; count how many entries back each row.
     const best: Record<string, Model> = {};
+    const samples: Record<string, number> = {};
     for (const e of data.entries) {
       const m = adaptEntryToModel(e);
+      samples[m.slug] = (samples[m.slug] ?? 0) + 1;
       const cur = best[m.slug];
       if (!cur || m.pipelineScore > cur.pipelineScore) best[m.slug] = m;
     }
-    const list = Object.values(best).sort((a, b) => b.pipelineScore - a.pipelineScore);
+    const list = Object.values(best)
+      .map((m) => ({ ...m, samples: samples[m.slug] ?? 1 }))
+      .sort((a, b) => b.pipelineScore - a.pipelineScore);
     return list.length > 0 ? list : MOCK_MODELS;
   } catch {
     return MOCK_MODELS;
@@ -122,17 +125,18 @@ export async function getModel(slug: string): Promise<Model | undefined> {
   try {
     const data = await res.json() as BackendModelDetail;
     if (!data?.slug) return getMockModelBySlug(slug);
-    const scores = data.median_category_scores ?? {};
+    const median = data.stats?.median_pipeline_score ?? 0;
+    const scores = data.stats?.median_category_scores ?? {};
     return {
       slug: data.slug,
       displayName: data.display_name,
       provider: data.provider,
       family: data.family ?? data.provider,
       contextWindow: data.context_window ?? 0,
-      releasedAt: '',
+      releasedAt: data.released_at ?? '',
       labVerified: false,
-      pipelineScore: data.median_pipeline_score ?? 0,
-      tier: tierForScore(data.median_pipeline_score ?? 0),
+      pipelineScore: median,
+      tier: tierForScore(median),
       categoryScores: {
         code: scores.code ?? 0,
         reason: scores.reason ?? 0,
@@ -140,6 +144,7 @@ export async function getModel(slug: string): Promise<Model | undefined> {
         rag: scores.rag ?? 0,
         speed: scores.speed ?? 0,
       },
+      samples: data.stats?.submission_count,
     };
   } catch {
     return getMockModelBySlug(slug);
@@ -153,7 +158,22 @@ export async function getRecentSubmissions(slug: string): Promise<Submission[]> 
   }
   try {
     const data = await res.json() as BackendModelDetail;
-    return (data.recent_submissions ?? []).map(adaptEntryToSubmission);
+    return (data.recent_submissions ?? []).map((e) => ({
+      id: e.id,
+      modelSlug: slug,
+      pipelineScore: e.pipeline_score,
+      tier: e.tier,
+      categoryScores: {
+        code: e.category_scores.code ?? 0,
+        reason: e.category_scores.reason ?? 0,
+        tool_use: e.category_scores.tool_use ?? 0,
+        rag: e.category_scores.rag ?? 0,
+        speed: e.category_scores.speed ?? 0,
+      },
+      labVerified: !!e.lab_verified,
+      submittedAt: e.created_at,
+      cliVersion: 'unknown',
+    }));
   } catch {
     return MOCK_SUBMISSIONS.filter((s) => s.modelSlug === slug);
   }
@@ -230,6 +250,7 @@ export interface UserLeaderboardQuery {
   tier?: string;
   user?: string;
   search?: string;
+  hardware?: string;
   labVerified?: boolean;
   sort?: 'score' | 'date' | 'user' | 'model' | 'provider' | 'tier';
   dir?: 'asc' | 'desc';
@@ -244,6 +265,7 @@ export async function getUserLeaderboard(q: UserLeaderboardQuery = {}): Promise<
   if (q.tier) params.set('tier', q.tier);
   if (q.user) params.set('user', q.user);
   if (q.search) params.set('search', q.search);
+  if (q.hardware) params.set('hardware', q.hardware);
   if (q.labVerified) params.set('lab_verified', '1');
   if (q.sort) params.set('sort', q.sort);
   if (q.dir) params.set('dir', q.dir);
@@ -342,11 +364,72 @@ export async function getUserDirectory(): Promise<UserDirectoryEntry[]> {
   }
 }
 
+/**
+ * Hardware board: every submission with a hardware tag, collapsed to one row
+ * per rig. Built from the user leaderboard (the backend has no dedicated
+ * endpoint); entries arrive score-desc so the first hit per tag is its best.
+ */
+export async function getHardwareBoard(): Promise<HardwareBoardRow[]> {
+  const page = await getUserLeaderboard({ sort: 'score', dir: 'desc', limit: 500 });
+  const rows = new Map<
+    string,
+    HardwareBoardRow & { _users: Set<string>; _latencies: number[] }
+  >();
+  for (const e of page.entries) {
+    const tag = e.hardwareTag;
+    if (!tag) continue;
+    let row = rows.get(tag);
+    if (!row) {
+      row = {
+        tag,
+        bestScore: e.pipelineScore,
+        bestTier: e.tier,
+        bestModel: {
+          slug: e.model.slug,
+          displayName: e.model.displayName,
+          provider: e.model.provider,
+        },
+        bestCategoryScores: { ...e.categoryScores } as CategoryScores,
+        runs: 0,
+        users: 0,
+        avgLatencyMs: null,
+        _users: new Set<string>(),
+        _latencies: [],
+      };
+      rows.set(tag, row);
+    }
+    row.runs += 1;
+    row._users.add(e.userNickname);
+    if (e.efficiency.avgLatencyMs !== null) row._latencies.push(e.efficiency.avgLatencyMs);
+    if (e.pipelineScore > row.bestScore) {
+      row.bestScore = e.pipelineScore;
+      row.bestTier = e.tier;
+      row.bestModel = {
+        slug: e.model.slug,
+        displayName: e.model.displayName,
+        provider: e.model.provider,
+      };
+      row.bestCategoryScores = { ...e.categoryScores } as CategoryScores;
+    }
+  }
+  return Array.from(rows.values())
+    .map(({ _users, _latencies, ...row }) => ({
+      ...row,
+      users: _users.size,
+      avgLatencyMs:
+        _latencies.length > 0
+          ? Math.round(_latencies.reduce((a, b) => a + b, 0) / _latencies.length)
+          : null,
+    }))
+    .sort((a, b) => b.bestScore - a.bestScore);
+}
+
 function mockUserPage(q: UserLeaderboardQuery): UserLeaderboardPage {
   let entries = [...MOCK_USER_ENTRIES];
   if (q.provider) entries = entries.filter((e) => e.model.provider === q.provider);
   if (q.tier) entries = entries.filter((e) => e.tier === q.tier);
   if (q.user) entries = entries.filter((e) => e.userNickname === q.user);
+  if (q.hardware) entries = entries.filter((e) => e.hardwareTag === q.hardware);
   if (q.search) {
     const needle = q.search.toLowerCase();
     entries = entries.filter((e) => e.userNickname.toLowerCase().includes(needle));
@@ -378,7 +461,7 @@ function mockUserPage(q: UserLeaderboardQuery): UserLeaderboardPage {
     count: pageEntries.length,
     limit,
     offset,
-    filters: { provider: q.provider, tier: q.tier, user: q.user, search: q.search, lab_verified: !!q.labVerified, days: 365, sort, dir },
+    filters: { provider: q.provider, tier: q.tier, user: q.user, search: q.search, hardware: q.hardware, lab_verified: !!q.labVerified, days: 365, sort, dir },
     entries: pageEntries,
   };
 }

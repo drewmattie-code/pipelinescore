@@ -10,7 +10,7 @@
 
 ### What PipelineScore does
 
-A standardized 25-task LLM benchmark with a hardware-aware public leaderboard at https://pipelinescore.ai. The user runs a CLI against a local model server (Ollama / LM Studio / MLX / llama.cpp / vLLM) or a frontier API (Anthropic, OpenAI). The score lands on a public board grouped by `(model, hardware_tag)`.
+A standardized 34-task deterministic LLM benchmark with a hardware-aware public leaderboard at https://pipelinescore.ai. The user runs a CLI against a local model server (Ollama / LM Studio / MLX / llama.cpp / vLLM) or a frontier API (Anthropic, OpenAI). Scoring happens entirely on the user's machine (no judge model, no API key for local runs); the server stores and ranks. The score lands on a public board grouped by `(model, hardware_tag)`.
 
 ### When to invoke
 
@@ -94,16 +94,15 @@ A 429 returns the cooldown duration. Local score is still computed; only the upl
 
 ## What gets scored
 
-Six categories, weighted to mirror real LLM usage:
+Five categories, fully deterministic — graded on the user's machine, no judge model:
 
 | Category | Weight | Tests |
 |---|---|---|
-| Code | 25% | Function-level code generation: Python, JS, SQL, regex |
-| Reason | 20% | Multi-step math, logic puzzles, instruction following |
-| Write | 15% | Distinct, on-spec prose, summarization |
-| Tool use | 15% | API/schema selection, function-call construction |
-| RAG | 12% | Grounding, refusal-to-fabricate |
-| Speed | 13% | Latency under standardized conditions |
+| Code | 28% | Function-level code generation, graded by executing the output: Python, JS, SQL, regex |
+| Reason | 22% | Multi-step math, logic puzzles, instruction following — exact-match |
+| Tool use | 18% | API/schema selection, function-call construction — JSON-match |
+| RAG | 17% | Grounding, refusal-to-fabricate — JSON-match |
+| Speed | 15% | Measured throughput vs a 100 tok/s target |
 
 Score is a weighted average (0-100) mapped to one of five tiers:
 
@@ -128,7 +127,7 @@ All responses include `api_version: "v1"` field.
 | `/v1/beta-testers` | GET | First 50 beta testers list + slots remaining |
 | `/v1/models/{slug}` | GET | Per-model stats: median score, recent submissions, top hardware |
 | `/v1/compare?a=<slug>&b=<slug>` | GET | Head-to-head model comparison |
-| `/v1/testpack` | GET | Daily HMAC-signed 25-task pack |
+| `/v1/testpack` | GET | Daily HMAC-signed 34-task pack |
 | `/v1/stats` | GET | Submission count / user count / model count |
 | `/v1/submissions` | POST | Submit a benchmark run |
 | `/health` | GET | Service health check |

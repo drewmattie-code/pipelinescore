@@ -16,8 +16,11 @@ export function Footer() {
           <Link href="/leaderboard" className="hover:text-[var(--color-emerald)] transition-colors">
             Models
           </Link>
+          <Link href="/leaderboard/hardware" className="hover:text-[var(--color-emerald)] transition-colors">
+            Hardware
+          </Link>
           <Link href="/leaderboard/users" className="hover:text-[var(--color-emerald)] transition-colors">
-            Users Leaderboard
+            Users
           </Link>
           <Link href="/methodology" className="hover:text-[var(--color-emerald)] transition-colors">
             Methodology

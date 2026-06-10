@@ -36,3 +36,21 @@ export const CATEGORY_LABELS: Record<keyof typeof CATEGORY_WEIGHTS, string> = {
   rag: "RAG",
   speed: "Speed",
 };
+
+// v3 weighting profiles (mirror benchmarks/taxonomy.json). A profile re-weights
+// the composite so the ranking reflects a use case instead of one fixed average.
+export type ProfileId = "balanced" | "coding" | "agentic" | "local-first";
+
+export const PROFILE_WEIGHTS: Record<ProfileId, Record<keyof typeof CATEGORY_WEIGHTS, number>> = {
+  balanced: { code: 0.28, reason: 0.22, tool_use: 0.18, rag: 0.17, speed: 0.15 },
+  coding: { code: 0.45, reason: 0.18, tool_use: 0.22, rag: 0.07, speed: 0.08 },
+  agentic: { code: 0.2, reason: 0.25, tool_use: 0.35, rag: 0.12, speed: 0.08 },
+  "local-first": { code: 0.25, reason: 0.2, tool_use: 0.13, rag: 0.12, speed: 0.3 },
+};
+
+export const PROFILES: { id: ProfileId; label: string }[] = [
+  { id: "balanced", label: "Balanced" },
+  { id: "coding", label: "Coding" },
+  { id: "agentic", label: "Agentic" },
+  { id: "local-first", label: "Local-first" },
+];

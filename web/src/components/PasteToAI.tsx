@@ -4,7 +4,7 @@ import { useState } from "react";
 
 const PASTE_PROMPT = `Help me run a PipelineScore benchmark.
 
-PipelineScore is a 25-task standardized LLM benchmark with a public leaderboard at pipelinescore.ai. I want to run it and submit my result.
+PipelineScore is a 34-task deterministic LLM benchmark with a public leaderboard at pipelinescore.ai. I want to run it and submit my result.
 
 Please do the following:
 
@@ -12,7 +12,7 @@ Please do the following:
 2. Ask me which model id to benchmark (e.g. claude-opus-4-7, gpt-5.5-2026-04, qwen3.6-27b).
 3. Ask me for a leaderboard nickname (alphanum + . _ -, 2-40 chars). If I've never set one, this becomes my public identity on the board.
 4. Ask if I'm testing a customized variant (system prompt, LoRA adapter, persona, RAG setup). If yes, ask for a short config_tag (e.g. "lora-domain-finance", "system-prompt-coder", "temp-zero"). If it's a vanilla run, skip this.
-5. Confirm I have the relevant API key in my environment (ANTHROPIC_API_KEY or OPENAI_API_KEY).
+5. If I picked a cloud provider, confirm the relevant API key is in my environment (ANTHROPIC_API_KEY or OPENAI_API_KEY). Local runs need no key at all.
 6. Run this command in my shell:
 
    npx @pipelinescore/cli run \\

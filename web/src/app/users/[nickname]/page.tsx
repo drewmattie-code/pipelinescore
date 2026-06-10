@@ -140,7 +140,7 @@ export default async function UserDashboardPage({
         <Efficiency
           label="Tasks run"
           value={fmtBig(profile.efficiency.totalTasksRun)}
-          hint={`${profile.submissionCount} submission${profile.submissionCount === 1 ? "" : "s"} x ~25 tasks`}
+          hint={`${profile.submissionCount} submission${profile.submissionCount === 1 ? "" : "s"} x ~34 tasks`}
         />
         <Efficiency
           label="Rigs used"
