@@ -9,3 +9,5 @@ backend/.data/
 .DS_Store
 # Internal design + handoff docs — kept locally, not published
 docs/superpowers/
+# Private held-out task pool for lab-verified runs — MUST NOT be published
+benchmarks/.holdout/

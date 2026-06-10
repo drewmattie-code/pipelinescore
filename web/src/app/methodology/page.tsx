@@ -5,7 +5,7 @@ import { TierBadge } from "@/components/TierBadge";
 export const metadata = {
   title: "Methodology",
   description:
-    "How the PipelineScore is computed. Six weighted categories, a deterministic 0–100 score, five tiers, and server-side anti-cheat re-judgment.",
+    "How the PipelineScore is computed. Six categories with confidence bands, selectable weighting profiles, throughput-based speed, five tiers, and a public set plus a private rotating held-out set for lab-verified runs.",
 };
 
 const CATEGORIES: {
@@ -31,23 +31,30 @@ export default function MethodologyPage() {
         How the score works.
       </h1>
       <p className="text-lg text-[var(--color-ink-2)] mt-5 leading-relaxed">
-        PipelineScore is a deterministic 0–100 number, computed from six
-        weighted categories that mirror real-world LLM workloads. Same test
-        pack, same judge, same math — every model gets the same shot.
+        PipelineScore is a 0–100 number computed from six categories that mirror
+        real-world LLM workloads, reported with a <strong>confidence band</strong>{" "}
+        so two models that are statistically tied read as tied. Pick a{" "}
+        <strong>weighting profile</strong> to rank for your use case. Same test
+        pack, same math — every model gets the same shot.
       </p>
 
       <Section title="The formula">
         <pre className="rounded-2xl border border-[var(--color-line-2)] bg-[var(--color-surface-2)] p-5 font-mono text-sm overflow-x-auto text-[var(--color-ink)]">
-{`PipelineScore = Σ (category_score × weight)
-
-category_score = normalized 0-100 against the v1 anchor
-weights sum to 1.0`}
+{`category_score = mean(task scores, 0-100)  ± 95% confidence band
+PipelineScore  = Σ (category_score × profile_weight)   (weights sum to 1.0)`}
         </pre>
         <p className="text-[var(--color-ink-2)] leading-relaxed mt-5">
-          Deterministic tests (code execution, exact-match, schema validation)
-          score pass/fail with a difficulty multiplier. Subjective tests
-          (writing quality, summarization) are scored 0–10 against a rubric by
-          a held-out judge model.
+          Each category is the mean of its task scores with a 95% confidence band
+          (Student-t for small samples), so a noisy category or an uncertain judge
+          shows a wider band; the band narrows as you add tasks. Deterministic
+          tests (code execution, exact-match, schema validation) score pass/fail.
+          Open-ended tests are scored 0–10 against a rubric by a judge model, graded
+          several times with the median taken (<strong>self-consistency</strong>),
+          and the spread feeds the band. Speed is{" "}
+          <strong>throughput (tokens/sec)</strong>, a rate, so it does not reward
+          terse answers. The composite is computed per weighting profile (balanced,
+          coding, writing, agentic, local-first); the board leads with the
+          per-category profile.
         </p>
       </Section>
 
@@ -128,16 +135,19 @@ weights sum to 1.0`}
       <Section title="Anti-cheat &amp; integrity">
         <ul className="flex flex-col gap-3 text-[var(--color-ink)] leading-relaxed">
           <Bullet>
-            <strong>Public taxonomy, private prompts.</strong>{" "}
-            The six categories and their task types are open. The exact prompts
-            rotate daily and are HMAC-signed per-day, so a cached pack from
-            yesterday won&apos;t pass today&apos;s server-side check.
+            <strong>Public set, private held-out set.</strong>{" "}
+            The community task set is open and reproducible — it ships bundled
+            with the CLI, so a run is exactly the published tasks. A separate
+            private, rotating held-out set is used for canonical lab-verified
+            runs, so the trusted ranking cannot be trained on or pre-tuned
+            against.
           </Bullet>
           <Bullet>
-            <strong>Server-side re-judgment.</strong>{" "}
-            Every submission is re-graded centrally by a held-out judge model
-            (Claude Haiku 4.5). The CLI&apos;s local score is provisional —
-            only the server&apos;s number lands on the board.
+            <strong>Community vs lab-verified.</strong>{" "}
+            Community submissions are computed locally by the CLI and are labeled
+            community, not verified — treat them as directional. The trusted
+            ranking is the lab-verified tier, run by the lab against the private
+            held-out set with a self-consistency-graded judge.
           </Bullet>
           <Bullet>
             <strong>Layered rate limits.</strong>{" "}

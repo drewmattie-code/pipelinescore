@@ -14,7 +14,7 @@ export async function loadLocalTaxonomy(): Promise<Taxonomy> {
 }
 
 export async function loadLocalTestpack(): Promise<Testpack> {
-  const raw = await readFile(resolve(BENCHMARKS_DIR, 'tasks-v1.json'), 'utf8');
+  const raw = await readFile(resolve(BENCHMARKS_DIR, 'tasks-v2.json'), 'utf8');
   return JSON.parse(raw) as Testpack;
 }
 

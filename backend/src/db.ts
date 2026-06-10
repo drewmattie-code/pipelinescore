@@ -92,7 +92,9 @@ export function migrate(): void {
 
   // Idempotent column adds for older DBs. SQLite won't add a column twice;
   // we catch and ignore the "duplicate column" error.
-  for (const col of ['user_nickname TEXT', 'config_tag TEXT', 'hardware_tag TEXT']) {
+  // score_detail (v2): JSON blob with confidence bands, per-profile composites,
+  // and throughput speed. Nullable so v1 rows remain valid.
+  for (const col of ['user_nickname TEXT', 'config_tag TEXT', 'hardware_tag TEXT', 'score_detail TEXT']) {
     try {
       db.exec(`ALTER TABLE submissions ADD COLUMN ${col}`);
     } catch (err) {

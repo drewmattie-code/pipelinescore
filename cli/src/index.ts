@@ -10,6 +10,7 @@ import { AnthropicProvider } from './providers/anthropic.js';
 import { OpenAIProvider } from './providers/openai.js';
 import { LocalProvider } from './providers/local.js';
 import { fetchTestpack, loadLocalTaxonomy, loadLocalTestpack } from './testpack.js';
+import { loadHoldout } from './holdout.js';
 import { runBenchmark } from './runner.js';
 import { renderCard } from './card.js';
 import { determineTier } from './score.js';
@@ -96,6 +97,9 @@ program
   .option('--api-key <key>', 'API key (defaults to env)')
   .option('--endpoint <url>', 'override endpoint base URL (for local/OpenAI-compatible)')
   .option('--backend <url>', 'PipelineScore backend URL', 'https://api.pipelinescore.ai')
+  .option('--holdout <path>', 'private held-out task pool for lab-verified runs (or set PS_HOLDOUT_FILE)')
+  .option('--seed <seed>', 'rotation seed for the held-out subset (lab runs; makes selection reproducible)')
+  .option('--lab-key <key>', 'lab key to request the lab-verified flag (must match the backend LAB_KEY)')
   .option('--user <nickname>', 'your public leaderboard nickname (alphanum + . _ -, 2–40 chars)')
   .option(
     '--config-tag <tag>',
@@ -134,6 +138,9 @@ interface RunCommandOptions {
   user?: string;
   configTag?: string;
   hardwareTag?: string;
+  holdout?: string;
+  seed?: string;
+  labKey?: string;
   submit: boolean;
   open: boolean;
 }
@@ -215,16 +222,25 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
   // the user's machine. The backend fetch is used ONLY as a non-executing
   // version check that nudges the user to upgrade when a newer pack is published.
   const taxonomy = await loadLocalTaxonomy();
-  const testpack = await loadLocalTestpack();
-  process.stdout.write(chalk.dim(`Using bundled testpack ${testpack.version}.\n`));
-  const remote = await fetchTestpack(opts.backend);
-  if (remote?.version && remote.version !== testpack.version) {
-    process.stdout.write(
-      chalk.yellow(
-        `A newer testpack (${remote.version}) is published; you're on ${testpack.version}. ` +
-        `Upgrade for the latest tasks: npm i -g @pipelinescore/cli\n`,
-      ),
-    );
+  let testpack: Awaited<ReturnType<typeof loadLocalTestpack>>;
+  const holdoutPath = opts.holdout ?? process.env.PS_HOLDOUT_FILE;
+  if (holdoutPath) {
+    // Lab-verified path: execute a seed-rotated subset of the private held-out
+    // pool. Still local (no untrusted network testpack); the pool is the lab's.
+    testpack = await loadHoldout(holdoutPath, opts.seed ?? 'lab', 5);
+    process.stdout.write(chalk.dim(`Using private held-out testpack ${testpack.version} (lab run).\n`));
+  } else {
+    testpack = await loadLocalTestpack();
+    process.stdout.write(chalk.dim(`Using bundled testpack ${testpack.version}.\n`));
+    const remote = await fetchTestpack(opts.backend);
+    if (remote?.version && remote.version !== testpack.version) {
+      process.stdout.write(
+        chalk.yellow(
+          `A newer testpack (${remote.version}) is published; you're on ${testpack.version}. ` +
+          `Upgrade for the latest tasks: npm i -g @pipelinescore/cli\n`,
+        ),
+      );
+    }
   }
 
   // Run
@@ -248,7 +264,10 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
     try {
       const res = await fetch(`${opts.backend}/v1/submissions`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          ...(opts.labKey ? { 'x-lab-key': opts.labKey as string } : {}),
+        },
         body: JSON.stringify(payload),
       });
       if (res.ok) {

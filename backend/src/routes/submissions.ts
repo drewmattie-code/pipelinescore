@@ -36,6 +36,7 @@ const SubmissionInput = z.object({
   category_scores: z.record(z.string(), z.number()),
   task_results: z.array(TaskResultInput).default([]),
   raw_transcripts: z.unknown().optional(),
+  score_detail: z.unknown().optional(), // v2: confidence bands, per-profile composites, throughput
   cli_version: z.string(),
   user_nickname: z
     .string()
@@ -89,6 +90,12 @@ router.post('/v1/submissions', (req, res) => {
   }
   const body = parsed.data;
 
+  // lab_verified is server-controlled: only a run that presents the lab key
+  // (which gates the private rotating held-out set) may carry the trusted flag.
+  // Community submissions can never set it from the request body.
+  const labKey = req.headers['x-lab-key'];
+  const labVerified = process.env.LAB_KEY && labKey === process.env.LAB_KEY ? 1 : 0;
+
   try {
     const submissionId = uid();
     const txn = db.transaction(() => {
@@ -96,8 +103,8 @@ router.post('/v1/submissions', (req, res) => {
       const tier = body.tier ?? tierForScore(body.pipeline_score);
 
       db.prepare(
-        `INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, cli_version, submitter_ip, user_nickname, config_tag, hardware_tag, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, score_detail, cli_version, submitter_ip, user_nickname, config_tag, hardware_tag, notes, lab_verified)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(
         submissionId,
         modelId,
@@ -106,12 +113,14 @@ router.post('/v1/submissions', (req, res) => {
         tier,
         JSON.stringify(body.category_scores),
         JSON.stringify(body.raw_transcripts ?? null),
+        JSON.stringify(body.score_detail ?? null),
         body.cli_version,
         req.ip ?? null,
         body.user_nickname ?? null,
         body.config_tag ?? null,
         body.hardware_tag ?? null,
-        body.notes ?? null
+        body.notes ?? null,
+        labVerified
       );
 
       const insertTask = db.prepare(

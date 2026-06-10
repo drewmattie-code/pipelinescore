@@ -6,7 +6,7 @@ import { sign } from '../lib/sign.js';
 import { stamp } from '../lib/api-version.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const TASKS_PATH = resolve(__dirname, '..', '..', '..', 'benchmarks', 'tasks-v1.json');
+const TASKS_PATH = resolve(__dirname, '..', '..', '..', 'benchmarks', 'tasks-v2.json');
 
 const router: Router = Router();
 

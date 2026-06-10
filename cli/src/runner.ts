@@ -6,7 +6,7 @@ import { judgeExactFinalLine } from './judges/exactFinalLine.js';
 import { judgeJsonMatch } from './judges/jsonMatch.js';
 import { judgeAvailable, judgeRubric } from './judges/rubric.js';
 import type { LLMProvider, RunSummary, Task, TaskResult, Taxonomy, Testpack } from './types.js';
-import { computeCategoryScores, computePipelineScore, determineTier } from './score.js';
+import { scoreRun } from './score.js';
 
 const CLI_VERSION = '0.1.0';
 
@@ -18,12 +18,17 @@ export interface RunOptions {
   taxonomy: Taxonomy;
 }
 
-async function runOneTask(task: Task, provider: LLMProvider): Promise<TaskResult> {
+async function runOneTask(
+  task: Task,
+  provider: LLMProvider,
+  judgeConfig?: Taxonomy['judge'],
+): Promise<TaskResult> {
   let response = '';
   let latency_ms = 0;
   let tokens_in: number | undefined;
   let tokens_out: number | undefined;
   let error: string | undefined;
+  let score_stddev = 0;
 
   try {
     const r = await provider.complete(task.prompt, { maxTokens: 1024, temperature: 0 });
@@ -69,7 +74,7 @@ async function runOneTask(task: Task, provider: LLMProvider): Promise<TaskResult
           break;
         }
         case 'rubric': {
-          const r = await judgeRubric(task, response);
+          const r = await judgeRubric(task, response, judgeConfig);
           if (r === null) {
             // Judge not available — skip task; signal via NaN so aggregator drops it.
             return {
@@ -87,6 +92,7 @@ async function runOneTask(task: Task, provider: LLMProvider): Promise<TaskResult
           }
           raw_score = r.score;
           rationale = r.rationale;
+          score_stddev = r.stddev; // within-task judge-sample spread (0-10 scale)
           break;
         }
       }
@@ -101,6 +107,7 @@ async function runOneTask(task: Task, provider: LLMProvider): Promise<TaskResult
     prompt: task.prompt,
     response,
     raw_score,
+    score_stddev,
     passed: raw_score >= 7,
     latency_ms,
     tokens_in,
@@ -129,28 +136,27 @@ export async function runBenchmark(opts: RunOptions): Promise<RunSummary> {
   const results: TaskResult[] = [];
   for (const task of tasks) {
     bar.update(results.length, { task: task.id });
-    const r = await runOneTask(task, opts.provider);
-    // Replace NaN-score tasks with a sentinel that aggregator skips.
+    const r = await runOneTask(task, opts.provider, opts.taxonomy.judge);
     results.push(r);
     bar.update(results.length, { task: task.id });
   }
   bar.stop();
 
-  // For aggregation, drop NaN scores.
+  // v2 scoring: confidence bands, throughput speed, per-profile composites.
+  // scoreRun drops NaN (skipped) tasks itself.
+  const v2 = scoreRun(results, opts.taxonomy);
+  // task_results stored for submission use 0 in place of NaN sentinels.
   const scoreableResults = results.map((r) => ({ ...r, raw_score: isNaN(r.raw_score) ? 0 : r.raw_score }));
-  const usableForCategories = results.filter((r) => !isNaN(r.raw_score));
-  const categoryScores = computeCategoryScores(usableForCategories, opts.taxonomy);
-  const pipeline_score = computePipelineScore(categoryScores, opts.taxonomy);
-  const tier = determineTier(pipeline_score, opts.taxonomy);
 
   return {
     testpack_version: opts.testpack.version,
     model: opts.model,
     provider: opts.providerName,
     cli_version: CLI_VERSION,
-    pipeline_score,
-    tier: tier.id,
-    category_scores: categoryScores,
+    pipeline_score: v2.pipeline_score,
+    tier: v2.tier,
+    category_scores: v2.category_scores,
+    score_detail: v2,
     task_results: scoreableResults,
     started_at: new Date().toISOString(),
     finished_at: new Date().toISOString(),
