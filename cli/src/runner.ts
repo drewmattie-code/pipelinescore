@@ -119,7 +119,10 @@ async function runOneTask(
 
 export async function runBenchmark(opts: RunOptions): Promise<RunSummary> {
   const tasks = opts.testpack.tasks;
-  process.stdout.write(chalk.dim(`Running ${tasks.length} tasks. Judge available: ${judgeAvailable() ? 'yes' : 'no (rubric tasks will be skipped)'}\n\n`));
+  process.stdout.write(chalk.dim(
+    `Running ${tasks.length} tasks. Subjective (rubric) tasks are graded server-side on submit` +
+    `${judgeAvailable() ? ' (a local preview is also computed)' : ' — no API key needed'}.\n\n`,
+  ));
 
   const bar = new cliProgress.SingleBar(
     {
@@ -143,10 +146,10 @@ export async function runBenchmark(opts: RunOptions): Promise<RunSummary> {
   bar.stop();
 
   // v2 scoring: confidence bands, throughput speed, per-profile composites.
-  // scoreRun drops NaN (skipped) tasks itself.
+  // scoreRun drops NaN (skipped) tasks itself. task_results keep the NaN sentinel
+  // for skipped rubric tasks so the submission can send judge_score=null and the
+  // server knows to grade (or skip) them rather than counting them as a 0.
   const v2 = scoreRun(results, opts.taxonomy);
-  // task_results stored for submission use 0 in place of NaN sentinels.
-  const scoreableResults = results.map((r) => ({ ...r, raw_score: isNaN(r.raw_score) ? 0 : r.raw_score }));
 
   return {
     testpack_version: opts.testpack.version,
@@ -157,7 +160,7 @@ export async function runBenchmark(opts: RunOptions): Promise<RunSummary> {
     tier: v2.tier,
     category_scores: v2.category_scores,
     score_detail: v2,
-    task_results: scoreableResults,
+    task_results: results,
     started_at: new Date().toISOString(),
     finished_at: new Date().toISOString(),
   };

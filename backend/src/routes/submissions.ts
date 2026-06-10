@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db, uid } from '../db.js';
 import { tierForScore } from '../lib/tier.js';
+import { serverGrade } from '../lib/serverGrade.js';
 import { stamp, toIsoDate } from '../lib/api-version.js';
 
 const router: Router = Router();
@@ -83,7 +84,7 @@ function findOrCreateModel(input: z.infer<typeof ModelInput>): string {
   return id;
 }
 
-router.post('/v1/submissions', (req, res) => {
+router.post('/v1/submissions', async (req, res) => {
   const parsed = SubmissionInput.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json(stamp({ error: 'invalid_payload', issues: parsed.error.issues }));
@@ -96,11 +97,31 @@ router.post('/v1/submissions', (req, res) => {
   const labKey = req.headers['x-lab-key'];
   const labVerified = process.env.LAB_KEY && labKey === process.env.LAB_KEY ? 1 : 0;
 
+  // Authoritative server-side scoring: grade the rubric (subjective) tasks
+  // centrally with the lab's judge and recompute the composite, so users need no
+  // judge key and the board number is the server's. Deterministic task scores
+  // come from the client. Falls back to the client's numbers on any error so a
+  // submission is never lost.
+  let authScore = body.pipeline_score;
+  let authCats: Record<string, number> = body.category_scores;
+  let authDetail: unknown = body.score_detail ?? null;
+  let authTier = body.tier ?? tierForScore(body.pipeline_score);
+  let graded = new Map<string, { score: number; stddev: number; rationale: string }>();
+  try {
+    const r = await serverGrade(body.task_results);
+    authScore = r.score.pipeline_score;
+    authCats = r.score.category_scores;
+    authDetail = r.score;
+    authTier = r.score.tier;
+    graded = r.graded;
+  } catch {
+    /* keep client-provided values */
+  }
+
   try {
     const submissionId = uid();
     const txn = db.transaction(() => {
       const modelId = findOrCreateModel(body.model);
-      const tier = body.tier ?? tierForScore(body.pipeline_score);
 
       db.prepare(
         `INSERT INTO submissions (id, model_id, testpack_version, pipeline_score, tier, category_scores, raw_transcripts, score_detail, cli_version, submitter_ip, user_nickname, config_tag, hardware_tag, notes, lab_verified)
@@ -109,11 +130,11 @@ router.post('/v1/submissions', (req, res) => {
         submissionId,
         modelId,
         body.testpack_version,
-        body.pipeline_score,
-        tier,
-        JSON.stringify(body.category_scores),
+        authScore,
+        authTier,
+        JSON.stringify(authCats),
         JSON.stringify(body.raw_transcripts ?? null),
-        JSON.stringify(body.score_detail ?? null),
+        JSON.stringify(authDetail),
         body.cli_version,
         req.ip ?? null,
         body.user_nickname ?? null,
@@ -128,6 +149,7 @@ router.post('/v1/submissions', (req, res) => {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       );
       for (const t of body.task_results) {
+        const g = graded.get(t.task_id);
         insertTask.run(
           uid(),
           submissionId,
@@ -135,11 +157,11 @@ router.post('/v1/submissions', (req, res) => {
           t.category,
           t.task_input,
           t.model_output,
-          t.judge_score ?? null,
+          g ? g.score : (t.judge_score ?? null),
           t.passed === undefined || t.passed === null ? null : t.passed ? 1 : 0,
           t.latency_ms ?? null,
           t.tokens_used ?? null,
-          t.judge_rationale ?? null
+          g ? g.rationale : (t.judge_rationale ?? null)
         );
       }
     });

@@ -255,8 +255,34 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
   // Submit (optional)
   let shareUrl: string | undefined;
   if (opts.submit) {
+    // Build the payload in the backend's contract (model as an object, per-task
+    // results as task_input/model_output). The old code spread the raw summary,
+    // whose shapes did not match, so every real submission was rejected (400).
+    const slug = opts.model.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'unknown-model';
     const payload = {
-      ...summary,
+      model: {
+        slug,
+        display_name: opts.model,
+        provider: providerName,
+        provider_model: opts.model,
+      },
+      testpack_version: summary.testpack_version,
+      pipeline_score: summary.pipeline_score,
+      tier: summary.tier,
+      category_scores: summary.category_scores,
+      score_detail: summary.score_detail,
+      cli_version: summary.cli_version,
+      task_results: summary.task_results.map((r) => ({
+        task_id: r.task_id,
+        category: r.category,
+        task_input: r.prompt,
+        model_output: r.response,
+        judge_score: Number.isNaN(r.raw_score) ? null : r.raw_score,
+        passed: r.passed,
+        latency_ms: r.latency_ms,
+        tokens_used: r.tokens_out ?? null,
+        judge_rationale: r.judge_rationale ?? null,
+      })),
       user_nickname: nickname,
       config_tag: configTag,
       hardware_tag: hardwareTag,
