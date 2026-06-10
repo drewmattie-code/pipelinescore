@@ -5,17 +5,28 @@ import type { Taxonomy, Testpack } from './types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Walk up from src/ or dist/ to the repo, then into benchmarks/.
-const BENCHMARKS_DIR = resolve(__dirname, '..', '..', 'benchmarks');
+// The public benchmark files must resolve in two layouts:
+//  - published npm package: bundled next to the compiled entry (dist/benchmarks),
+//    copied in at publish time (scripts/copy-benchmarks.mjs) — only the public
+//    task set + taxonomy, never the private held-out pool.
+//  - monorepo (dev): the repo-root benchmarks/ directory.
+const BUNDLED_DIR = resolve(__dirname, 'benchmarks');
+const MONOREPO_DIR = resolve(__dirname, '..', '..', 'benchmarks');
+
+async function readBenchmark(file: string): Promise<string> {
+  try {
+    return await readFile(resolve(BUNDLED_DIR, file), 'utf8');
+  } catch {
+    return await readFile(resolve(MONOREPO_DIR, file), 'utf8');
+  }
+}
 
 export async function loadLocalTaxonomy(): Promise<Taxonomy> {
-  const raw = await readFile(resolve(BENCHMARKS_DIR, 'taxonomy.json'), 'utf8');
-  return JSON.parse(raw) as Taxonomy;
+  return JSON.parse(await readBenchmark('taxonomy.json')) as Taxonomy;
 }
 
 export async function loadLocalTestpack(): Promise<Testpack> {
-  const raw = await readFile(resolve(BENCHMARKS_DIR, 'tasks-v2.json'), 'utf8');
-  return JSON.parse(raw) as Testpack;
+  return JSON.parse(await readBenchmark('tasks-v2.json')) as Testpack;
 }
 
 export async function fetchTestpack(endpoint: string, timeoutMs = 3000): Promise<Testpack | null> {
