@@ -4,7 +4,6 @@ import { judgeExecutePython } from './judges/executePython.js';
 import { judgeExecutePythonSnippet } from './judges/executePythonSnippet.js';
 import { judgeExactFinalLine } from './judges/exactFinalLine.js';
 import { judgeJsonMatch } from './judges/jsonMatch.js';
-import { judgeAvailable, judgeRubric } from './judges/rubric.js';
 import type { LLMProvider, RunSummary, Task, TaskResult, Taxonomy, Testpack } from './types.js';
 import { scoreRun } from './score.js';
 
@@ -18,11 +17,7 @@ export interface RunOptions {
   taxonomy: Taxonomy;
 }
 
-async function runOneTask(
-  task: Task,
-  provider: LLMProvider,
-  judgeConfig?: Taxonomy['judge'],
-): Promise<TaskResult> {
+async function runOneTask(task: Task, provider: LLMProvider): Promise<TaskResult> {
   let response = '';
   let latency_ms = 0;
   let tokens_in: number | undefined;
@@ -74,26 +69,20 @@ async function runOneTask(
           break;
         }
         case 'rubric': {
-          const r = await judgeRubric(task, response, judgeConfig);
-          if (r === null) {
-            // Judge not available — skip task; signal via NaN so aggregator drops it.
-            return {
-              task_id: task.id,
-              category: task.category,
-              prompt: task.prompt,
-              response,
-              raw_score: NaN,
-              passed: false,
-              latency_ms,
-              tokens_in,
-              tokens_out,
-              judge_rationale: 'rubric task skipped — no ANTHROPIC_API_KEY for judge',
-            };
-          }
-          raw_score = r.score;
-          rationale = r.rationale;
-          score_stddev = r.stddev; // within-task judge-sample spread (0-10 scale)
-          break;
+          // The testpack is fully deterministic (no judge, no key). A rubric
+          // task is unsupported and skipped (NaN drops it from scoring).
+          return {
+            task_id: task.id,
+            category: task.category,
+            prompt: task.prompt,
+            response,
+            raw_score: NaN,
+            passed: false,
+            latency_ms,
+            tokens_in,
+            tokens_out,
+            judge_rationale: 'rubric tasks are not supported in the deterministic testpack',
+          };
         }
       }
     } catch (e) {
@@ -120,8 +109,7 @@ async function runOneTask(
 export async function runBenchmark(opts: RunOptions): Promise<RunSummary> {
   const tasks = opts.testpack.tasks;
   process.stdout.write(chalk.dim(
-    `Running ${tasks.length} tasks. Subjective (rubric) tasks are graded server-side on submit` +
-    `${judgeAvailable() ? ' (a local preview is also computed)' : ' — no API key needed'}.\n\n`,
+    `Running ${tasks.length} tasks locally. No API key needed — every task is scored on your machine.\n\n`,
   ));
 
   const bar = new cliProgress.SingleBar(
@@ -139,16 +127,14 @@ export async function runBenchmark(opts: RunOptions): Promise<RunSummary> {
   const results: TaskResult[] = [];
   for (const task of tasks) {
     bar.update(results.length, { task: task.id });
-    const r = await runOneTask(task, opts.provider, opts.taxonomy.judge);
+    const r = await runOneTask(task, opts.provider);
     results.push(r);
     bar.update(results.length, { task: task.id });
   }
   bar.stop();
 
-  // v2 scoring: confidence bands, throughput speed, per-profile composites.
-  // scoreRun drops NaN (skipped) tasks itself. task_results keep the NaN sentinel
-  // for skipped rubric tasks so the submission can send judge_score=null and the
-  // server knows to grade (or skip) them rather than counting them as a 0.
+  // Fully local scoring: confidence bands, throughput speed, per-profile
+  // composites — all computed on the user's machine, then uploaded.
   const v2 = scoreRun(results, opts.taxonomy);
 
   return {

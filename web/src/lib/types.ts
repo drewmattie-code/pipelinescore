@@ -2,12 +2,11 @@
 
 export type TierId = "trunk" | "mainline" | "feeder" | "tap" | "drip";
 
-export type Category = "code" | "reason" | "write" | "tool_use" | "rag" | "speed";
+export type Category = "code" | "reason" | "tool_use" | "rag" | "speed";
 
 export interface CategoryScores {
   code: number;
   reason: number;
-  write: number;
   tool_use: number;
   rag: number;
   speed: number;

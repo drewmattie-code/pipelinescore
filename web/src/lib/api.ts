@@ -62,7 +62,6 @@ function adaptEntryToSubmission(e: BackendLeaderboardEntry): Submission {
     categoryScores: {
       code: e.category_scores.code ?? 0,
       reason: e.category_scores.reason ?? 0,
-      write: e.category_scores.write ?? 0,
       tool_use: e.category_scores.tool_use ?? 0,
       rag: e.category_scores.rag ?? 0,
       speed: e.category_scores.speed ?? 0,
@@ -88,7 +87,6 @@ function adaptEntryToModel(e: BackendLeaderboardEntry): Model {
     categoryScores: {
       code: e.category_scores.code ?? 0,
       reason: e.category_scores.reason ?? 0,
-      write: e.category_scores.write ?? 0,
       tool_use: e.category_scores.tool_use ?? 0,
       rag: e.category_scores.rag ?? 0,
       speed: e.category_scores.speed ?? 0,
@@ -138,7 +136,6 @@ export async function getModel(slug: string): Promise<Model | undefined> {
       categoryScores: {
         code: scores.code ?? 0,
         reason: scores.reason ?? 0,
-        write: scores.write ?? 0,
         tool_use: scores.tool_use ?? 0,
         rag: scores.rag ?? 0,
         speed: scores.speed ?? 0,
@@ -204,7 +201,6 @@ function adaptUserEntry(e: BackendUserEntry): UserLeaderboardEntry {
     categoryScores: {
       code: e.category_scores.code ?? 0,
       reason: e.category_scores.reason ?? 0,
-      write: e.category_scores.write ?? 0,
       tool_use: e.category_scores.tool_use ?? 0,
       rag: e.category_scores.rag ?? 0,
       speed: e.category_scores.speed ?? 0,

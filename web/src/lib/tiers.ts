@@ -19,19 +19,19 @@ export function tierForScore(score: number): TierId {
   return "drip";
 }
 
+// v3: fully deterministic categories (the subjective "write" category was
+// removed — it cannot be scored objectively without a judge).
 export const CATEGORY_WEIGHTS = {
-  code: 0.25,
-  reason: 0.2,
-  write: 0.15,
-  tool_use: 0.15,
-  rag: 0.12,
-  speed: 0.13,
+  code: 0.28,
+  reason: 0.22,
+  tool_use: 0.18,
+  rag: 0.17,
+  speed: 0.15,
 } as const;
 
 export const CATEGORY_LABELS: Record<keyof typeof CATEGORY_WEIGHTS, string> = {
   code: "Code",
   reason: "Reason",
-  write: "Write",
   tool_use: "Tool Use",
   rag: "RAG",
   speed: "Speed",

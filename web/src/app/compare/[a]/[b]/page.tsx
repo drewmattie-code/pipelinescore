@@ -6,7 +6,7 @@ import { TierBadge } from "@/components/TierBadge";
 import { CATEGORY_LABELS, TIER_BY_ID, tierForScore } from "@/lib/tiers";
 import type { Model } from "@/lib/types";
 
-const CATEGORIES = ["code", "reason", "write", "tool_use", "rag", "speed"] as const;
+const CATEGORIES = ["code", "reason", "tool_use", "rag", "speed"] as const;
 
 export async function generateMetadata({
   params,

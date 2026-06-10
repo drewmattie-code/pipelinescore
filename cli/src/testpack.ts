@@ -26,7 +26,7 @@ export async function loadLocalTaxonomy(): Promise<Taxonomy> {
 }
 
 export async function loadLocalTestpack(): Promise<Testpack> {
-  return JSON.parse(await readBenchmark('tasks-v2.json')) as Testpack;
+  return JSON.parse(await readBenchmark('tasks-v3.json')) as Testpack;
 }
 
 export async function fetchTestpack(endpoint: string, timeoutMs = 3000): Promise<Testpack | null> {

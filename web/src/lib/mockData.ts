@@ -11,7 +11,7 @@ const RAW_MODELS: Omit<Model, "tier">[] = [
     contextWindow: 1000000,
     releasedAt: "2026-02-14",
     pipelineScore: 91.4,
-    categoryScores: { code: 93.2, reason: 94.8, write: 92.1, tool_use: 91.5, rag: 90.6, speed: 84.1 },
+    categoryScores: { code: 93.2, reason: 94.8, tool_use: 91.5, rag: 90.6, speed: 84.1 },
     labVerified: true,
     notes: "Anchored reference model. Strongest on long-context reasoning + tool use.",
   },
@@ -23,7 +23,7 @@ const RAW_MODELS: Omit<Model, "tier">[] = [
     contextWindow: 400000,
     releasedAt: "2026-03-02",
     pipelineScore: 88.7,
-    categoryScores: { code: 91.0, reason: 90.4, write: 87.8, tool_use: 88.6, rag: 86.2, speed: 87.5 },
+    categoryScores: { code: 91.0, reason: 90.4, tool_use: 88.6, rag: 86.2, speed: 87.5 },
     labVerified: true,
   },
   {
@@ -34,7 +34,7 @@ const RAW_MODELS: Omit<Model, "tier">[] = [
     contextWindow: 2000000,
     releasedAt: "2026-01-28",
     pipelineScore: 85.9,
-    categoryScores: { code: 84.4, reason: 87.7, write: 85.2, tool_use: 84.1, rag: 91.8, speed: 82.9 },
+    categoryScores: { code: 84.4, reason: 87.7, tool_use: 84.1, rag: 91.8, speed: 82.9 },
     labVerified: true,
   },
   {
@@ -45,7 +45,7 @@ const RAW_MODELS: Omit<Model, "tier">[] = [
     contextWindow: 256000,
     releasedAt: "2026-04-09",
     pipelineScore: 82.3,
-    categoryScores: { code: 88.6, reason: 85.1, write: 76.2, tool_use: 81.4, rag: 78.7, speed: 83.5 },
+    categoryScores: { code: 88.6, reason: 85.1, tool_use: 81.4, rag: 78.7, speed: 83.5 },
     labVerified: true,
   },
   {
@@ -56,7 +56,7 @@ const RAW_MODELS: Omit<Model, "tier">[] = [
     contextWindow: 128000,
     releasedAt: "2026-04-22",
     pipelineScore: 78.4,
-    categoryScores: { code: 79.8, reason: 81.2, write: 74.3, tool_use: 78.1, rag: 75.4, speed: 81.0 },
+    categoryScores: { code: 79.8, reason: 81.2, tool_use: 78.1, rag: 75.4, speed: 81.0 },
     labVerified: false,
   },
   {
@@ -67,7 +67,7 @@ const RAW_MODELS: Omit<Model, "tier">[] = [
     contextWindow: 256000,
     releasedAt: "2026-03-18",
     pipelineScore: 76.1,
-    categoryScores: { code: 77.6, reason: 78.4, write: 73.8, tool_use: 74.2, rag: 76.9, speed: 75.4 },
+    categoryScores: { code: 77.6, reason: 78.4, tool_use: 74.2, rag: 76.9, speed: 75.4 },
     labVerified: true,
   },
   {
@@ -78,7 +78,7 @@ const RAW_MODELS: Omit<Model, "tier">[] = [
     contextWindow: 200000,
     releasedAt: "2026-02-14",
     pipelineScore: 73.5,
-    categoryScores: { code: 70.2, reason: 74.8, write: 75.6, tool_use: 73.0, rag: 72.1, speed: 92.4 },
+    categoryScores: { code: 70.2, reason: 74.8, tool_use: 73.0, rag: 72.1, speed: 92.4 },
     labVerified: true,
     notes: "Used as the PipelineScore judge model.",
   },
@@ -90,7 +90,7 @@ const RAW_MODELS: Omit<Model, "tier">[] = [
     contextWindow: 128000,
     releasedAt: "2026-01-09",
     pipelineScore: 68.9,
-    categoryScores: { code: 71.4, reason: 70.1, write: 67.8, tool_use: 66.5, rag: 68.7, speed: 70.2 },
+    categoryScores: { code: 71.4, reason: 70.1, tool_use: 66.5, rag: 68.7, speed: 70.2 },
     labVerified: false,
   },
   {
@@ -101,7 +101,7 @@ const RAW_MODELS: Omit<Model, "tier">[] = [
     contextWindow: 200000,
     releasedAt: "2026-05-01",
     pipelineScore: 64.2,
-    categoryScores: { code: 60.1, reason: 67.3, write: 65.9, tool_use: 62.7, rag: 65.4, speed: 64.8 },
+    categoryScores: { code: 60.1, reason: 67.3, tool_use: 62.7, rag: 65.4, speed: 64.8 },
     labVerified: false,
   },
   {
@@ -112,7 +112,7 @@ const RAW_MODELS: Omit<Model, "tier">[] = [
     contextWindow: 128000,
     releasedAt: "2025-11-12",
     pipelineScore: 56.8,
-    categoryScores: { code: 51.2, reason: 58.6, write: 62.1, tool_use: 55.9, rag: 60.8, speed: 54.7 },
+    categoryScores: { code: 51.2, reason: 58.6, tool_use: 55.9, rag: 60.8, speed: 54.7 },
     labVerified: false,
   },
 ];
@@ -158,7 +158,6 @@ function makeSubmissions(): Submission[] {
         categoryScores: {
           code: Number(drift(m.categoryScores.code).toFixed(2)),
           reason: Number(drift(m.categoryScores.reason).toFixed(2)),
-          write: Number(drift(m.categoryScores.write).toFixed(2)),
           tool_use: Number(drift(m.categoryScores.tool_use).toFixed(2)),
           rag: Number(drift(m.categoryScores.rag).toFixed(2)),
           speed: Number(drift(m.categoryScores.speed).toFixed(2)),
@@ -196,11 +195,11 @@ export const SAMPLE_TASKS = [
     prompt: "Two trains, opposite directions, given speeds and start times — when do they meet?",
   },
   {
-    id: "write-tagline-1",
-    category: "write" as const,
-    difficulty: 1,
-    title: "Five distinct taglines",
-    prompt: "Write 5 one-line taglines for a benchmark tool. <=10 words each, no numbering.",
+    id: "rag-extract-1",
+    category: "rag" as const,
+    difficulty: 2,
+    title: "Extract metrics to JSON",
+    prompt: "From the context, extract net sales, operating margin, and free cash flow as a JSON object. Numbers only.",
   },
   {
     id: "tool-schema-1",
@@ -276,7 +275,6 @@ export const MOCK_USER_ENTRIES: UserLeaderboardEntry[] = (() => {
         categoryScores: {
           code: Number(drift(m.categoryScores.code).toFixed(2)),
           reason: Number(drift(m.categoryScores.reason).toFixed(2)),
-          write: Number(drift(m.categoryScores.write).toFixed(2)),
           tool_use: Number(drift(m.categoryScores.tool_use).toFixed(2)),
           rag: Number(drift(m.categoryScores.rag).toFixed(2)),
           speed: Number(drift(m.categoryScores.speed).toFixed(2)),

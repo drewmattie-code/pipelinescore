@@ -7,7 +7,7 @@ import { CategoryBars } from "@/components/CategoryBars";
 import { BetaBadge } from "@/components/BetaBadge";
 import { TIER_BY_ID, CATEGORY_LABELS } from "@/lib/tiers";
 
-const CATEGORIES = ["code", "reason", "write", "tool_use", "rag", "speed"] as const;
+const CATEGORIES = ["code", "reason", "tool_use", "rag", "speed"] as const;
 
 // Render on-demand at request time. User dashboards change constantly as
 // submissions land, and new nicknames appear without notice — force-dynamic
@@ -52,7 +52,6 @@ export default async function UserDashboardPage({
   const avgCategoryScores = {
     code: catTotals.code ? catTotals.code.sum / catTotals.code.n : 0,
     reason: catTotals.reason ? catTotals.reason.sum / catTotals.reason.n : 0,
-    write: catTotals.write ? catTotals.write.sum / catTotals.write.n : 0,
     tool_use: catTotals.tool_use ? catTotals.tool_use.sum / catTotals.tool_use.n : 0,
     rag: catTotals.rag ? catTotals.rag.sum / catTotals.rag.n : 0,
     speed: catTotals.speed ? catTotals.speed.sum / catTotals.speed.n : 0,

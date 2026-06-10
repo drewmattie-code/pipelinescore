@@ -8,33 +8,30 @@ import { ScoreNumber } from "./ScoreNumber";
 import { TierBadge } from "./TierBadge";
 import { CategoryBarsInline } from "./CategoryBars";
 
-type CategoryFilter = "overall" | "code" | "reason" | "write" | "tool_use" | "rag" | "speed";
+type CategoryFilter = "overall" | "code" | "reason" | "tool_use" | "rag" | "speed";
 
 const FILTERS: { id: CategoryFilter; label: string }[] = [
   { id: "overall", label: "Overall" },
   { id: "code", label: CATEGORY_LABELS.code },
   { id: "reason", label: CATEGORY_LABELS.reason },
-  { id: "write", label: CATEGORY_LABELS.write },
   { id: "tool_use", label: CATEGORY_LABELS.tool_use },
   { id: "rag", label: CATEGORY_LABELS.rag },
   { id: "speed", label: CATEGORY_LABELS.speed },
 ];
 
-// v2 weighting profiles (mirror benchmarks/taxonomy.json). The "Overall" column
-// is a weighted composite of the six category scores; the profile chooses the
+// v3 weighting profiles (mirror benchmarks/taxonomy.json). The "Overall" column
+// is a weighted composite of the category scores; the profile chooses the
 // weighting so the ranking reflects a use case instead of one fixed average.
-type ProfileId = "balanced" | "coding" | "writing" | "agentic" | "local-first";
+type ProfileId = "balanced" | "coding" | "agentic" | "local-first";
 const PROFILE_WEIGHTS: Record<ProfileId, Record<string, number>> = {
-  balanced: { code: 0.25, reason: 0.2, write: 0.15, tool_use: 0.15, rag: 0.12, speed: 0.13 },
-  coding: { code: 0.4, reason: 0.18, write: 0.05, tool_use: 0.2, rag: 0.07, speed: 0.1 },
-  writing: { code: 0.05, reason: 0.2, write: 0.45, tool_use: 0.05, rag: 0.15, speed: 0.1 },
-  agentic: { code: 0.22, reason: 0.22, write: 0.06, tool_use: 0.3, rag: 0.12, speed: 0.08 },
-  "local-first": { code: 0.22, reason: 0.18, write: 0.12, tool_use: 0.13, rag: 0.1, speed: 0.25 },
+  balanced: { code: 0.28, reason: 0.22, tool_use: 0.18, rag: 0.17, speed: 0.15 },
+  coding: { code: 0.45, reason: 0.18, tool_use: 0.22, rag: 0.07, speed: 0.08 },
+  agentic: { code: 0.2, reason: 0.25, tool_use: 0.35, rag: 0.12, speed: 0.08 },
+  "local-first": { code: 0.25, reason: 0.2, tool_use: 0.13, rag: 0.12, speed: 0.3 },
 };
 const PROFILES: { id: ProfileId; label: string }[] = [
   { id: "balanced", label: "Balanced" },
   { id: "coding", label: "Coding" },
-  { id: "writing", label: "Writing" },
   { id: "agentic", label: "Agentic" },
   { id: "local-first", label: "Local-first" },
 ];

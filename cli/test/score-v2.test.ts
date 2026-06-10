@@ -77,14 +77,13 @@ check('speed unscored without token data', spdNone.scored === false && spdNone.s
 const results: TaskResult[] = [
   ...Array.from({ length: 3 }, () => tr('code', 10, { tokens_out: 50, latency_ms: 1000 })),
   ...Array.from({ length: 3 }, () => tr('reason', 5, { tokens_out: 50, latency_ms: 1000 })),
-  ...Array.from({ length: 3 }, () => tr('write', 2, { tokens_out: 50, latency_ms: 1000 })),
   ...Array.from({ length: 3 }, () => tr('tool_use', 5, { tokens_out: 50, latency_ms: 1000 })),
   ...Array.from({ length: 3 }, () => tr('rag', 5, { tokens_out: 50, latency_ms: 1000 })),
 ];
 const v2 = scoreRun(results, taxonomy);
-check('coding profile rewards the code-strong model over writing profile',
-  v2.profile_scores.coding > v2.profile_scores.writing,
-  `coding ${v2.profile_scores.coding} vs writing ${v2.profile_scores.writing}`);
+check('coding profile rewards the code-strong model over the local-first (speed-weighted) profile',
+  v2.profile_scores.coding > v2.profile_scores['local-first'],
+  `coding ${v2.profile_scores.coding} vs local-first ${v2.profile_scores['local-first']}`);
 check('composite carries a confidence band', v2.pipeline_ci_high >= v2.pipeline_score && v2.pipeline_ci_low <= v2.pipeline_score);
 check('category detail present with n', v2.category_detail.code?.n === 3, JSON.stringify(v2.category_detail.code));
 check('default profile is balanced', v2.profile === 'balanced');

@@ -1,7 +1,7 @@
 {
   "name": "@pipelinescore/cli",
-  "version": "0.2.0",
-  "description": "PipelineScore CLI — benchmark LLMs on your own hardware. Runs a standardized 48-task suite against any local server (Ollama, LM Studio, MLX, llama.cpp) or frontier API (Anthropic, OpenAI), publishes to the hardware-aware public leaderboard at pipelinescore.ai.",
+  "version": "0.3.0",
+  "description": "PipelineScore CLI — benchmark LLMs on your own hardware. Runs a standardized, fully deterministic suite (no API key required) against any local server (Ollama, LM Studio, MLX, llama.cpp) or frontier API (Anthropic, OpenAI), scores it locally, and publishes to the hardware-aware public leaderboard at pipelinescore.ai.",
   "type": "module",
   "main": "./dist/index.js",
   "bin": {

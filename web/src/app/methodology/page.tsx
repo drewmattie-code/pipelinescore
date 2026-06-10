@@ -5,7 +5,7 @@ import { TierBadge } from "@/components/TierBadge";
 export const metadata = {
   title: "Methodology",
   description:
-    "How the PipelineScore is computed. Six categories with confidence bands, selectable weighting profiles, throughput-based speed, five tiers, and a public set plus a private rotating held-out set for lab-verified runs.",
+    "How the PipelineScore is computed. Five deterministic categories scored locally with no API key, confidence bands, selectable weighting profiles, throughput-based speed, five tiers, and a public set plus a private rotating held-out set for lab-verified runs.",
 };
 
 const CATEGORIES: {
@@ -13,12 +13,11 @@ const CATEGORIES: {
   weight: string;
   tests: string;
 }[] = [
-  { id: "code", weight: "25%", tests: "Code generation, debugging, refactoring, test writing — runnable, gradeable code." },
-  { id: "reason", weight: "20%", tests: "Multi-step reasoning, math, logic, strict instruction following." },
-  { id: "write", weight: "15%", tests: "Drafting, summarization, style adherence, tone control." },
-  { id: "tool_use", weight: "15%", tests: "Function calling correctness, parameter selection, orchestration, graceful refusal." },
-  { id: "rag", weight: "12%", tests: "Grounded answering, citation accuracy, faithfulness, refusal to fabricate." },
-  { id: "speed", weight: "13%", tests: "Latency (p50, p95) and tokens/sec under a standardized load." },
+  { id: "code", weight: "28%", tests: "Code generation, debugging, refactoring — the model's code is executed against hidden test cases." },
+  { id: "reason", weight: "22%", tests: "Multi-step reasoning, math, logic — the final answer is exact-matched." },
+  { id: "tool_use", weight: "18%", tests: "Function-calling: the emitted tool call is JSON-matched against the expected structure." },
+  { id: "rag", weight: "17%", tests: "Grounded extraction and structured answering, JSON-matched against the context." },
+  { id: "speed", weight: "15%", tests: "Throughput (tokens/sec) measured on your hardware during the run." },
 ];
 
 export default function MethodologyPage() {
@@ -31,11 +30,12 @@ export default function MethodologyPage() {
         How the score works.
       </h1>
       <p className="text-lg text-[var(--color-ink-2)] mt-5 leading-relaxed">
-        PipelineScore is a 0–100 number computed from six categories that mirror
+        PipelineScore is a 0–100 number computed from five categories that mirror
         real-world LLM workloads, reported with a <strong>confidence band</strong>{" "}
-        so two models that are statistically tied read as tied. Pick a{" "}
-        <strong>weighting profile</strong> to rank for your use case. Same test
-        pack, same math — every model gets the same shot.
+        so two models that are statistically tied read as tied. Every task is
+        checked objectively, so the whole benchmark runs <strong>on your machine
+        with no API key</strong>, then the result uploads to the board. Pick a{" "}
+        <strong>weighting profile</strong> to rank for your use case.
       </p>
 
       <Section title="The formula">
@@ -45,20 +45,19 @@ PipelineScore  = Σ (category_score × profile_weight)   (weights sum to 1.0)`}
         </pre>
         <p className="text-[var(--color-ink-2)] leading-relaxed mt-5">
           Each category is the mean of its task scores with a 95% confidence band
-          (Student-t for small samples), so a noisy category or an uncertain judge
-          shows a wider band; the band narrows as you add tasks. Deterministic
-          tests (code execution, exact-match, schema validation) score pass/fail.
-          Open-ended tests are scored 0–10 against a rubric by a judge model, graded
-          several times with the median taken (<strong>self-consistency</strong>),
-          and the spread feeds the band. Speed is{" "}
-          <strong>throughput (tokens/sec)</strong>, a rate, so it does not reward
-          terse answers. The composite is computed per weighting profile (balanced,
-          coding, writing, agentic, local-first); the board leads with the
+          (Student-t for small samples), so a noisy category shows a wider band and
+          the band narrows as you add tasks. <strong>Every task is scored
+          deterministically on your machine</strong>: code is executed against
+          hidden test cases, answers are exact-matched, and tool calls and
+          extractions are JSON-matched. There is no judge model and no API key.
+          Speed is <strong>throughput (tokens/sec)</strong>, a rate, so it does not
+          reward terse answers. The composite is computed per weighting profile
+          (balanced, coding, agentic, local-first); the board leads with the
           per-category profile.
         </p>
       </Section>
 
-      <Section title="The six categories">
+      <Section title="The five categories">
         <div className="border-y border-[var(--color-line-2)]">
           {CATEGORIES.map((c) => (
             <div
@@ -147,7 +146,7 @@ PipelineScore  = Σ (category_score × profile_weight)   (weights sum to 1.0)`}
             Community submissions are computed locally by the CLI and are labeled
             community, not verified — treat them as directional. The trusted
             ranking is the lab-verified tier, run by the lab against the private
-            held-out set with a self-consistency-graded judge.
+            rotating held-out task set so it cannot be pre-tuned against.
           </Bullet>
           <Bullet>
             <strong>Layered rate limits.</strong>{" "}
