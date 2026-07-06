@@ -359,7 +359,20 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
         )}\n`,
       ),
     );
+  } else if (!opts.submit) {
+    process.stdout.write(
+      chalk.dim(
+        `Score stayed local (--no-submit). Claim your spot: rerun without --no-submit and join ${chalk.cyan(`${opts.site}/leaderboard`)}\n`,
+      ),
+    );
   }
+
+  // One honest ask, at the exact moment the tool has just proven its worth.
+  process.stdout.write(
+    chalk.dim(
+      `Useful? A star helps others find it: ${chalk.cyan('https://github.com/drewmattie-code/pipelinescore')} ${chalk.yellow('★')}\n`,
+    ),
+  );
 
   // Quick per-task summary to stderr (so stdout stays clean for piping)
   process.stderr.write('\n' + chalk.dim('Per-task scores:\n'));
