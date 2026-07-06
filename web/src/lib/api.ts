@@ -16,10 +16,10 @@ import type {
 const API_BASE = process.env.PIPELINESCORE_API_BASE ?? 'http://localhost:4601';
 const FETCH_TIMEOUT_MS = 1500;
 
-async function timedFetch(url: string): Promise<Response | null> {
+async function timedFetch(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response | null> {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
     clearTimeout(timer);
     return res.ok ? res : null;
@@ -569,9 +569,30 @@ export interface SubmissionDetail {
   ciHigh: number | null;
 }
 
+// Like timedFetch but keeps 404 distinguishable from "backend unreachable" —
+// the share page must 404 on a bad id yet stay alive through a Render cold start.
+async function fetchOr404(url: string, timeoutMs: number): Promise<Response | '404' | null> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+    clearTimeout(timer);
+    if (res.status === 404) return '404';
+    return res.ok ? res : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Single run, for the /s/[id] share page. undefined = not found, null = backend unreachable. */
 export async function getSubmission(id: string): Promise<SubmissionDetail | null | undefined> {
-  const res = await timedFetch(`${API_BASE}/v1/submissions/${encodeURIComponent(id)}`);
+  // Share links arrive from cold — a Render spin-up can take several seconds,
+  // and a 404 on someone's shared score is worse than a slow load. Long
+  // timeout, one retry.
+  const url = `${API_BASE}/v1/submissions/${encodeURIComponent(id)}`;
+  let res = await fetchOr404(url, 8000);
+  if (res === null) res = await fetchOr404(url, 8000);
+  if (res === '404') return undefined;
   if (!res) return null;
   try {
     const d = (await res.json()) as {

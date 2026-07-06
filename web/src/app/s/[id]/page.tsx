@@ -17,6 +17,7 @@ export async function generateMetadata({
 }) {
   const { id } = await params;
   const sub = await getSubmission(id);
+  if (sub === null) return { title: "PipelineScore run" };
   if (!sub) return { title: "Run not found" };
   const rig = sub.hardwareTag ? ` on ${sub.hardwareTag}` : "";
   return {
@@ -32,6 +33,23 @@ export default async function SharePage({
 }) {
   const { id } = await params;
   const sub = await getSubmission(id);
+  if (sub === null) {
+    // Backend unreachable (likely a cold start) — don't 404 someone's share link.
+    return (
+      <div className="max-w-3xl mx-auto px-6 md:px-10 py-24 text-center">
+        <div className="text-xs uppercase tracking-[0.18em] text-[var(--color-emerald)] font-semibold">
+          Benchmark run
+        </div>
+        <h1 className="display text-3xl font-bold text-[var(--color-ink)] mt-4">
+          The leaderboard is waking up…
+        </h1>
+        <p className="text-sm text-[var(--color-ink-2)] mt-3 leading-relaxed">
+          The API is spinning up from a cold start. Refresh in a few seconds —
+          this run isn&apos;t going anywhere.
+        </p>
+      </div>
+    );
+  }
   if (!sub) notFound();
 
   const date = sub.createdAt ? new Date(sub.createdAt).toISOString().slice(0, 10) : "";
