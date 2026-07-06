@@ -101,13 +101,13 @@ Once installed, try saying to your AI:
 > "Benchmark Llama 3.3 70B on my M3 Max against PipelineScore"
 
 Your AI should:
-1. Call `run_benchmark` with `provider=local`, `endpoint=http://localhost:11434`, `model=llama-3.3-70b`, `hardware_tag=m3-max-128gb`
+1. Call `run_benchmark` with `provider=local`, `endpoint=http://localhost:11434/v1`, `model=llama-3.3-70b` (hardware tag auto-detects)
 2. Wait for the CLI to complete
 3. Show you the score card + the public URL to your run
 
 ## Why local-first?
 
-PipelineScore's whole pitch is **hardware-aware** ranking. Same model on M3 Max vs RTX 4090 vs A100 = three different rows. The MCP tool defaults to `--provider local` when possible — see your AI's response in [SKILL.md](https://github.com/drewmattie-code/pipelinescore/blob/main/dist/skills/pipelinescore/SKILL.md) for the default flow.
+PipelineScore's whole pitch is **hardware-aware** ranking. Same model on M3 Max vs RTX 4090 vs A100 = three different rows. The MCP tool defaults to `--provider local` when possible — see your AI's response in [SKILL.md](https://pipelinescore.ai/skills/pipelinescore/SKILL.md) for the default flow.
 
 ## License
 

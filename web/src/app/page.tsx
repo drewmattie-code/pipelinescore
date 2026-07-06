@@ -9,8 +9,12 @@ import { modelMatchups, rigMatchups } from "@/lib/matchups";
 // every request — no stale cached homepage.
 export const dynamic = "force-dynamic";
 
+// Copy-paste-safe: endpoint includes /v1 (required by every local server's
+// OpenAI-compat API), no --hardware-tag (auto-detected — hand-typed tags put
+// wrong rigs on the board), no placeholder --user (a real user once submitted
+// as "yourusername").
 const RUN_COMMAND =
-  "npx @pipelinescore/cli run --provider local --endpoint http://localhost:11434 --model llama-3.3-70b --hardware-tag m3-max-128gb --user your-handle";
+  "npx @pipelinescore/cli run --provider local --endpoint http://localhost:11434/v1 --model llama3.2";
 
 export default async function Home() {
   const [models, stats, rigs] = await Promise.all([
@@ -43,6 +47,11 @@ export default async function Home() {
           <div className="flex flex-wrap items-center gap-3 mt-6">
             <CopyCommand command={RUN_COMMAND} />
           </div>
+          <p className="text-xs text-[var(--color-ink-3)] mt-2 font-mono">
+            Ollama shown — LM Studio :1234/v1, llama.cpp :8080/v1. Swap
+            --model for anything you serve. Hardware is auto-detected; add
+            --user yourname to claim your spot on the board.
+          </p>
           <div className="flex flex-wrap items-center gap-5 mt-5 text-sm font-semibold">
             <Link
               href="/run"

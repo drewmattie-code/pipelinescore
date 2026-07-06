@@ -1,7 +1,7 @@
 {
   "name": "@pipelinescore/mcp",
-  "version": "0.1.0",
-  "description": "MCP server for the PipelineScore LLM benchmark — exposes run_benchmark / get_user_leaderboard / get_user_profile tools to any MCP-compatible client (Claude Code, Codex, Cursor, Continue, Cline). Lets your AI drive local-first LLM benchmarking on your hardware.",
+  "version": "0.1.1",
+  "description": "MCP server for the PipelineScore LLM benchmark \u2014 exposes run_benchmark / get_user_leaderboard / get_user_profile tools to any MCP-compatible client (Claude Code, Codex, Cursor, Continue, Cline). Lets your AI drive local-first LLM benchmarking on your hardware.",
   "type": "module",
   "main": "./dist/index.js",
   "bin": {

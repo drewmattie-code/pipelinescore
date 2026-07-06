@@ -33,6 +33,11 @@ interface BackendLeaderboardEntry {
   pipeline_score: number;
   tier: TierId;
   category_scores: Record<string, number>;
+  score_detail?: {
+    speed?: { scored?: boolean; speed_score?: number };
+    pipeline_ci_low?: number;
+    pipeline_ci_high?: number;
+  } | null;
   lab_verified: boolean;
   created_at: string;
   model: {
@@ -41,6 +46,20 @@ interface BackendLeaderboardEntry {
     provider: string;
     family?: string;
   };
+}
+
+// Runs from CLI <0.4.0 kept speed only inside score_detail (throughput-based),
+// so category_scores.speed is absent on those rows. Fall back so old runs
+// don't render a phantom 0.0 speed.
+function speedOf(
+  categoryScores: Record<string, number>,
+  detail?: BackendLeaderboardEntry['score_detail'],
+): number {
+  if (typeof categoryScores.speed === 'number') return categoryScores.speed;
+  if (detail?.speed?.scored && typeof detail.speed.speed_score === 'number') {
+    return Math.round(detail.speed.speed_score * 100) / 100;
+  }
+  return 0;
 }
 
 // /v1/models/{slug} response. Medians are nested under `stats`; the
@@ -88,15 +107,17 @@ function adaptEntryToModel(e: BackendLeaderboardEntry): Model {
       reason: e.category_scores.reason ?? 0,
       tool_use: e.category_scores.tool_use ?? 0,
       rag: e.category_scores.rag ?? 0,
-      speed: e.category_scores.speed ?? 0,
+      speed: speedOf(e.category_scores, e.score_detail),
     },
   };
 }
 
 /** Top-of-leaderboard view. Returns a deduped per-model leaderboard ordered by score. */
 export async function getLeaderboardModels(): Promise<Model[]> {
-  // Pull a large window so every model shows up at least once, then dedupe by slug.
-  const res = await timedFetch(`${API_BASE}/v1/leaderboard?limit=200`);
+  // Pull a large window so every model shows up at least once, then dedupe by
+  // slug. days=365 explicitly: the backend's old 30-day default silently
+  // emptied this board once early submissions aged out.
+  const res = await timedFetch(`${API_BASE}/v1/leaderboard?limit=200&days=365`);
   if (!res) return MOCK_MODELS;
   try {
     const data = await res.json() as { entries: BackendLeaderboardEntry[] };
@@ -528,6 +549,76 @@ export async function getStats(): Promise<SiteStats> {
     };
   } catch {
     return { submission_count: 0, user_count: 0, model_count: 0 };
+  }
+}
+
+export interface SubmissionDetail {
+  id: string;
+  model: { slug: string; displayName: string; provider: string };
+  pipelineScore: number;
+  tier: TierId;
+  categoryScores: CategoryScores;
+  userNickname: string | null;
+  hardwareTag: string | null;
+  configTag: string | null;
+  cliVersion: string;
+  labVerified: boolean;
+  testpackVersion: string;
+  createdAt: string;
+  ciLow: number | null;
+  ciHigh: number | null;
+}
+
+/** Single run, for the /s/[id] share page. undefined = not found, null = backend unreachable. */
+export async function getSubmission(id: string): Promise<SubmissionDetail | null | undefined> {
+  const res = await timedFetch(`${API_BASE}/v1/submissions/${encodeURIComponent(id)}`);
+  if (!res) return null;
+  try {
+    const d = (await res.json()) as {
+      id?: string;
+      model?: { slug?: string; display_name?: string; provider?: string };
+      pipeline_score?: number;
+      tier?: TierId;
+      category_scores?: Record<string, number>;
+      score_detail?: BackendLeaderboardEntry['score_detail'];
+      user_nickname?: string | null;
+      hardware_tag?: string | null;
+      config_tag?: string | null;
+      cli_version?: string;
+      lab_verified?: boolean;
+      testpack_version?: string;
+      created_at?: string;
+    };
+    if (!d?.id || !d.model?.slug) return undefined;
+    const cs = d.category_scores ?? {};
+    return {
+      id: d.id,
+      model: {
+        slug: d.model.slug,
+        displayName: d.model.display_name ?? d.model.slug,
+        provider: d.model.provider ?? 'local',
+      },
+      pipelineScore: d.pipeline_score ?? 0,
+      tier: d.tier ?? tierForScore(d.pipeline_score ?? 0),
+      categoryScores: {
+        code: cs.code ?? 0,
+        reason: cs.reason ?? 0,
+        tool_use: cs.tool_use ?? 0,
+        rag: cs.rag ?? 0,
+        speed: speedOf(cs, d.score_detail),
+      },
+      userNickname: d.user_nickname ?? null,
+      hardwareTag: d.hardware_tag ?? null,
+      configTag: d.config_tag ?? null,
+      cliVersion: d.cli_version ?? 'unknown',
+      labVerified: !!d.lab_verified,
+      testpackVersion: d.testpack_version ?? '',
+      createdAt: d.created_at ?? '',
+      ciLow: typeof d.score_detail?.pipeline_ci_low === 'number' ? d.score_detail.pipeline_ci_low : null,
+      ciHigh: typeof d.score_detail?.pipeline_ci_high === 'number' ? d.score_detail.pipeline_ci_high : null,
+    };
+  } catch {
+    return undefined;
   }
 }
 

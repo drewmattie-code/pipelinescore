@@ -12,7 +12,7 @@ const LOCAL_ENDPOINTS = [
   { id: "lm-studio", port: "1234", label: "LM Studio" },
   { id: "llama-cpp", port: "8080", label: "llama.cpp server" },
   { id: "mlx-omni", port: "10240", label: "MLX-Omni / mlx_lm" },
-  { id: "litellm", port: "8000", label: "LiteLLM proxy" },
+  { id: "litellm", port: "4000", label: "LiteLLM proxy" },
 ];
 
 const FRONTIER_PROVIDERS = [
@@ -37,10 +37,10 @@ export default function RunPage() {
       </div>
       <p className="text-lg text-[var(--color-ink)] mt-5 leading-relaxed">
         Three minutes. No account. Point the CLI at your local model server —
-        Ollama, LM Studio, MLX, llama.cpp — and tag your hardware. The CLI
-        runs 34 standardized tasks, submits the result with your hardware tag,
-        and your run lands on the public leaderboard alongside others
-        running the same model on different rigs.
+        Ollama, LM Studio, MLX, llama.cpp — and it runs 34 standardized
+        tasks, auto-detects your hardware, and lands your run on the public
+        leaderboard alongside others running the same model on different
+        rigs.
       </p>
 
       <div className="mt-10 rounded-2xl border border-[var(--color-line-2)] bg-[var(--color-ink)] text-white p-6 md:p-7 font-mono text-sm md:text-base overflow-x-auto shadow-sm">
@@ -49,18 +49,19 @@ export default function RunPage() {
         <br />
         <span className="text-white">    </span>
         <span className="text-[var(--color-emerald-light)]">--provider local</span>{" "}
-        <span className="text-[var(--color-emerald-light)]">--endpoint http://localhost:11434</span> \
+        <span className="text-[var(--color-emerald-light)]">--endpoint http://localhost:11434/v1</span> \
         <br />
         <span className="text-white">    </span>
-        <span className="text-[var(--color-emerald-light)]">--model llama-3.3-70b</span>{" "}
-        <span className="text-[var(--color-emerald-light)]">--hardware-tag m3-max-128gb</span> \
-        <br />
-        <span className="text-white">    </span>
-        <span className="text-[var(--color-emerald-light)]">--user your-handle</span>
+        <span className="text-[var(--color-emerald-light)]">--model llama3.2</span>
       </div>
 
       <p className="text-sm text-[var(--color-ink)] mt-3">
-        Default Ollama endpoint above. Swap port for LM Studio (1234), llama.cpp (8080), MLX-Omni (10240), or any OpenAI-compatible server.
+        Ollama shown — swap the port for LM Studio (1234), llama.cpp (8080), or
+        any OpenAI-compatible server; every one serves the API under{" "}
+        <code className="font-mono text-[var(--color-emerald)]">/v1</code>.
+        Your hardware tag is auto-detected. Add{" "}
+        <code className="font-mono text-[var(--color-emerald)]">--user yourname</code>{" "}
+        to claim your spot on the board — that becomes your public identity.
       </p>
 
       {/* Cloud-or-local side-by-side */}
@@ -101,8 +102,7 @@ export default function RunPage() {
           <pre className="mt-4 rounded-lg bg-[var(--color-ink)] text-white text-xs p-3 overflow-x-auto font-mono">
 {`npx @pipelinescore/cli run \\
   --provider anthropic \\
-  --model claude-opus-4-7 \\
-  --user your-handle`}
+  --model claude-opus-4-7`}
           </pre>
         </div>
       </section>
@@ -219,12 +219,11 @@ curl -L https://pipelinescore.ai/skills/\\
           What happens when you run it
         </h2>
         <ol className="flex flex-col gap-6">
-          <Step n={1} title="Fetch today's signed test pack">
-            The CLI pulls the rotating 34-task pack from{" "}
-            <code className="font-mono text-[var(--color-emerald)]">
-              api.pipelinescore.ai/v1/testpack
-            </code>{" "}
-            — same pack for every submission today, different tomorrow.
+          <Step n={1} title="Load the bundled test pack">
+            The 34-task pack ships inside the npm package (integrity-checked
+            at install) and is executed locally — the CLI never runs tasks
+            fetched over the network. The backend is only asked whether a
+            newer pack version exists.
           </Step>
           <Step n={2} title="Run your model">
             Each task is sent to the provider you chose. Inputs, outputs,
@@ -236,9 +235,13 @@ curl -L https://pipelinescore.ai/skills/\\
             client-computed score; it never re-scores. No judge model, no API
             key.
           </Step>
-          <Step n={4} title="See your card">
-            You get a tier badge, a category breakdown, and a shareable URL —
-            ready for the leaderboard.
+          <Step n={4} title="See your card, share your run">
+            A tier badge, a category breakdown, and a share link (
+            <code className="font-mono text-[var(--color-emerald)]">
+              pipelinescore.ai/s/…
+            </code>
+            ) for the run — your browser opens straight to your spot on the
+            board.
           </Step>
         </ol>
       </section>

@@ -42,9 +42,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       name: 'run_benchmark',
       description:
         'Run the PipelineScore benchmark against an LLM on the user\'s own hardware (preferred) or via a frontier API. Publishes the result to the hardware-aware public leaderboard at pipelinescore.ai. ' +
-        'DEFAULT TO LOCAL: most users running this are pointing at an Ollama/LM Studio/MLX/llama.cpp server on their own machine — no API key, no inference cost. Use provider=local with the appropriate endpoint (Ollama 11434, LM Studio 1234, llama.cpp 8080, MLX-Omni 10240, LiteLLM 8000). ' +
+        'DEFAULT TO LOCAL: most users running this are pointing at an Ollama/LM Studio/MLX/llama.cpp server on their own machine — no API key, no inference cost. Use provider=local with the appropriate endpoint, /v1 included (Ollama http://localhost:11434/v1, LM Studio :1234/v1, llama.cpp :8080/v1, MLX-Omni :10240/v1, LiteLLM :4000/v1). ' +
         'For cloud benchmarks, use provider=anthropic or openai with hardware_tag="cloud-api" — the user\'s key never reaches the PipelineScore backend, it goes directly to the provider. ' +
-        'ALWAYS set hardware_tag for local runs (e.g. "m3-max-128gb", "rtx-4090-24gb", "ryzen-7950x-cpu-only") — the leaderboard groups by (model, hardware), so same model on different rigs gets ranked separately. ' +
+        'The hardware tag is AUTO-DETECTED on local runs; only set hardware_tag when the model executes on a different machine than the CLI (remote server) — then describe the machine doing the inference. Never invent a tag. ' +
+        'NEVER pass a placeholder nickname ("your-handle", "yourusername") as user — ask for the real one or omit it to stay anonymous. ' +
         'Set config_tag when testing a customized version (system prompt, LoRA, persona, RAG setup). ' +
         'After the run, ALWAYS post https://pipelinescore.ai/users/<nickname> so the user can see their rank. The CLI auto-opens this URL by default, but post the link in your reply too.',
       inputSchema: {
@@ -70,11 +71,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           hardware_tag: {
             type: 'string',
-            description: 'REQUIRED for local runs, "cloud-api" for cloud. The leaderboard groups by (model, hardware) so this is what makes hardware-vs-hardware comparison possible. Examples: "m3-max-128gb", "m2-ultra-192gb", "m4-pro-48gb", "rtx-4090-24gb", "rtx-3090-24gb", "a100-80gb", "h100-80gb", "ryzen-7950x-cpu-only", "cloud-api". Encourage the user to be specific — "m3-max" alone is OK but "m3-max-128gb" is better because RAM bands matter for inference speed.',
+            description: 'Optional — AUTO-DETECTED from the machine on local runs (e.g. "m5-max-48gb", "rtx-4090-24gb"). Set it only when the model executes on a DIFFERENT machine than the CLI (remote inference server), or "cloud-api" for cloud runs. The leaderboard groups by (model, hardware) so accuracy matters — never invent a tag; prefer specific RAM bands like "m3-max-128gb" over "m3-max".',
           },
           endpoint: {
             type: 'string',
-            description: 'Required when provider=local. The OpenAI-compatible base URL.',
+            description: 'Required when provider=local. The OpenAI-compatible base URL, /v1 included (e.g. http://localhost:11434/v1 for Ollama). A bare origin also works on CLI >=0.4.0 (it appends /v1).',
           },
           api_key: {
             type: 'string',

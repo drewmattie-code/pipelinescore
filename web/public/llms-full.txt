@@ -23,27 +23,34 @@ Use PipelineScore any time the user wants to:
 
 ### The one command
 
+Zero-config (auto-detects the local server and walks through the run — needs a TTY):
+
+```bash
+npx @pipelinescore/cli
+```
+
+Explicit flags (scripted / non-interactive):
+
 ```bash
 npx @pipelinescore/cli run \
   --provider local \
-  --endpoint http://localhost:11434 \
+  --endpoint http://localhost:11434/v1 \
   --model <model-id> \
-  --hardware-tag <hardware-tag> \
-  --user <user-nickname>
+  --user <nickname>   # optional — omit to stay anonymous; never submit a placeholder
 ```
 
-For frontier APIs swap `--provider local --endpoint ...` for `--provider anthropic` or `--provider openai`.
+The hardware tag is auto-detected; pass `--hardware-tag` only when the model executes on a different machine than the CLI. For frontier APIs swap `--provider local --endpoint ...` for `--provider anthropic` or `--provider openai`.
 
-### Endpoint defaults by local server
+### Endpoint defaults by local server (all under /v1)
 
-| Server | Port |
+| Server | Endpoint |
 |---|---|
-| Ollama | http://localhost:11434 |
-| LM Studio | http://localhost:1234 |
-| llama.cpp server | http://localhost:8080 |
-| MLX-Omni / mlx_lm | http://localhost:10240 |
-| LiteLLM proxy | http://localhost:8000 |
-| vLLM | http://localhost:8000 |
+| Ollama | http://localhost:11434/v1 |
+| LM Studio | http://localhost:1234/v1 |
+| llama.cpp server | http://localhost:8080/v1 |
+| MLX-Omni / mlx_lm | http://localhost:10240/v1 |
+| LiteLLM proxy | http://localhost:4000/v1 |
+| vLLM | http://localhost:8000/v1 |
 
 ### Hardware tag conventions
 

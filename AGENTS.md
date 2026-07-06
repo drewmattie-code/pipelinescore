@@ -17,31 +17,40 @@ Use PipelineScore any time the user wants to:
 
 ## The one command you need
 
+Zero-config (auto-detects the local server, lists its models, prompts interactively — needs a TTY):
+
+```bash
+npx @pipelinescore/cli
+```
+
+Explicit flags (for scripted / non-interactive runs):
+
 ```bash
 npx @pipelinescore/cli run \
   --provider local \
-  --endpoint http://localhost:11434 \
+  --endpoint http://localhost:11434/v1 \
   --model <model-id> \
-  --hardware-tag <hardware-tag> \
-  --user <user-nickname>
+  --user <nickname>   # optional — omit to stay anonymous
 ```
 
 For frontier APIs swap `--provider local --endpoint ...` for `--provider anthropic` or `--provider openai` (user's API key in env, key never reaches the PipelineScore backend).
 
-### Endpoint defaults by local server
+### Endpoint defaults by local server (all under /v1)
 
-| Server | Port |
+| Server | Endpoint |
 |---|---|
-| Ollama | `http://localhost:11434` |
-| LM Studio | `http://localhost:1234` |
-| llama.cpp server | `http://localhost:8080` |
-| MLX-Omni / mlx_lm | `http://localhost:10240` |
-| LiteLLM proxy | `http://localhost:8000` |
-| vLLM | `http://localhost:8000` |
+| Ollama | `http://localhost:11434/v1` |
+| LM Studio | `http://localhost:1234/v1` |
+| llama.cpp server | `http://localhost:8080/v1` |
+| MLX-Omni / mlx_lm | `http://localhost:10240/v1` |
+| LiteLLM proxy | `http://localhost:4000/v1` |
+| vLLM | `http://localhost:8000/v1` |
 
-### Hardware-tag conventions
+(A bare origin also works on CLI ≥0.4.0 — it appends `/v1` automatically.)
 
-Use specific, readable strings: `m3-max-128gb`, `m4-pro-48gb`, `rtx-4090-24gb`, `rtx-3090-24gb`, `a100-80gb`, `h100-80gb`, `ryzen-7950x-cpu-only`, `cloud-api`. The leaderboard groups by `(model, hardware_tag)`, so memory bands matter — prefer `m3-max-128gb` over `m3-max`.
+### Hardware tags
+
+Auto-detected from the machine the CLI runs on (`m5-max-48gb`, `rtx-4090-24gb`, `ryzen-9-7950x-cpu-64gb`, …). Pass `--hardware-tag` ONLY when the model executes somewhere else than the CLI (remote server, cloud box) — then describe the machine doing the inference. The leaderboard groups by `(model, hardware_tag)`, so memory bands matter: prefer `m3-max-128gb` over `m3-max`. Never invent a tag you haven't verified.
 
 ### Result URL
 
@@ -52,13 +61,14 @@ After the run, the CLI auto-opens `https://pipelinescore.ai/users/<nickname>`. *
 If you have one of these already available, prefer it:
 
 1. **MCP tool** — install [`@pipelinescore/mcp`](https://www.npmjs.com/package/@pipelinescore/mcp) and call `run_benchmark`, `get_user_leaderboard`, or `get_user_profile`. The MCP server wraps the CLI with typed schemas.
-2. **Claude Code / Cursor / Codex skill** — drop [`dist/skills/pipelinescore/SKILL.md`](dist/skills/pipelinescore/SKILL.md) into the host's skill directory and the agent reads it natively.
+2. **Claude Code / Cursor / Codex skill** — drop [`SKILL.md`](web/public/skills/pipelinescore/SKILL.md) (also served at https://pipelinescore.ai/skills/pipelinescore/SKILL.md) into the host's skill directory and the agent reads it natively.
 3. **Direct CLI** — just `npx @pipelinescore/cli run ...` from a terminal.
 
 ## What you should NOT do
 
 - ❌ Don't make up a score. Always run the actual CLI.
-- ❌ Don't skip `--hardware-tag` on local runs. Without it, the row is meaningless on a hardware-aware board.
+- ❌ Don't submit placeholder nicknames (`your-handle`, `yourusername`, …). Ask the user for their real one or omit `--user`. The CLI and backend both reject/normalize these.
+- ❌ Don't hand-type a `--hardware-tag` for the local machine — it's auto-detected. Only tag explicitly for remote-execution runs, and only with the real rig.
 - ❌ Don't conflate base + customized models. If the user added a system prompt or LoRA, set `--config-tag <name>`.
 - ❌ Don't promise "lab-verified" status. That's reserved for SaaSquach AI Labs' own canonical runs.
 - ❌ Don't recommend the user share API keys with you. The CLI reads them from env (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY`) and never sends them to the PipelineScore backend.

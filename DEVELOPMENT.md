@@ -11,7 +11,7 @@ pipelinescore/
 ├── backend/            Express + better-sqlite3 API (port 4601 in dev)
 ├── cli/                Node TypeScript CLI (`ps-bench` / `pipelinescore`)
 ├── mcp/                MCP server (`@pipelinescore/mcp`)
-├── dist/skills/        Claude Code / Codex / Cursor skill
+├── web/public/skills/  Claude Code / Codex / Cursor skill (served at /skills/... on the site)
 └── assets/hero/        Hero imagery
 ```
 
@@ -68,7 +68,7 @@ npm run dev -- run --provider anthropic --model claude-haiku-4-5-20251001 \
 Or local-server, no key needed:
 
 ```bash
-npm run dev -- run --provider local --endpoint http://localhost:11434 \
+npm run dev -- run --provider local --endpoint http://localhost:11434/v1 \
   --model llama-3.3-70b --user dev-test --hardware-tag m3-max-128gb \
   --backend http://localhost:4601 --site http://localhost:4600
 ```

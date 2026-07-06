@@ -6,10 +6,16 @@ PipelineScore is a local-first benchmark. Users point a CLI at their model serve
 
 ## Quickstart
 
-The one command to run a local benchmark:
+Zero-config (auto-detects Ollama / LM Studio / llama.cpp / MLX and walks through the run interactively):
 
 ```bash
-npx @pipelinescore/cli run --provider local --endpoint http://localhost:11434 --model llama-3.3-70b --hardware-tag m3-max-128gb --user your-handle
+npx @pipelinescore/cli
+```
+
+Explicit flags (note: local endpoints need the /v1 suffix; the hardware tag is auto-detected; --user is optional — never submit a placeholder nickname):
+
+```bash
+npx @pipelinescore/cli run --provider local --endpoint http://localhost:11434/v1 --model llama3.2 --user <the-users-real-nickname>
 ```
 
 ## Documentation
@@ -34,7 +40,7 @@ npx @pipelinescore/cli run --provider local --endpoint http://localhost:11434 --
 - [GET /v1/models/{slug}](https://api.pipelinescore.ai/v1/models/llama-3-3-70b-instruct): Per-model stats
 - [GET /v1/beta-testers](https://api.pipelinescore.ai/v1/beta-testers): First 50 testers list
 - [POST /v1/submissions](https://api.pipelinescore.ai/v1/submissions): Submit a benchmark run
-- [GET /v1/testpack](https://api.pipelinescore.ai/v1/testpack): The 34-task pack with HMAC signature
+- [GET /v1/testpack](https://api.pipelinescore.ai/v1/testpack): The current 34-task pack (version check only — the CLI executes its bundled, npm-integrity-checked copy, never a network payload)
 
 ## Source
 
