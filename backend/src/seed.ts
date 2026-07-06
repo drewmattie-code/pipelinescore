@@ -287,27 +287,13 @@ function pickHardwareTag(): string | null {
   return HARDWARE_TAGS[Math.floor(Math.random() * HARDWARE_TAGS.length)];
 }
 
-// Backfill: any submission missing a user_nickname gets one. Lab-verified rows get "lab".
-function backfillNicknames(): void {
-  const missing = db
-    .prepare(
-      `SELECT id, lab_verified FROM submissions WHERE user_nickname IS NULL OR user_nickname = ''`
-    )
-    .all() as Array<{ id: string; lab_verified: number }>;
-  if (missing.length === 0) return;
-  console.log(`[seed] backfilling user_nickname on ${missing.length} existing submissions`);
-  const update = db.prepare(`UPDATE submissions SET user_nickname = ? WHERE id = ?`);
-  const txn = db.transaction(() => {
-    for (const row of missing) {
-      const nick = row.lab_verified ? 'lab' : pickNickname();
-      update.run(nick, row.id);
-    }
-  });
-  txn();
-}
+// NOTE: a backfillNicknames() helper used to run here on every boot, stamping
+// a random seed-pool nickname onto ANY submission with a null nickname. That
+// was a one-time migration aid for the original seed rows, but on a live DB it
+// rewrote real anonymous community submissions with fabricated identities on
+// every restart. Anonymous rows now stay anonymous.
 
 export function seedIfEmpty(): void {
-  backfillNicknames();
   const modelCount = (db.prepare('SELECT COUNT(*) AS c FROM models').get() as { c: number }).c;
   if (modelCount > 0) return;
 

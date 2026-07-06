@@ -15,7 +15,9 @@ router.get('/v1/leaderboard', (req, res) => {
     typeof req.query.profile === 'string' && PROFILES.has(req.query.profile) ? req.query.profile : undefined;
   const labVerified = req.query.lab_verified === '1' || req.query.lab_verified === 'true';
   const limit = Math.max(1, Math.min(parseInt((req.query.limit as string) ?? '50', 10) || 50, 200));
-  const days = Math.max(1, Math.min(parseInt((req.query.days as string) ?? '30', 10) || 30, 365));
+  // Default window is a year, matching /v1/leaderboard/users. It was 30 days,
+  // which silently emptied the model board once early submissions aged out.
+  const days = Math.max(1, Math.min(parseInt((req.query.days as string) ?? '365', 10) || 365, 365));
 
   // Pull recent submissions (last N days) joined w/ models.
   const where: string[] = [`s.created_at >= datetime('now', ?)`];

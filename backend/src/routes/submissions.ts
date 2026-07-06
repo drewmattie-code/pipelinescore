@@ -6,6 +6,16 @@ import { stamp, toIsoDate } from '../lib/api-version.js';
 
 const router: Router = Router();
 
+// Docs-example placeholders that people copy-paste verbatim (a real submission
+// arrived as "yourusername"). Normalized to anonymous rather than rejected so
+// older CLIs keep working. The CLI blocks the same list client-side.
+const PLACEHOLDER_NICKNAMES = new Set([
+  'yourusername', 'your-username', 'your_username', 'yourname', 'your-name', 'your_name',
+  'your-handle', 'your_handle', 'yourhandle', 'your-nickname', 'username', 'nickname',
+  'handle', 'user', 'changeme', 'change-me', 'anonymous', 'anon', 'example', 'test-user',
+  'admin', 'root', 'moderator', 'official', 'staff', 'pipelinescore',
+]);
+
 const ModelInput = z.object({
   slug: z.string().min(1),
   display_name: z.string().min(1),
@@ -89,6 +99,9 @@ router.post('/v1/submissions', (req, res) => {
     return res.status(400).json(stamp({ error: 'invalid_payload', issues: parsed.error.issues }));
   }
   const body = parsed.data;
+  if (body.user_nickname && PLACEHOLDER_NICKNAMES.has(body.user_nickname.toLowerCase())) {
+    body.user_nickname = undefined;
+  }
 
   // lab_verified is server-controlled: only a run that presents the lab key
   // (which gates the private rotating held-out set) may carry the trusted flag.
@@ -181,6 +194,10 @@ router.get('/v1/submissions/:id', (req, res) => {
     pipeline_score: sub.pipeline_score,
     tier: sub.tier,
     category_scores: JSON.parse(sub.category_scores as string),
+    score_detail: sub.score_detail ? JSON.parse(sub.score_detail as string) : null,
+    user_nickname: (sub.user_nickname as string | null) ?? null,
+    hardware_tag: (sub.hardware_tag as string | null) ?? null,
+    config_tag: (sub.config_tag as string | null) ?? null,
     cli_version: sub.cli_version,
     lab_verified: Boolean(sub.lab_verified),
     notes: sub.notes,
