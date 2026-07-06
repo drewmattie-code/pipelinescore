@@ -43,26 +43,25 @@ export default function RunPage() {
         rigs.
       </p>
 
-      <div className="mt-10 rounded-2xl border border-[var(--color-line-2)] bg-[var(--color-ink)] text-white p-6 md:p-7 font-mono text-sm md:text-base overflow-x-auto shadow-sm">
+      <div className="mt-10 rounded-2xl border border-[var(--color-line-2)] bg-[var(--color-ink)] text-white p-6 md:p-7 font-mono text-base md:text-lg overflow-x-auto shadow-sm">
         <span className="text-[var(--color-ink-3)] select-none">$ </span>
-        <span className="text-white">npx @pipelinescore/cli run \</span>
-        <br />
-        <span className="text-white">    </span>
-        <span className="text-[var(--color-emerald-light)]">--provider local</span>{" "}
-        <span className="text-[var(--color-emerald-light)]">--endpoint http://localhost:11434/v1</span> \
-        <br />
-        <span className="text-white">    </span>
-        <span className="text-[var(--color-emerald-light)]">--model llama3.2</span>
+        <span className="text-[var(--color-emerald-light)]">npx @pipelinescore/cli</span>
       </div>
 
       <p className="text-sm text-[var(--color-ink)] mt-3">
-        Ollama shown — swap the port for LM Studio (1234), llama.cpp (8080), or
-        any OpenAI-compatible server; every one serves the API under{" "}
-        <code className="font-mono text-[var(--color-emerald)]">/v1</code>.
-        Your hardware tag is auto-detected. Add{" "}
-        <code className="font-mono text-[var(--color-emerald)]">--user yourname</code>{" "}
-        to claim your spot on the board — that becomes your public identity.
+        That&apos;s the whole command. The CLI probes localhost for your model
+        server, lists the models it&apos;s actually serving, asks for an
+        optional leaderboard nickname, auto-detects your hardware, runs, and
+        submits. Scripting it, or running non-interactively? Use explicit
+        flags — every local server keeps its OpenAI-compatible API under{" "}
+        <code className="font-mono text-[var(--color-emerald)]">/v1</code>:
       </p>
+
+      <pre className="mt-4 rounded-xl bg-[var(--color-ink)] text-white text-xs md:text-sm p-4 overflow-x-auto font-mono">
+{`npx @pipelinescore/cli run \\
+  --provider local --endpoint http://localhost:11434/v1 \\
+  --model llama3.2 --user yourname`}
+      </pre>
 
       {/* Cloud-or-local side-by-side */}
       <section className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-4">
