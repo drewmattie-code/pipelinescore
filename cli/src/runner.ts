@@ -6,8 +6,9 @@ import { judgeExactFinalLine } from './judges/exactFinalLine.js';
 import { judgeJsonMatch } from './judges/jsonMatch.js';
 import type { LLMProvider, RunSummary, Task, TaskResult, Taxonomy, Testpack } from './types.js';
 import { scoreRun } from './score.js';
+import { cliVersion } from './util.js';
 
-const CLI_VERSION = '0.1.0';
+const CLI_VERSION = cliVersion();
 
 export interface RunOptions {
   provider: LLMProvider;
@@ -26,7 +27,9 @@ async function runOneTask(task: Task, provider: LLMProvider): Promise<TaskResult
   let score_stddev = 0;
 
   try {
-    const r = await provider.complete(task.prompt, { maxTokens: 1024, temperature: 0 });
+    // 2048, not 1024: reasoning models spend output tokens thinking before the
+    // final answer, and a starved budget returns empty content on hard tasks.
+    const r = await provider.complete(task.prompt, { maxTokens: 2048, temperature: 0 });
     response = r.text;
     latency_ms = r.latency_ms;
     tokens_in = r.tokens_in;

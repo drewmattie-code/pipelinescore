@@ -1,6 +1,33 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
-const PYTHON = process.env.PS_PYTHON ?? 'python3';
+let cachedPython: string | null | undefined;
+
+/**
+ * Find a Python 3 interpreter. macOS/Linux ship `python3`; Windows installs
+ * usually expose only `python`. PS_PYTHON overrides. Cached for the process.
+ */
+function resolvePython(): string | null {
+  if (cachedPython !== undefined) return cachedPython;
+  const candidates = process.env.PS_PYTHON ? [process.env.PS_PYTHON] : ['python3', 'python'];
+  for (const bin of candidates) {
+    try {
+      const r = spawnSync(bin, ['--version'], { encoding: 'utf-8', timeout: 3000 });
+      if (r.status === 0 && /Python 3\./.test(`${r.stdout ?? ''}${r.stderr ?? ''}`)) {
+        cachedPython = bin;
+        return bin;
+      }
+    } catch {
+      // try next candidate
+    }
+  }
+  cachedPython = null;
+  return null;
+}
+
+/** Whether a usable Python 3 exists (for the preflight warning). */
+export function hasPython(): boolean {
+  return resolvePython() !== null;
+}
 
 export interface PyExecResult {
   stdout: string;
@@ -27,9 +54,17 @@ function safeEnv(): Record<string, string> {
 const MAX_CAPTURE = 512 * 1024; // cap stdout/stderr so a runaway print can't exhaust memory
 
 export function runPython(script: string, timeoutMs = 8000): Promise<PyExecResult> {
+  const bin = resolvePython();
+  if (!bin) {
+    return Promise.resolve({
+      stdout: '',
+      stderr: 'python3 not found on PATH — install Python 3 to score code-execution tasks',
+      exitCode: -1,
+    });
+  }
   return new Promise((resolve) => {
     // -I = isolated mode: ignore PYTHONPATH / user site-packages / env config.
-    const proc = spawn(PYTHON, ['-I', '-c', script], {
+    const proc = spawn(bin, ['-I', '-c', script], {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: safeEnv(),
     });

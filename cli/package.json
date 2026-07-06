@@ -1,7 +1,7 @@
 {
   "name": "@pipelinescore/cli",
-  "version": "0.3.0",
-  "description": "PipelineScore CLI — benchmark LLMs on your own hardware. Runs a standardized, fully deterministic suite (no API key required) against any local server (Ollama, LM Studio, MLX, llama.cpp) or frontier API (Anthropic, OpenAI), scores it locally, and publishes to the hardware-aware public leaderboard at pipelinescore.ai.",
+  "version": "0.4.0",
+  "description": "PipelineScore CLI — benchmark LLMs on your own hardware. Zero-config: `npx @pipelinescore/cli` auto-detects Ollama / LM Studio / llama.cpp / MLX and walks you through a run. Fully deterministic suite (no API key required), scored locally, published to the hardware-aware public leaderboard at pipelinescore.ai.",
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
@@ -19,7 +19,7 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build && node scripts/copy-benchmarks.mjs",
-    "test": "tsx test/hardware.test.ts"
+    "test": "tsx test/util.test.ts && tsx test/hardware.test.ts && tsx test/score-v2.test.ts"
   },
   "engines": {
     "node": ">=22"

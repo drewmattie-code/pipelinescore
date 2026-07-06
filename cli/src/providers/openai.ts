@@ -21,7 +21,13 @@ export class OpenAIProvider implements LLMProvider {
       messages: [{ role: 'user', content: prompt }],
     });
     const latency_ms = Date.now() - start;
-    const text = res.choices[0]?.message?.content ?? '';
+    const choice = res.choices?.[0];
+    if (!choice) {
+      throw new Error(
+        `endpoint returned no choices — wrong base URL or model id? Local servers keep their OpenAI-compatible API under /v1 (e.g. --endpoint http://localhost:11434/v1), and the model id must match what the server reports at /v1/models.`,
+      );
+    }
+    const text = choice.message?.content ?? '';
     return {
       text,
       tokens_in: res.usage?.prompt_tokens,

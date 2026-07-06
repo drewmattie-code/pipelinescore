@@ -16,7 +16,11 @@ import { renderCard } from './card.js';
 import { determineTier } from './score.js';
 import type { LLMProvider } from './types.js';
 import { detectHardware, checkModelFit, type HardwareInfo } from './hardware.js';
+import { cliVersion, isPlaceholderNickname } from './util.js';
+import { runWizard } from './wizard.js';
+import { hasPython } from './judges/python.js';
 
+const VERSION = cliVersion();
 const CONFIG_PATH = resolve(homedir(), '.config', 'pipelinescore', 'config.json');
 const NICKNAME_RE = /^[a-zA-Z0-9._-]{2,40}$/;
 const CONFIG_TAG_RE = /^[a-zA-Z0-9._-]{2,60}$/;
@@ -87,7 +91,33 @@ const program = new Command();
 program
   .name('ps-bench')
   .description('PipelineScore — run a standardized LLM benchmark against any model')
-  .version('0.1.0');
+  .version(VERSION);
+
+// Zero-config default: `npx @pipelinescore/cli` with no arguments probes the
+// common local servers, walks through model/nickname interactively, then runs.
+program
+  .command('bench', { isDefault: true, hidden: true })
+  .description('Interactive zero-config benchmark (default when no command is given)')
+  .action(async () => {
+    try {
+      const saved = loadSavedConfig();
+      const choice = await runWizard(saved.user_nickname);
+      if (!choice) process.exit(1);
+      await runCommand({
+        provider: 'local',
+        model: choice.model,
+        endpoint: choice.endpoint,
+        backend: 'https://api.pipelinescore.ai',
+        site: 'https://pipelinescore.ai',
+        user: choice.user,
+        submit: choice.submit,
+        open: choice.submit,
+      });
+    } catch (e) {
+      process.stderr.write(chalk.red(`\nFatal: ${(e as Error).message}\n`));
+      process.exit(1);
+    }
+  });
 
 program
   .command('run')
@@ -154,6 +184,11 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
   if (nickname && !NICKNAME_RE.test(nickname)) {
     throw new Error(`Invalid nickname "${nickname}". Use 2-40 chars of [a-zA-Z0-9._-].`);
   }
+  if (nickname && isPlaceholderNickname(nickname)) {
+    throw new Error(
+      `"${nickname}" looks like a docs placeholder, not a nickname. Pass your own with --user <name>, or omit --user to stay anonymous.`,
+    );
+  }
   let configTag: string | undefined = opts.configTag ?? saved.config_tag;
   if (configTag && !CONFIG_TAG_RE.test(configTag)) {
     throw new Error(`Invalid --config-tag "${configTag}". Use 2-60 chars of [a-zA-Z0-9._-].`);
@@ -185,7 +220,7 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
   // Banner
   process.stdout.write(
     boxen(
-      `${chalk.bold('PipelineScore')} ${chalk.dim('v0.1.0')}\n` +
+      `${chalk.bold('PipelineScore')} ${chalk.dim(`v${VERSION}`)}\n` +
         `${chalk.dim('Provider:')}     ${providerName}\n` +
         `${chalk.dim('Model:')}        ${opts.model}\n` +
         `${chalk.dim('Hardware:')}     ${hardwareTag ? `${hardwareTag}${hardwareAutoDetected ? chalk.dim(' (auto-detected)') : ''}` : chalk.italic.dim('— (use --hardware-tag for local-hardware comparisons)')}\n` +
@@ -237,10 +272,19 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
       process.stdout.write(
         chalk.yellow(
           `A newer testpack (${remote.version}) is published; you're on ${testpack.version}. ` +
-          `Upgrade for the latest tasks: npm i -g @pipelinescore/cli\n`,
+          `Upgrade for the latest tasks: npx @pipelinescore/cli@latest (or npm i -g @pipelinescore/cli@latest)\n`,
         ),
       );
     }
+  }
+
+  const pythonTasks = testpack.tasks.filter((t) => t.judge_type.startsWith('execute_python')).length;
+  if (pythonTasks > 0 && !hasPython()) {
+    process.stderr.write(
+      chalk.yellow(
+        `Python 3 not found on PATH — ${pythonTasks} code-execution tasks will score 0. Install it (https://python.org/downloads) for a fair code score.\n`,
+      ),
+    );
   }
 
   // Run
@@ -251,6 +295,15 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
     testpack,
     taxonomy,
   });
+
+  // v3 computes speed from throughput and keeps it in score_detail; mirror it
+  // into the category map so the card, the payload, and the site all show the
+  // same five columns instead of a phantom 0.0 speed.
+  const speedDetail = (summary.score_detail as { speed?: { scored?: boolean; speed_score?: number } })?.speed;
+  const categoryScores: Record<string, number> = { ...summary.category_scores };
+  if (speedDetail?.scored && typeof speedDetail.speed_score === 'number') {
+    categoryScores.speed = Math.round(speedDetail.speed_score * 100) / 100;
+  }
 
   // Submit (optional)
   let shareUrl: string | undefined;
@@ -269,7 +322,7 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
       testpack_version: summary.testpack_version,
       pipeline_score: summary.pipeline_score,
       tier: summary.tier,
-      category_scores: summary.category_scores,
+      category_scores: categoryScores,
       score_detail: summary.score_detail,
       cli_version: summary.cli_version,
       task_results: summary.task_results.map((r) => ({
@@ -298,7 +351,9 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
       });
       if (res.ok) {
         const data = (await res.json()) as { id?: string; url?: string };
-        if (data.url) shareUrl = data.url;
+        // The backend replies with a relative path (/s/<id>); anchor it to the
+        // site so the card prints a link that actually opens.
+        if (data.url) shareUrl = data.url.startsWith('http') ? data.url : `${opts.site}${data.url}`;
         else if (data.id) shareUrl = `${opts.site}/s/${data.id}`;
       } else if (res.status === 429) {
         const retry = res.headers.get('retry-after');
@@ -320,7 +375,14 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
           ),
         );
       } else {
-        process.stderr.write(chalk.yellow(`Submission failed: ${res.status} ${res.statusText}\n`));
+        let hint = '';
+        try {
+          const body = await res.text();
+          if (body) hint = ` — ${body.slice(0, 200)}`;
+        } catch {
+          /* body unavailable */
+        }
+        process.stderr.write(chalk.yellow(`Submission failed: ${res.status} ${res.statusText}${hint}\n`));
       }
     } catch (e) {
       process.stderr.write(chalk.yellow(`Submission failed: ${(e as Error).message}\n`));
@@ -334,7 +396,7 @@ async function runCommand(opts: RunCommandOptions): Promise<void> {
       score: summary.pipeline_score,
       tier: determineTier(summary.pipeline_score, taxonomy),
       model: summary.model,
-      categoryScores: summary.category_scores,
+      categoryScores,
       taxonomy,
       shareUrl,
     }) + '\n',
