@@ -269,7 +269,9 @@ export default async function UsersLeaderboardPage({
               {page.entries.length === 0 && (
                 <tr>
                   <td colSpan={10} className="px-4 py-12 text-center text-[var(--color-ink-3)]">
-                    No submissions match the current filters.
+                    {filtersActive
+                      ? "No submissions match the current filters."
+                      : "The board is waking up — the API is spinning up from a cold start. Refresh in a few seconds."}
                   </td>
                 </tr>
               )}

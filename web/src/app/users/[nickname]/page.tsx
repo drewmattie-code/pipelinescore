@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DataUnavailable } from "@/components/DataUnavailable";
 import { notFound } from "next/navigation";
 import { getHardwareBoard, getUserLeaderboard, getUserProfile } from "@/lib/api";
 import { ScoreNumber } from "@/components/ScoreNumber";
@@ -41,6 +42,11 @@ export default async function UserDashboardPage({
     getUserProfile(decoded),
     getUserLeaderboard({ sort: "score", dir: "desc", limit: 500 }),
   ]);
+  // null = API never answered. Don't 404 a real person over a cold start, and
+  // never fall back to sample data — that used to invent whole profiles.
+  if (profile === null) {
+    return <DataUnavailable eyebrow="User profile" subject={decoded} />;
+  }
   if (!profile) notFound();
 
   // Standing: where this user's best run sits in the whole population, and

@@ -288,7 +288,7 @@ export const MOCK_USER_ENTRIES: UserLeaderboardEntry[] = (() => {
         efficiency: {
           totalTokens: 4000 + Math.floor((n * 137) % 4000),
           avgLatencyMs: 400 + Math.floor((n * 73) % 800),
-          taskCount: 25,
+          taskCount: 34,
         },
         model: {
           slug: m.slug,

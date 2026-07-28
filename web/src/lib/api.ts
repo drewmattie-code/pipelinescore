@@ -14,18 +14,47 @@ import type {
 } from './types';
 
 const API_BASE = process.env.PIPELINESCORE_API_BASE ?? 'http://localhost:4601';
-const FETCH_TIMEOUT_MS = 1500;
 
-async function timedFetch(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response | null> {
+// The API sleeps on idle and a wake-up costs seconds, not milliseconds. A short
+// budget here used to expire mid-cold-start and drop the whole site onto mock
+// data, so every board is now given the same allowance the share page always had.
+const FETCH_TIMEOUT_MS = 8000;
+
+/**
+ * Mock data is a local-development convenience so the site renders without the
+ * backend running. It must NEVER reach production: these are invented scores
+ * for real, named commercial models, and serving them under a masthead that
+ * says "real runs on real rigs" publishes numbers nobody measured.
+ */
+const MOCKS_ENABLED = process.env.NODE_ENV !== 'production';
+
+/** '404' = the backend answered "no such thing". null = we never got an answer. */
+type FetchResult = Response | '404' | null;
+
+async function fetchOnce(url: string, timeoutMs: number): Promise<FetchResult> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
     clearTimeout(timer);
+    if (res.status === 404) return '404';
     return res.ok ? res : null;
   } catch {
     return null;
   }
+}
+
+/** One retry, because the first request after an idle period is the one that wakes the API. */
+async function apiFetch(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<FetchResult> {
+  const first = await fetchOnce(url, timeoutMs);
+  if (first !== null) return first;
+  return fetchOnce(url, timeoutMs);
+}
+
+/** Response, or null for both "unreachable" and "not found" — for callers that treat them alike. */
+async function timedFetch(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response | null> {
+  const res = await apiFetch(url, timeoutMs);
+  return res === '404' || res === null ? null : res;
 }
 
 interface BackendLeaderboardEntry {
@@ -118,7 +147,7 @@ export async function getLeaderboardModels(): Promise<Model[]> {
   // slug. days=365 explicitly: the backend's old 30-day default silently
   // emptied this board once early submissions aged out.
   const res = await timedFetch(`${API_BASE}/v1/leaderboard?limit=200&days=365`);
-  if (!res) return MOCK_MODELS;
+  if (!res) return MOCKS_ENABLED ? MOCK_MODELS : [];
   try {
     const data = await res.json() as { entries: BackendLeaderboardEntry[] };
     // Keep highest score per slug; count how many entries back each row.
@@ -133,19 +162,21 @@ export async function getLeaderboardModels(): Promise<Model[]> {
     const list = Object.values(best)
       .map((m) => ({ ...m, samples: samples[m.slug] ?? 1 }))
       .sort((a, b) => b.pipelineScore - a.pipelineScore);
-    return list.length > 0 ? list : MOCK_MODELS;
+    if (list.length > 0) return list;
+    return MOCKS_ENABLED ? MOCK_MODELS : [];
   } catch {
-    return MOCK_MODELS;
+    return MOCKS_ENABLED ? MOCK_MODELS : [];
   }
 }
 
-/** Per-model detail page. */
-export async function getModel(slug: string): Promise<Model | undefined> {
-  const res = await timedFetch(`${API_BASE}/v1/models/${encodeURIComponent(slug)}`);
-  if (!res) return getMockModelBySlug(slug);
+/** Per-model detail page. undefined = no such model, null = backend unreachable. */
+export async function getModel(slug: string): Promise<Model | null | undefined> {
+  const res = await apiFetch(`${API_BASE}/v1/models/${encodeURIComponent(slug)}`);
+  if (res === '404') return undefined;
+  if (!res) return MOCKS_ENABLED ? getMockModelBySlug(slug) : null;
   try {
     const data = await res.json() as BackendModelDetail;
-    if (!data?.slug) return getMockModelBySlug(slug);
+    if (!data?.slug) return undefined;
     const median = data.stats?.median_pipeline_score ?? 0;
     const scores = data.stats?.median_category_scores ?? {};
     return {
@@ -168,14 +199,14 @@ export async function getModel(slug: string): Promise<Model | undefined> {
       samples: data.stats?.submission_count,
     };
   } catch {
-    return getMockModelBySlug(slug);
+    return MOCKS_ENABLED ? getMockModelBySlug(slug) : null;
   }
 }
 
 export async function getRecentSubmissions(slug: string): Promise<Submission[]> {
   const res = await timedFetch(`${API_BASE}/v1/models/${encodeURIComponent(slug)}`);
   if (!res) {
-    return MOCK_SUBMISSIONS.filter((s) => s.modelSlug === slug);
+    return MOCKS_ENABLED ? MOCK_SUBMISSIONS.filter((s) => s.modelSlug === slug) : [];
   }
   try {
     const data = await res.json() as BackendModelDetail;
@@ -196,7 +227,7 @@ export async function getRecentSubmissions(slug: string): Promise<Submission[]> 
       cliVersion: 'unknown',
     }));
   } catch {
-    return MOCK_SUBMISSIONS.filter((s) => s.modelSlug === slug);
+    return MOCKS_ENABLED ? MOCK_SUBMISSIONS.filter((s) => s.modelSlug === slug) : [];
   }
 }
 
@@ -294,7 +325,7 @@ export async function getUserLeaderboard(q: UserLeaderboardQuery = {}): Promise<
   params.set('offset', String(q.offset ?? 0));
 
   const res = await timedFetch(`${API_BASE}/v1/leaderboard/users?${params.toString()}`);
-  if (!res) return mockUserPage(q);
+  if (!res) return MOCKS_ENABLED ? mockUserPage(q) : emptyUserPage(q);
   try {
     const data = (await res.json()) as {
       total: number;
@@ -313,14 +344,19 @@ export async function getUserLeaderboard(q: UserLeaderboardQuery = {}): Promise<
       entries: data.entries.map(adaptUserEntry),
     };
   } catch {
-    return mockUserPage(q);
+    return MOCKS_ENABLED ? mockUserPage(q) : emptyUserPage(q);
   }
 }
 
-export async function getUserProfile(nickname: string): Promise<UserProfile | undefined> {
-  const res = await timedFetch(`${API_BASE}/v1/users/${encodeURIComponent(nickname)}`);
-  if (!res) return mockUserProfile(nickname);
-  if (res.status === 404) return undefined;
+/**
+ * undefined = no such user, null = backend unreachable.
+ * These must stay distinct: collapsing them is what used to serve invented
+ * profiles for nicknames that only ever existed in the mock fixtures.
+ */
+export async function getUserProfile(nickname: string): Promise<UserProfile | null | undefined> {
+  const res = await apiFetch(`${API_BASE}/v1/users/${encodeURIComponent(nickname)}`);
+  if (res === '404') return undefined;
+  if (!res) return MOCKS_ENABLED ? mockUserProfile(nickname) : null;
   try {
     const data = (await res.json()) as {
       nickname: string;
@@ -366,13 +402,13 @@ export async function getUserProfile(nickname: string): Promise<UserProfile | un
       submissions: data.submissions.map(adaptUserEntry),
     };
   } catch {
-    return mockUserProfile(nickname);
+    return MOCKS_ENABLED ? mockUserProfile(nickname) : null;
   }
 }
 
 export async function getUserDirectory(): Promise<UserDirectoryEntry[]> {
   const res = await timedFetch(`${API_BASE}/v1/users`);
-  if (!res) return MOCK_USER_DIRECTORY;
+  if (!res) return MOCKS_ENABLED ? MOCK_USER_DIRECTORY : [];
   try {
     const data = (await res.json()) as { users: Array<{ user_nickname: string; submission_count: number; best_score: number }> };
     return data.users.map((u) => ({
@@ -381,8 +417,30 @@ export async function getUserDirectory(): Promise<UserDirectoryEntry[]> {
       bestScore: u.best_score,
     }));
   } catch {
-    return MOCK_USER_DIRECTORY;
+    return MOCKS_ENABLED ? MOCK_USER_DIRECTORY : [];
   }
+}
+
+/** What the user board looks like when the API never answered: nothing, honestly. */
+function emptyUserPage(q: UserLeaderboardQuery): UserLeaderboardPage {
+  return {
+    total: 0,
+    count: 0,
+    limit: q.limit ?? 100,
+    offset: q.offset ?? 0,
+    filters: {
+      provider: q.provider,
+      tier: q.tier,
+      user: q.user,
+      search: q.search,
+      hardware: q.hardware,
+      lab_verified: !!q.labVerified,
+      days: 365,
+      sort: q.sort ?? 'score',
+      dir: q.dir ?? 'desc',
+    },
+    entries: [],
+  };
 }
 
 /**
@@ -569,29 +627,11 @@ export interface SubmissionDetail {
   ciHigh: number | null;
 }
 
-// Like timedFetch but keeps 404 distinguishable from "backend unreachable" —
-// the share page must 404 on a bad id yet stay alive through a Render cold start.
-async function fetchOr404(url: string, timeoutMs: number): Promise<Response | '404' | null> {
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
-    clearTimeout(timer);
-    if (res.status === 404) return '404';
-    return res.ok ? res : null;
-  } catch {
-    return null;
-  }
-}
-
 /** Single run, for the /s/[id] share page. undefined = not found, null = backend unreachable. */
 export async function getSubmission(id: string): Promise<SubmissionDetail | null | undefined> {
-  // Share links arrive from cold — a Render spin-up can take several seconds,
-  // and a 404 on someone's shared score is worse than a slow load. Long
-  // timeout, one retry.
-  const url = `${API_BASE}/v1/submissions/${encodeURIComponent(id)}`;
-  let res = await fetchOr404(url, 8000);
-  if (res === null) res = await fetchOr404(url, 8000);
+  // Share links arrive from cold, and a 404 on someone's shared score is worse
+  // than a slow load. apiFetch already gives this the long budget and a retry.
+  const res = await apiFetch(`${API_BASE}/v1/submissions/${encodeURIComponent(id)}`);
   if (res === '404') return undefined;
   if (!res) return null;
   try {

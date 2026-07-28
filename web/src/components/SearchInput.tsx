@@ -19,10 +19,14 @@ export function SearchInput({
   const initial = params.get(paramName) ?? "";
   const [value, setValue] = useState(initial);
 
-  // Sync local state when URL changes externally (back button, filter chip, etc.)
-  useEffect(() => {
-    setValue(params.get(paramName) ?? "");
-  }, [params, paramName]);
+  // Sync local state when the URL changes externally (back button, filter chip).
+  // Adjusted during render rather than in an effect: an effect here re-renders
+  // the whole subtree a second time on every navigation, and React flags it.
+  const [lastFromUrl, setLastFromUrl] = useState(initial);
+  if (initial !== lastFromUrl) {
+    setLastFromUrl(initial);
+    setValue(initial);
+  }
 
   function submit(next: string) {
     const np = new URLSearchParams(params.toString());

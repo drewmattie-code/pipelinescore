@@ -1,5 +1,6 @@
 import { getLeaderboardModels } from "@/lib/api";
 import { BenchTable } from "@/components/BenchTable";
+import { DataUnavailable } from "@/components/DataUnavailable";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,11 @@ export default async function LeaderboardPage() {
           re-weight for your use case, and pick two rows to go head-to-head.
         </p>
       </div>
-      <BenchTable models={models} />
+      {models.length === 0 ? (
+        <DataUnavailable eyebrow="Model board" subject="The board" inline />
+      ) : (
+        <BenchTable models={models} />
+      )}
     </div>
   );
 }

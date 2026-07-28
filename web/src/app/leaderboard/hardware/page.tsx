@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DataUnavailable } from "@/components/DataUnavailable";
 import { getHardwareBoard } from "@/lib/api";
 import { priceFor } from "@/lib/rigPrices";
 import { HardwareTable, type HardwareTableRow } from "@/components/HardwareTable";
@@ -54,7 +55,11 @@ export default async function HardwareBoardPage() {
         </div>
       </div>
 
-      <HardwareTable rows={rows} />
+      {board.length === 0 ? (
+        <DataUnavailable eyebrow="Hardware board" subject="The rig board" inline />
+      ) : (
+        <HardwareTable rows={rows} />
+      )}
 
       <p className="mt-4 text-xs text-[var(--color-ink-3)] leading-relaxed max-w-2xl">
         Click a hardware tag to see every run on that rig; tick two rigs to go

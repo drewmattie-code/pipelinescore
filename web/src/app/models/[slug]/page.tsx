@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DataUnavailable } from "@/components/DataUnavailable";
 import { notFound } from "next/navigation";
 import { getLeaderboardModels, getModel, getUserLeaderboard, SAMPLE_TASKS } from "@/lib/api";
 import { ScoreNumber } from "@/components/ScoreNumber";
@@ -38,6 +39,9 @@ export default async function ModelPage({
     getLeaderboardModels(),
     getUserLeaderboard({ sort: "score", dir: "desc", limit: 500 }),
   ]);
+  if (model === null) {
+    return <DataUnavailable eyebrow="Model" subject="This model page" />;
+  }
   if (!model) notFound();
 
   const otherModels = allModels.filter((m) => m.slug !== model.slug).slice(0, 5);

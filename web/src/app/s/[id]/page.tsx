@@ -20,9 +20,29 @@ export async function generateMetadata({
   if (sub === null) return { title: "PipelineScore run" };
   if (!sub) return { title: "Run not found" };
   const rig = sub.hardwareTag ? ` on ${sub.hardwareTag}` : "";
+  const title = `${sub.pipelineScore.toFixed(1)} ${sub.tier.toUpperCase()} — ${sub.model.displayName}${rig}`;
+  const description = `A PipelineScore run: ${sub.model.displayName}${rig} scored ${sub.pipelineScore.toFixed(1)}/100 across 34 deterministic tasks. Benchmark your own hardware at pipelinescore.ai.`;
+  // The root layout defines its own openGraph block, and a bare `title` here
+  // does NOT override it — so these pages used to unfurl on Reddit/X/Slack as a
+  // generic site card with the score nowhere in sight. Set them explicitly.
   return {
-    title: `${sub.pipelineScore.toFixed(1)} ${sub.tier.toUpperCase()} — ${sub.model.displayName}${rig}`,
-    description: `A PipelineScore run: ${sub.model.displayName}${rig} scored ${sub.pipelineScore.toFixed(1)}/100 across 34 deterministic tasks. Benchmark your own hardware at pipelinescore.ai.`,
+    title,
+    description,
+    openGraph: {
+      type: "article",
+      title,
+      description,
+      url: `/s/${id}`,
+      siteName: "PipelineScore",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+    // Individual runs are thin, near-duplicate pages: fine to unfurl and share,
+    // not something to fill the index with.
+    robots: { index: false, follow: true },
   };
 }
 

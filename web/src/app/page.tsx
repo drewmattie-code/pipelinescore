@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DataUnavailable } from "@/components/DataUnavailable";
 import { getHardwareBoard, getLeaderboardModels, getStats } from "@/lib/api";
 import { BenchTable } from "@/components/BenchTable";
 import { CopyCommand } from "@/components/CopyCommand";
@@ -110,7 +111,11 @@ export default async function Home() {
             How scores are computed →
           </Link>
         </div>
-        <BenchTable models={models} />
+        {models.length === 0 ? (
+          <DataUnavailable eyebrow="Model board" subject="The board" inline />
+        ) : (
+          <BenchTable models={models} />
+        )}
       </section>
 
       {/* Popular matchups — every chip is a live head-to-head */}
