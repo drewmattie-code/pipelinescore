@@ -4,6 +4,7 @@ import { judgeExecutePython } from './judges/executePython.js';
 import { judgeExecutePythonSnippet } from './judges/executePythonSnippet.js';
 import { judgeExactFinalLine } from './judges/exactFinalLine.js';
 import { judgeJsonMatch } from './judges/jsonMatch.js';
+import { stripReasoning } from './normalize.js';
 import type { LLMProvider, RunSummary, Task, TaskResult, Taxonomy, Testpack } from './types.js';
 import { scoreRun } from './score.js';
 import { cliVersion } from './util.js';
@@ -30,7 +31,10 @@ async function runOneTask(task: Task, provider: LLMProvider): Promise<TaskResult
     // 2048, not 1024: reasoning models spend output tokens thinking before the
     // final answer, and a starved budget returns empty content on hard tasks.
     const r = await provider.complete(task.prompt, { maxTokens: 2048, temperature: 0 });
-    response = r.text;
+    // Judge the answer, not the scratchpad. Some servers strip a reasoning
+    // model's channels for you and some hand them back raw; without this the
+    // server you happen to run decides your score more than your hardware does.
+    response = stripReasoning(r.text);
     latency_ms = r.latency_ms;
     tokens_in = r.tokens_in;
     tokens_out = r.tokens_out;

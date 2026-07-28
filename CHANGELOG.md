@@ -2,6 +2,23 @@
 
 All notable changes to PipelineScore will be documented here. Format roughly follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) + [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] — 2026-07-27
+
+### Fixed
+- **Reasoning models are scored on their answer, not their scratchpad.** Local servers disagree about what
+  to do with a reasoning model's thinking: LM Studio strips gpt-oss harmony channels before returning the
+  response, MLX hands back the whole thing. The CLI judged whatever arrived, so the code judge was feeding
+  `<|channel|>analysis<|message|>…` to `python3` and the JSON judge was parsing prose. The same
+  `gpt-oss-20b` scored **93.2 on LM Studio and 41.5 on MLX** — a 51.7-point gap produced entirely by which
+  server was in front of the model, on a leaderboard whose whole claim is that the hardware is the variable.
+  The CLI now separates reasoning from answer before judging, for both harmony channels and
+  `<think>`/`<thinking>`/`<reasoning>` tags. The same MLX run now scores **91.4**, within 2 points of
+  LM Studio, and its remaining failures are real model errors. Responses with no reasoning markers are
+  passed through byte for byte.
+
+  Note for anyone comparing history: reasoning-model scores submitted by CLI versions before 0.4.1 are not
+  comparable to later ones. Every submission records its `cli_version`.
+
 ## [0.4.0] — 2026-07-06
 
 The "it just works" release: every documented command now works verbatim, and the no-flags path is the front door.
