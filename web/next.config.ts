@@ -12,13 +12,21 @@ import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 // critical CSS path. script-src takes 'unsafe-inline' because the App Router
 // emits inline hydration bootstrap scripts without a nonce in a static export.
 // connect-src is pinned to the one API this site talks to.
+// Cloudflare injects its Web Analytics beacon into every response it serves, so
+// the policy has to allow it or the site silently stops reporting visitors. The
+// script comes from static.cloudflareinsights.com and reports to
+// cloudflareinsights.com/cdn-cgi/rum. Caught by loading production in a real
+// browser; curl shows the headers but never the violation.
+const CF_BEACON_SCRIPT = 'https://static.cloudflareinsights.com';
+const CF_BEACON_REPORT = 'https://cloudflareinsights.com';
+
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline' ${CF_BEACON_SCRIPT}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self' https://api.pipelinescore.ai",
+  `connect-src 'self' https://api.pipelinescore.ai ${CF_BEACON_REPORT}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
