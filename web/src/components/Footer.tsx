@@ -34,6 +34,9 @@ export function Footer() {
           <Link href="/privacy" className="hover:text-[var(--color-emerald)] transition-colors">
             Privacy
           </Link>
+          <a href="mailto:drew@stimpmedia.com" className="hover:text-[var(--color-emerald)] transition-colors">
+            Contact
+          </a>
         </div>
       </div>
     </footer>
