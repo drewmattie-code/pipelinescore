@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { migrate } from './db.js';
-import { seedIfEmpty, augmentIfMissing, purgeClosedModelsIfPresent } from './seed.js';
+import { seedIfEmpty, augmentIfMissing, purgeClosedModelsIfPresent, normalizePlaceholderNicknamesIfPresent } from './seed.js';
 import health from './routes/health.js';
 import testpack from './routes/testpack.js';
 import submissions from './routes/submissions.js';
@@ -34,6 +34,10 @@ migrate();
 // Closed-weights models can't run on local hardware tags — keeping the
 // sample leaderboard honest. Idempotent.
 purgeClosedModelsIfPresent();
+// One-time scrub: applies the placeholder-nickname policy retroactively to rows
+// that predate the submit-route check, so a real run posted as "yourusername"
+// becomes anonymous instead of headlining the board. Idempotent.
+normalizePlaceholderNicknamesIfPresent();
 seedIfEmpty();
 // Non-destructive: adds any models from LOCAL_MODELS that aren't already
 // in the DB, plus a few hardware-distributed sample submissions per new

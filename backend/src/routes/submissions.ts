@@ -3,18 +3,9 @@ import { z } from 'zod';
 import { db, uid } from '../db.js';
 import { tierForScore } from '../lib/tier.js';
 import { stamp, toIsoDate } from '../lib/api-version.js';
+import { isPlaceholderNickname } from '../lib/placeholder-nicknames.js';
 
 const router: Router = Router();
-
-// Docs-example placeholders that people copy-paste verbatim (a real submission
-// arrived as "yourusername"). Normalized to anonymous rather than rejected so
-// older CLIs keep working. The CLI blocks the same list client-side.
-const PLACEHOLDER_NICKNAMES = new Set([
-  'yourusername', 'your-username', 'your_username', 'yourname', 'your-name', 'your_name',
-  'your-handle', 'your_handle', 'yourhandle', 'your-nickname', 'username', 'nickname',
-  'handle', 'user', 'changeme', 'change-me', 'anonymous', 'anon', 'example', 'test-user',
-  'admin', 'root', 'moderator', 'official', 'staff', 'pipelinescore',
-]);
 
 const ModelInput = z.object({
   slug: z.string().min(1),
@@ -99,7 +90,7 @@ router.post('/v1/submissions', (req, res) => {
     return res.status(400).json(stamp({ error: 'invalid_payload', issues: parsed.error.issues }));
   }
   const body = parsed.data;
-  if (body.user_nickname && PLACEHOLDER_NICKNAMES.has(body.user_nickname.toLowerCase())) {
+  if (isPlaceholderNickname(body.user_nickname)) {
     body.user_nickname = undefined;
   }
 

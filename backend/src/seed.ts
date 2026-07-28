@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PLACEHOLDER_NICKNAMES } from './lib/placeholder-nicknames.js';
 import { db, uid } from './db.js';
 import { tierForScore } from './lib/tier.js';
 import { LOCAL_MODELS, HARDWARE_POOL, type LocalSeedModel } from './seed-local-models.js';
@@ -609,5 +610,45 @@ export function purgeClosedModelsIfPresent(): void {
 
   if (totalPurged > 0) {
     console.log(`[purge] removed ${totalPurged} seeded submissions of closed-weights models`);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// normalizePlaceholderNicknamesIfPresent — one-time scrub.
+//
+// The submit route rejects docs-example nicknames ("yourusername" and friends)
+// and stores them as anonymous, but that check landed after a real submission
+// had already come in under one. Someone benchmarked gemma4:12b on their own
+// RTX 3070 and pasted the example command verbatim, so the top of the public
+// user board read "yourusername" — which looks to any visitor like the site
+// shipped with unfilled placeholder text.
+//
+// This applies the current policy retroactively: the run stays on the board
+// with its score, hardware tag and share page intact, it just becomes
+// anonymous. Nothing is deleted.
+//
+// Idempotent by construction — once a nickname is NULL it matches nothing on
+// the next boot. Safe to call on every start.
+//
+// Side effect worth knowing: beta-tester ranks are DERIVED from the earliest
+// real submission per named nickname (lib/beta-testers.ts), so anonymizing a
+// row releases its slot and everyone below it moves up one.
+// ----------------------------------------------------------------------------
+export function normalizePlaceholderNicknamesIfPresent(): void {
+  const names = [...PLACEHOLDER_NICKNAMES];
+  const placeholders = names.map(() => '?').join(',');
+  const result = db
+    .prepare(
+      `UPDATE submissions
+          SET user_nickname = NULL
+        WHERE user_nickname IS NOT NULL
+          AND lower(user_nickname) IN (${placeholders})`
+    )
+    .run(...names);
+
+  if (result.changes > 0) {
+    console.log(
+      `[scrub] anonymized ${result.changes} submission(s) that were posted under a docs placeholder nickname`
+    );
   }
 }
