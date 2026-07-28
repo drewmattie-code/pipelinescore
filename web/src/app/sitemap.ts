@@ -4,6 +4,19 @@ import { modelMatchups, rigMatchups } from "@/lib/matchups";
 
 const SITE_URL = "https://pipelinescore.ai";
 
+/**
+ * Model slugs are the only board-supplied value interpolated into a sitemap URL
+ * without encoding, and the sitemap is XML that Google trusts. A submitted slug
+ * of `a</loc><loc>https://evil.example` produced a well-formed foreign entry —
+ * this site vouching to a crawler for someone else's URL.
+ *
+ * The API now rejects those at submission, so this is the second line: anything
+ * that isn't a clean identifier is dropped rather than encoded, because an
+ * encoded junk slug would just publish a 404 to the crawler.
+ */
+const SAFE_SLUG = /^[a-zA-Z0-9._-]+$/;
+const isSafeSlug = (s: string | undefined | null): s is string => !!s && SAFE_SLUG.test(s);
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const staticPages = [
@@ -29,7 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getHardwareBoard(),
   ]);
 
-  const modelPages = models.map((m) => ({
+  const modelPages = models.filter((m) => isSafeSlug(m.slug)).map((m) => ({
     url: `${SITE_URL}/models/${m.slug}`,
     lastModified: now,
     changeFrequency: "weekly" as const,
@@ -38,7 +51,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Popular head-to-heads — same pair generator as the homepage strip, so
   // crawlers land on pages users actually see linked.
-  const comparePages = modelMatchups(models, 12).map(([a, b]) => ({
+  const comparePages = modelMatchups(models, 12)
+    .filter(([a, b]) => isSafeSlug(a.slug) && isSafeSlug(b.slug))
+    .map(([a, b]) => ({
     url: `${SITE_URL}/compare/${a.slug}/${b.slug}`,
     lastModified: now,
     changeFrequency: "weekly" as const,

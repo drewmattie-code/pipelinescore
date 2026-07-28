@@ -48,6 +48,8 @@ const app = express();
 // Trust the reverse proxy (Fly, Cloudflare, etc.) so req.ip is the real client IP.
 // In dev (no proxy), this is harmless.
 app.set('trust proxy', 1);
+// Don't advertise the stack; it costs nothing to withhold.
+app.disable('x-powered-by');
 app.use(express.json({ limit: '10mb' }));
 app.use(
   cors({

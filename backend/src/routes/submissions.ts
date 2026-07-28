@@ -7,38 +7,49 @@ import { isPlaceholderNickname } from '../lib/placeholder-nicknames.js';
 
 const router: Router = Router();
 
+// The slug is the one field that leaves the app as structure rather than text:
+// it becomes a URL path and a <loc> in sitemap.xml. Unconstrained, a submission
+// of `a</loc><loc>https://evil.example` injected a foreign, well-formed entry
+// into the sitemap — the site vouching to Google for someone else's URL.
+// Locked to an identifier, same as nickname / hardware_tag / config_tag already are.
+const SLUG = z.string().min(1).max(100).regex(/^[a-zA-Z0-9._-]+$/, 'slug: alphanum + . _ - only');
+
+// Display fields stay permissive on purpose — real names carry ':', '/' and
+// spaces (`gemma4:12b-it-qat_gpu`, `openai/gpt-oss-20b`). They are rendered
+// through React, which escapes them, so the risk here is storage abuse rather
+// than injection. Bounded rather than pattern-matched.
 const ModelInput = z.object({
-  slug: z.string().min(1),
-  display_name: z.string().min(1),
-  provider: z.string().min(1),
-  provider_model: z.string().min(1),
-  family: z.string().optional(),
-  context_window: z.number().int().optional(),
-  released_at: z.string().optional(),
+  slug: SLUG,
+  display_name: z.string().min(1).max(120),
+  provider: z.string().min(1).max(60),
+  provider_model: z.string().min(1).max(200),
+  family: z.string().max(60).optional(),
+  context_window: z.number().int().nonnegative().max(100_000_000).optional(),
+  released_at: z.string().max(40).optional(),
 });
 
 const TaskResultInput = z.object({
-  task_id: z.string(),
-  category: z.string(),
-  task_input: z.string(),
-  model_output: z.string(),
+  task_id: z.string().max(120),
+  category: z.string().max(40),
+  task_input: z.string().max(100_000),
+  model_output: z.string().max(100_000),
   judge_score: z.number().nullable().optional(),
   passed: z.boolean().nullable().optional(),
   latency_ms: z.number().int().nullable().optional(),
   tokens_used: z.number().int().nullable().optional(),
-  judge_rationale: z.string().nullable().optional(),
+  judge_rationale: z.string().max(10_000).nullable().optional(),
 });
 
 const SubmissionInput = z.object({
   model: ModelInput,
-  testpack_version: z.string(),
+  testpack_version: z.string().min(1).max(60),
   pipeline_score: z.number().min(0).max(100),
   tier: z.string().optional(),
   category_scores: z.record(z.string(), z.number()),
-  task_results: z.array(TaskResultInput).default([]),
+  task_results: z.array(TaskResultInput).max(200).default([]),
   raw_transcripts: z.unknown().optional(),
   score_detail: z.unknown().optional(), // v2: confidence bands, per-profile composites, throughput
-  cli_version: z.string(),
+  cli_version: z.string().min(1).max(40),
   user_nickname: z
     .string()
     .min(2)
@@ -57,7 +68,7 @@ const SubmissionInput = z.object({
     .max(60)
     .regex(/^[a-zA-Z0-9._-]+$/, 'hardware_tag: alphanum + . _ - only')
     .optional(),
-  notes: z.string().nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
 });
 
 function findOrCreateModel(input: z.infer<typeof ModelInput>): string {
