@@ -69,7 +69,13 @@ router.get('/v1/leaderboard/users', (req, res) => {
   const offset = Math.max(parseInt((q.offset as string) ?? '0', 10) || 0, 0);
   const days = Math.min(parseInt((q.days as string) ?? '365', 10) || 365, 3650);
 
-  const where: string[] = [`s.created_at >= datetime('now', ?)`, `s.user_nickname IS NOT NULL`];
+  // The rig board ranks hardware, not people, so a run with no nickname still
+  // belongs on it. Opt-in rather than default: the user board itself is a list
+  // of named users and would be nonsense with blank rows in it.
+  const includeAnonymous = q.include_anonymous === '1' || q.include_anonymous === 'true';
+
+  const where: string[] = [`s.created_at >= datetime('now', ?)`];
+  if (!includeAnonymous) where.push(`s.user_nickname IS NOT NULL`);
   const params: unknown[] = [`-${days} days`];
 
   if (provider) { where.push('m.provider = ?'); params.push(provider); }
@@ -110,10 +116,10 @@ router.get('/v1/leaderboard/users', (req, res) => {
     tier: r.tier as string,
     category_scores: JSON.parse(r.category_scores as string) as Record<string, number>,
     lab_verified: Boolean(r.lab_verified),
-    user_nickname: r.user_nickname as string,
+    user_nickname: (r.user_nickname as string | null) ?? null,
     config_tag: (r.config_tag as string | null) ?? null,
     hardware_tag: (r.hardware_tag as string | null) ?? null,
-    beta_tester_rank: getBetaTesterRank(r.user_nickname as string),
+    beta_tester_rank: getBetaTesterRank(r.user_nickname as string | null),
     created_at: toIsoDate(r.created_at as string),
     cli_version: r.cli_version as string,
     efficiency: efficiency[r.id as string] ?? { total_tokens: 0, avg_latency_ms: null, task_count: 0 },
@@ -130,7 +136,7 @@ router.get('/v1/leaderboard/users', (req, res) => {
     count: entries.length,
     limit,
     offset,
-    filters: { provider, tier, user, search, hardware, lab_verified: labVerified, days, sort, dir },
+    filters: { provider, tier, user, search, hardware, lab_verified: labVerified, include_anonymous: includeAnonymous, days, sort, dir },
     entries,
   }));
 });

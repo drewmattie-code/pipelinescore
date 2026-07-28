@@ -241,7 +241,7 @@ function tierForScore(s: number): TierId {
 
 interface BackendUserEntry {
   submission_id: string;
-  user_nickname: string;
+  user_nickname: string | null;
   pipeline_score: number;
   tier: TierId;
   category_scores: Record<string, number>;
@@ -267,7 +267,10 @@ interface BackendUserEntry {
 function adaptUserEntry(e: BackendUserEntry): UserLeaderboardEntry {
   return {
     submissionId: e.submission_id,
-    userNickname: e.user_nickname,
+    // Anonymous runs only ever arrive on the include_anonymous path, which is
+    // exclusively the rig board, and that skips falsy nicknames. Collapsing to
+    // '' keeps every other consumer free of null checks it can never hit.
+    userNickname: e.user_nickname ?? '',
     pipelineScore: e.pipeline_score,
     tier: e.tier,
     categoryScores: {
@@ -304,6 +307,8 @@ export interface UserLeaderboardQuery {
   search?: string;
   hardware?: string;
   labVerified?: boolean;
+  /** Include runs with no nickname. Only the rig board wants these. */
+  includeAnonymous?: boolean;
   sort?: 'score' | 'date' | 'user' | 'model' | 'provider' | 'tier';
   dir?: 'asc' | 'desc';
   limit?: number;
@@ -319,6 +324,7 @@ export async function getUserLeaderboard(q: UserLeaderboardQuery = {}): Promise<
   if (q.search) params.set('search', q.search);
   if (q.hardware) params.set('hardware', q.hardware);
   if (q.labVerified) params.set('lab_verified', '1');
+  if (q.includeAnonymous) params.set('include_anonymous', '1');
   if (q.sort) params.set('sort', q.sort);
   if (q.dir) params.set('dir', q.dir);
   params.set('limit', String(q.limit ?? 100));
@@ -448,8 +454,18 @@ function emptyUserPage(q: UserLeaderboardQuery): UserLeaderboardPage {
  * per rig. Built from the user leaderboard (the backend has no dedicated
  * endpoint); entries arrive score-desc so the first hit per tag is its best.
  */
-export async function getHardwareBoard(prefetched?: UserLeaderboardPage): Promise<HardwareBoardRow[]> {
-  const page = prefetched ?? (await getUserLeaderboard({ sort: 'score', dir: 'desc', limit: 500 }));
+export async function getHardwareBoard(): Promise<HardwareBoardRow[]> {
+  // Always fetched here rather than accepting a caller's page, so every rig
+  // board on the site is computed from the same population and the rank shown
+  // on a user's dashboard matches the rank on /leaderboard/hardware.
+  // include_anonymous: a rig earns its place on this board by its score, not by
+  // whether whoever ran it chose a nickname.
+  const page = await getUserLeaderboard({
+    sort: 'score',
+    dir: 'desc',
+    limit: 500,
+    includeAnonymous: true,
+  });
   const rows = new Map<
     string,
     HardwareBoardRow & { _users: Set<string>; _latencies: number[] }
@@ -478,7 +494,7 @@ export async function getHardwareBoard(prefetched?: UserLeaderboardPage): Promis
       rows.set(tag, row);
     }
     row.runs += 1;
-    row._users.add(e.userNickname);
+    if (e.userNickname) row._users.add(e.userNickname);
     if (e.efficiency.avgLatencyMs !== null) row._latencies.push(e.efficiency.avgLatencyMs);
     if (e.pipelineScore > row.bestScore) {
       row.bestScore = e.pipelineScore;

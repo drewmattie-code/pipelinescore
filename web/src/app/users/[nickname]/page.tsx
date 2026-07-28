@@ -51,7 +51,7 @@ export default async function UserDashboardPage({
 
   // Standing: where this user's best run sits in the whole population, and
   // where their best rig sits on the hardware board.
-  const rigBoard = await getHardwareBoard(population);
+  const rigBoard = await getHardwareBoard();
   const beats = beatsPct(
     profile.bestScore,
     population.entries.map((e) => e.pipelineScore)
