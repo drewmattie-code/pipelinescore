@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { migrate } from './db.js';
-import { seedIfEmpty, augmentIfMissing, purgeClosedModelsIfPresent, normalizePlaceholderNicknamesIfPresent } from './seed.js';
+import { seedIfEmpty, augmentIfMissing, purgeClosedModelsIfPresent, normalizePlaceholderNicknamesIfPresent, purgeSeedSubmissionsIfPresent } from './seed.js';
 import health from './routes/health.js';
 import testpack from './routes/testpack.js';
 import submissions from './routes/submissions.js';
@@ -43,6 +43,10 @@ seedIfEmpty();
 // in the DB, plus a few hardware-distributed sample submissions per new
 // model. Safe over a populated persistent disk.
 augmentIfMissing();
+// LAST, and it must stay last: seedIfEmpty() and augmentIfMissing() above both
+// mint synthetic submissions, and PipelineScore only serves real runs. Running
+// the scrub after them means the board self-heals even on a fresh disk.
+purgeSeedSubmissionsIfPresent();
 
 const app = express();
 // Trust the reverse proxy (Fly, Cloudflare, etc.) so req.ip is the real client IP.

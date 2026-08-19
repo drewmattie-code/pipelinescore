@@ -11,3 +11,4 @@ backend/.data/
 docs/superpowers/
 # Private held-out task pool for lab-verified runs — MUST NOT be published
 benchmarks/.holdout/
+backups/

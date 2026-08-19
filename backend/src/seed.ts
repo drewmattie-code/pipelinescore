@@ -652,3 +652,49 @@ export function normalizePlaceholderNicknamesIfPresent(): void {
     );
   }
 }
+
+// ----------------------------------------------------------------------------
+// purgeSeedSubmissionsIfPresent — the honesty scrub. Runs LAST on every boot.
+//
+// PipelineScore's entire claim is "real runs on real rigs". On 2026-08-18 the
+// live board was ~429 seeded submissions to 7 genuine ones — the hardware board
+// was advertising B200 and A100 rigs nobody had ever run. Synthetic rows that
+// look measured are worse than an empty board: this audience checks, and the
+// credibility is the product.
+//
+// So: no synthetic submissions are served, ever. Seed rows are identified by
+// `submitter_ip = 'seed'`, which both seedIfEmpty() and augmentIfMissing() set.
+//
+// The MODELS catalog is deliberately preserved — it is legitimate reference
+// data (names, families, context windows), it is what makes an empty board
+// browsable, and keeping it non-empty is what stops seedIfEmpty() from firing
+// again on a fresh disk.
+//
+// ⚠️ Call this AFTER seedIfEmpty() and augmentIfMissing(), not before. Both of
+// those still create sample rows; running last means the system self-heals even
+// if the persistent disk is lost and the whole seed path re-runs.
+// Idempotent — does nothing once the rows are gone.
+// ----------------------------------------------------------------------------
+export function purgeSeedSubmissionsIfPresent(): void {
+  const seeded = db
+    .prepare(`SELECT id FROM submissions WHERE submitter_ip = 'seed'`)
+    .all() as Array<{ id: string }>;
+  if (seeded.length === 0) return;
+
+  const ids = seeded.map((s) => s.id);
+  const txn = db.transaction(() => {
+    // Delete in chunks — SQLite caps bound parameters (default 999).
+    for (let i = 0; i < ids.length; i += 500) {
+      const chunk = ids.slice(i, i + 500);
+      const ph = chunk.map(() => '?').join(',');
+      db.prepare(`DELETE FROM task_results WHERE submission_id IN (${ph})`).run(...chunk);
+      db.prepare(`DELETE FROM submissions WHERE id IN (${ph})`).run(...chunk);
+    }
+  });
+  txn();
+
+  const remaining = (db.prepare('SELECT COUNT(*) AS c FROM submissions').get() as { c: number }).c;
+  console.log(
+    `[purge] removed ${ids.length} synthetic submissions — ${remaining} real submission(s) remain`
+  );
+}
