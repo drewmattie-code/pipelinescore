@@ -36,12 +36,15 @@ export default async function Home() {
             Benchmark LLMs on YOUR hardware.
           </h1>
           <p className="text-base md:text-lg text-[var(--color-ink-2)] leading-relaxed mt-4 max-w-2xl">
-            {stats.model_count.toLocaleString()} models ranked from{" "}
-            {stats.submission_count.toLocaleString()} real runs on real rigs —
-            M3 Max vs RTX 4090 vs A100 vs cloud API. Same 34 deterministic
-            tasks, scored entirely on your machine, one 0–100 score. The only
-            public LLM board that ranks <em>where</em> the model runs, not just
-            which model it is.
+            The same 34 deterministic tasks, scored entirely on your machine —
+            no judge model, no API key, one 0–100 score. A catalog of{" "}
+            {stats.model_count.toLocaleString()} models, ranked by runs people
+            actually made on their own hardware. The only public LLM board that
+            ranks <em>where</em> the model runs, not just which model it is.
+          </p>
+          <p className="text-sm text-[var(--color-ink-3)] leading-relaxed mt-3 max-w-2xl">
+            Every score here is a real run. We seed nothing — which is why the
+            board is small and why you can trust the numbers on it.
           </p>
           <div className="flex flex-wrap items-center gap-3 mt-6">
             <CopyCommand command={RUN_COMMAND} />
@@ -76,9 +79,9 @@ export default async function Home() {
         {/* Instrument strip */}
         <div className="border-t border-[var(--color-line-2)] bg-[var(--color-ink)] text-white">
           <div className="max-w-7xl mx-auto px-6 md:px-10 py-3 flex flex-wrap items-center gap-x-8 gap-y-1 font-mono text-[11px] md:text-xs uppercase tracking-[0.14em]">
-            <Stat label="Submissions" value={stats.submission_count} />
+            <Stat label="Models tracked" value={stats.model_count} />
+            <Stat label="Real runs" value={stats.submission_count} />
             <Stat label="Users" value={stats.user_count} />
-            <Stat label="Models" value={stats.model_count} />
             <span className="text-white/50">
               Testpack <span className="text-[var(--color-emerald-light)]">v3</span>
             </span>

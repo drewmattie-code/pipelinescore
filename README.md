@@ -16,7 +16,9 @@
 
 [Live leaderboard](https://pipelinescore.ai/leaderboard/users) · [Methodology](https://pipelinescore.ai/methodology) · [Privacy / BYOK posture](https://pipelinescore.ai/privacy) · [Run the CLI](https://pipelinescore.ai/run)
 
-[![PipelineScore hardware board — every rig ranked by its best score: B200, DGX H100, A100, dual RTX 4090, M-series Macs and more](assets/leaderboard-screenshot.jpg)](https://pipelinescore.ai/leaderboard/hardware)
+**[See the live hardware board →](https://pipelinescore.ai/leaderboard/hardware)**
+
+*Every rig on that board is a real run someone made. We seed nothing, so the board is small — and every number on it is one you can trust.*
 
 </div>
 
