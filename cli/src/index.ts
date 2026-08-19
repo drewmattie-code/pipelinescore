@@ -16,6 +16,7 @@ import { renderCard } from './card.js';
 import { determineTier } from './score.js';
 import type { LLMProvider } from './types.js';
 import { detectHardware, checkModelFit, type HardwareInfo } from './hardware.js';
+import { fitAll, measuredFor, usableBudgetGb, boardOnlyRows, type FitRow } from './fit.js';
 import { cliVersion, isPlaceholderNickname } from './util.js';
 import { runWizard } from './wizard.js';
 import { hasPython } from './judges/python.js';
@@ -117,6 +118,133 @@ program
       process.stderr.write(chalk.red(`\nFatal: ${(e as Error).message}\n`));
       process.exit(1);
     }
+  });
+
+// ---------------------------------------------------------------------------
+// `fit` — the on-ramp. Answers "what can this machine run" with zero setup.
+//
+// `run` requires a local server and pulled weights; that is a question you can
+// only ask once you're already committed. `fit` answers the question that comes
+// first, in about a second, and then points at the real benchmark.
+// ---------------------------------------------------------------------------
+program
+  .command('fit')
+  .description('What can this machine run? (no setup, no server, ~1 second)')
+  .option('--backend <url>', 'PipelineScore backend URL', 'https://api.pipelinescore.ai')
+  .option('--all', 'show every model in the catalog, not just the best fits')
+  .option('--offline', 'skip the measured-score lookup entirely')
+  .action(async (opts: { backend: string; all?: boolean; offline?: boolean }) => {
+    const hw = detectHardware();
+    const { gb: budget, kind } = usableBudgetGb(hw);
+
+    process.stdout.write(
+      boxen(
+        `${chalk.bold('PipelineScore')} ${chalk.dim(`v${VERSION}`)}  ${chalk.dim('· fit')}\n` +
+          `${chalk.dim('Hardware:')}  ${hw.tag ?? chalk.dim('unknown')}\n` +
+          `${chalk.dim('Memory:')}    ${budget} GB usable ${chalk.dim(`(${kind})`)}`,
+        { padding: 1, borderStyle: 'round', borderColor: 'cyan' }
+      ) + '\n'
+    );
+
+    const rows = fitAll(hw);
+    const lookup = opts.offline
+      ? { scores: new Map<string, { score: number; runs: number; name: string }>(), reachable: false }
+      : await measuredFor(hw.tag, opts.backend);
+    const measured = lookup.scores;
+
+    for (const r of rows) {
+      const m = measured.get(r.model.slug);
+      if (m) r.measured = { score: m.score, runs: m.runs, hardwareTag: hw.tag! };
+    }
+
+    // Models with real runs on this rig that the static catalog doesn't know about.
+    // These are the most valuable rows on screen — actual evidence, this hardware.
+    const extra = boardOnlyRows(measured, hw, new Set(rows.map((r) => r.model.slug)));
+
+    const runnable = rows.filter((r) => r.verdict !== 'no');
+    // Biggest model that still fits is the interesting one, so sort by size desc.
+    runnable.sort((a, b) => b.model.params - a.model.params);
+    // Measured rows first: evidence outranks estimate.
+    const measuredRows = [...extra, ...runnable.filter((r) => r.measured)];
+    const estimateRows = runnable.filter((r) => !r.measured);
+    const show = opts.all ? estimateRows : estimateRows.slice(0, 10);
+
+    if (runnable.length === 0) {
+      process.stdout.write(
+        chalk.yellow('  Nothing in the catalog fits comfortably in that budget.\n') +
+          chalk.dim('  Small models (1-3B) at q4 are the place to start.\n\n')
+      );
+      return;
+    }
+
+    if (measuredRows.length > 0) {
+      process.stdout.write(
+        chalk.bold('  Measured on this exact hardware  ') +
+          chalk.dim('(real runs, not estimates)\n\n')
+      );
+      for (const r of measuredRows) {
+        const name = r.model.name.length > 34 ? r.model.name.slice(0, 33) + '…' : r.model.name;
+        const size = chalk.dim((r.estGb ? `${r.estGb}GB ${r.quant}` : '').padEnd(11));
+        const runs = r.measured!.runs === 1 ? '1 run' : `${r.measured!.runs} runs`;
+        process.stdout.write(
+          `  ${chalk.cyan('★')} ${name.padEnd(34)} ${size}  ` +
+            `${chalk.cyan(`PipelineScore ${r.measured!.score.toFixed(1)}`)} ${chalk.dim(`(${runs})`)}\n`
+        );
+      }
+      process.stdout.write('\n');
+    }
+
+    process.stdout.write(chalk.bold(`  Estimated to run here  `) + chalk.dim(`(${runnable.length} of ${rows.length} catalog models fit)\n\n`));
+
+    for (const r of show) {
+      const badge =
+        r.verdict === 'comfortable' ? chalk.green('●') : chalk.yellow('◐');
+      const size = chalk.dim(`${r.estGb}GB ${r.quant}`.padEnd(11));
+      const name = r.model.name.length > 34 ? r.model.name.slice(0, 33) + '…' : r.model.name;
+      let line = `  ${badge} ${name.padEnd(34)} ${size}`;
+      if (r.measured) {
+        const runs = r.measured.runs === 1 ? '1 run' : `${r.measured.runs} runs`;
+        line += `  ${chalk.cyan(`measured ${r.measured.score.toFixed(1)}`)} ${chalk.dim(`(${runs} on ${r.measured.hardwareTag})`)}`;
+      }
+      process.stdout.write(line + '\n');
+    }
+
+    if (!opts.all && estimateRows.length > show.length) {
+      process.stdout.write(chalk.dim(`\n  …and ${estimateRows.length - show.length} more. Use --all to see them.\n`));
+    }
+
+    const anyMeasured = measuredRows.length > 0;
+    process.stdout.write('\n');
+    process.stdout.write(
+      chalk.dim('  ● comfortable   ◐ tight — will fit, but little room for context\n')
+    );
+    process.stdout.write(
+      chalk.dim('  Fit is an estimate from parameter count and quantisation.\n')
+    );
+
+    if (anyMeasured) {
+      process.stdout.write(
+        chalk.cyan('  “measured” scores are real PipelineScore runs on this exact hardware tag.\n')
+      );
+    } else if (opts.offline) {
+      process.stdout.write(chalk.dim('  Measured-score lookup skipped (--offline).\n'));
+    } else if (!lookup.reachable) {
+      // Never claim "no runs" when the truth is "couldn't ask".
+      process.stdout.write(
+        chalk.yellow("  Couldn't reach the leaderboard, so measured scores are unknown — not absent.\n")
+      );
+    } else {
+      process.stdout.write(
+        chalk.dim(`  No measured runs on ${hw.tag ?? 'this rig'} yet — you'd be the first.\n`)
+      );
+    }
+
+    process.stdout.write(
+      '\n' +
+        chalk.bold('  Want a real score instead of an estimate?\n') +
+        chalk.dim('  Start a local server (Ollama / LM Studio / llama.cpp), then:\n') +
+        `  ${chalk.cyan('npx @pipelinescore/cli run')}\n\n`
+    );
   });
 
 program
