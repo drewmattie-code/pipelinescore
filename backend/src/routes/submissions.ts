@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { db, uid } from '../db.js';
 import { tierForScore } from '../lib/tier.js';
@@ -71,6 +72,13 @@ const SubmissionInput = z.object({
   notes: z.string().max(2000).nullable().optional(),
 });
 
+// Constant-time comparison; hashing first gives equal-length buffers.
+function keyMatches(provided: string, expected: string): boolean {
+  const a = createHash('sha256').update(provided).digest();
+  const b = createHash('sha256').update(expected).digest();
+  return timingSafeEqual(a, b);
+}
+
 function findOrCreateModel(input: z.infer<typeof ModelInput>): string {
   const existing = db.prepare('SELECT id FROM models WHERE slug = ?').get(input.slug) as
     | { id: string }
@@ -109,7 +117,7 @@ router.post('/v1/submissions', (req, res) => {
   // (which gates the private rotating held-out set) may carry the trusted flag.
   // Community submissions can never set it from the request body.
   const labKey = req.headers['x-lab-key'];
-  const labVerified = process.env.LAB_KEY && labKey === process.env.LAB_KEY ? 1 : 0;
+  const labVerified = process.env.LAB_KEY && typeof labKey === 'string' && keyMatches(labKey, process.env.LAB_KEY) ? 1 : 0;
 
   try {
     const submissionId = uid();
