@@ -19,13 +19,14 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 const BACKEND = process.env.PIPELINESCORE_BACKEND ?? 'https://api.pipelinescore.ai';
 
 const server = new Server(
   {
     name: 'pipelinescore-mcp',
-    version: '0.1.0',
+    version: (JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version,
   },
   {
     capabilities: {

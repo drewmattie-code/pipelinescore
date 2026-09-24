@@ -1,7 +1,7 @@
 {
   "name": "@pipelinescore/cli",
-  "version": "0.4.1",
-  "description": "PipelineScore CLI \u2014 benchmark LLMs on your own hardware. Zero-config: `npx @pipelinescore/cli` auto-detects Ollama / LM Studio / llama.cpp / MLX and walks you through a run. Fully deterministic suite (no API key required), scored locally, published to the hardware-aware public leaderboard at pipelinescore.ai.",
+  "version": "0.4.2",
+  "description": "PipelineScore CLI — benchmark LLMs on your own hardware. Zero-config: `npx @pipelinescore/cli` auto-detects Ollama / LM Studio / llama.cpp / MLX and walks you through a run. Fully deterministic suite (no API key required), scored locally, published to the hardware-aware public leaderboard at pipelinescore.ai.",
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
