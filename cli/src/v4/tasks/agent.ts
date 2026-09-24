@@ -1,4 +1,9 @@
 import type { ToolDef, V4Task } from '../types.js';
+import { agentRebook } from './agent-rebook.js';
+import { agentCalendar } from './agent-calendar.js';
+import { agentInventory } from './agent-inventory.js';
+import { agentHelpdesk } from './agent-helpdesk.js';
+import { agentExpense } from './agent-expense.js';
 
 // τ-bench style: a support agent with a written policy and a mock orders
 // database. Graded on the database's end state, not on what the model says.
@@ -137,3 +142,5 @@ export const agentReturns: V4Task = {
     };
   },
 };
+
+export const AGENT_TASKS: V4Task[] = [agentReturns, agentRebook, agentCalendar, agentInventory, agentHelpdesk, agentExpense];

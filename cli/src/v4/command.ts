@@ -18,9 +18,12 @@ export interface V4Options {
   seed?: string;
   only?: string;
   save?: string;
+  maxTokens?: string;
 }
 
 const MINIMAX_DEFAULT = 'https://api.minimax.io/v1';
+// The API's own ceiling for MiniMax-M2.7 (it rejects anything above 196608).
+const MINIMAX_MAX_OUTPUT = 196_608;
 
 function minimaxKey(): string | undefined {
   if (process.env.MINIMAX_API_KEY) return process.env.MINIMAX_API_KEY;
@@ -37,7 +40,9 @@ export function buildChatProvider(o: V4Options): ChatProvider {
     case 'minimax': {
       const key = o.apiKey ?? minimaxKey();
       if (!key) throw new Error('MiniMax needs a key: set MINIMAX_API_KEY or put it in ~/.config/minimax/api_key');
-      return new OpenAIChatProvider('minimax', o.model, { baseURL: o.endpoint ?? MINIMAX_DEFAULT, apiKey: key });
+      const p = new OpenAIChatProvider('minimax', o.model, { baseURL: o.endpoint ?? MINIMAX_DEFAULT, apiKey: key });
+      p.maxOutputTokens = MINIMAX_MAX_OUTPUT;
+      return p;
     }
     case 'anthropic': {
       const key = o.apiKey ?? process.env.ANTHROPIC_API_KEY;
@@ -56,6 +61,7 @@ export async function runV4(o: V4Options): Promise<V4Summary> {
   }
   ensureImages();
   const provider = buildChatProvider(o);
+  if (o.maxTokens) provider.maxOutputTokens = Number(o.maxTokens);
   const seed = o.seed ?? newSeed();
   const tasks = o.only ? V4_TASKS.filter((t) => o.only!.split(',').includes(t.id)) : V4_TASKS;
   const ctx = { sandbox: new DockerSandbox() };

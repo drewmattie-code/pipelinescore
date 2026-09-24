@@ -15,7 +15,7 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
   let tokensIn = 0;
   let tokensOut = 0;
   let latency = 0;
-  const maxTokens = inst.maxTokens ?? DEFAULT_MAX_TOKENS;
+  const maxTokens = Math.max(inst.maxTokens ?? DEFAULT_MAX_TOKENS, provider.maxOutputTokens ?? 0);
 
   if (inst.kind === 'single') {
     const res = await provider.chat(inst.messages, { tools: inst.tools, maxTokens });

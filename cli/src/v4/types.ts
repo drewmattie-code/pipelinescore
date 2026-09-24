@@ -36,6 +36,9 @@ export interface ChatResponse {
 export interface ChatProvider {
   name: string;
   model: string;
+  // Raises every task's output cap to at least this, so reasoning models that
+  // think at length are never cut off before they answer.
+  maxOutputTokens?: number;
   chat(messages: ChatMessage[], opts: { tools?: ToolDef[]; maxTokens: number }): Promise<ChatResponse>;
 }
 

@@ -1,21 +1,20 @@
 import type { V4Task } from '../types.js';
-import { agentReturns } from './agent.js';
-import { codeMergeIntervals } from './code.js';
-import { fncallAbstain, fncallParallelNested } from './fncall.js';
-import { instructProductCopy } from './instruct.js';
-import { longdocTwoHop } from './longdoc.js';
-import { reasonTank } from './reason.js';
-import { repoTieredPricing } from './repo.js';
+import { AGENT_TASKS } from './agent.js';
+import { CODE_TASKS } from './code.js';
+import { FNCALL_TASKS } from './fncall.js';
+import { INSTRUCT_TASKS } from './instruct.js';
+import { LONGDOC_TASKS } from './longdoc.js';
+import { REASON_TASKS } from './reason.js';
+import { REPO_TASKS } from './repo.js';
 
-export const TESTPACK_V4_VERSION = '4.0.0-alpha.1';
+export const TESTPACK_V4_VERSION = '4.0.0-alpha.2';
 
 export const V4_TASKS: V4Task[] = [
-  codeMergeIntervals,
-  repoTieredPricing,
-  agentReturns,
-  fncallParallelNested,
-  fncallAbstain,
-  reasonTank,
-  longdocTwoHop,
-  instructProductCopy,
+  ...CODE_TASKS,
+  ...REPO_TASKS,
+  ...AGENT_TASKS,
+  ...FNCALL_TASKS,
+  ...REASON_TASKS,
+  ...LONGDOC_TASKS,
+  ...INSTRUCT_TASKS,
 ];

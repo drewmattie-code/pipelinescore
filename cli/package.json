@@ -19,7 +19,7 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build && node scripts/copy-benchmarks.mjs",
-    "test": "tsx test/util.test.ts && tsx test/hardware.test.ts && tsx test/normalize.test.ts && tsx test/score-v2.test.ts && tsx test/v4.test.ts"
+    "test": "tsx test/util.test.ts && tsx test/hardware.test.ts && tsx test/normalize.test.ts && tsx test/score-v2.test.ts && tsx test/v4.test.ts && tsx test/v4-code.test.ts && tsx test/v4-repo-agent.test.ts && tsx test/v4-fncall.test.ts && tsx test/v4-reason-instruct.test.ts && tsx test/v4-longdoc.test.ts"
   },
   "engines": {
     "node": ">=22"
