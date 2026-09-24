@@ -65,9 +65,11 @@ router.get('/v1/leaderboard/users', (req, res) => {
   const labVerified = q.lab_verified === '1' || q.lab_verified === 'true';
   const sort = typeof q.sort === 'string' && SORT_COLUMNS[q.sort] ? q.sort : 'score';
   const dir = q.dir === 'asc' ? 'ASC' : 'DESC';
-  const limit = Math.min(parseInt((q.limit as string) ?? '100', 10) || 100, 500);
+  // Lower bounds matter: SQLite treats a negative LIMIT as "no limit", so ?limit=-1
+  // returned every row (and bound one IN (...) placeholder per row for efficiency).
+  const limit = Math.max(1, Math.min(parseInt((q.limit as string) ?? '100', 10) || 100, 500));
   const offset = Math.max(parseInt((q.offset as string) ?? '0', 10) || 0, 0);
-  const days = Math.min(parseInt((q.days as string) ?? '365', 10) || 365, 3650);
+  const days = Math.max(1, Math.min(parseInt((q.days as string) ?? '365', 10) || 365, 3650));
 
   // The rig board ranks hardware, not people, so a run with no nickname still
   // belongs on it. Opt-in rather than default: the user board itself is a list

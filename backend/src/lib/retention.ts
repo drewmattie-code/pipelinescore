@@ -21,16 +21,19 @@ interface RetentionResult {
 
 export function runRetention(): RetentionResult {
   const txn = db.transaction((): RetentionResult => {
-    // Nullify raw_transcripts on old submissions (preserve the score, drop the body)
+    // Nullify raw_transcripts on old submissions (preserve the score, drop the body).
+    // Skip only rows already holding the exact marker: a substring match skipped
+    // any transcript whose content merely contained the word "redacted".
+    const TRANSCRIPT_MARKER = '{"redacted":true,"reason":"30d_ttl"}';
     const subRes = db
       .prepare(
         `UPDATE submissions
-           SET raw_transcripts = '{"redacted":true,"reason":"30d_ttl"}'
+           SET raw_transcripts = ?
          WHERE created_at < datetime('now', ?)
            AND raw_transcripts IS NOT NULL
-           AND raw_transcripts NOT LIKE '%redacted%'`
+           AND raw_transcripts != ?`
       )
-      .run(`-${TRANSCRIPT_TTL_DAYS} days`);
+      .run(TRANSCRIPT_MARKER, `-${TRANSCRIPT_TTL_DAYS} days`, TRANSCRIPT_MARKER);
 
     // Redact per-task inputs + outputs on the same window. The columns are
     // NOT NULL, so we overwrite with a marker rather than nulling.
