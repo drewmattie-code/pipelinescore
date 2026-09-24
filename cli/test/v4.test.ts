@@ -3,7 +3,8 @@
 // Run: npx tsx test/v4.test.ts
 import { taskRng } from '../src/v4/rng.js';
 import { V4_TASKS } from '../src/v4/tasks/index.js';
-import { SUITE_WEIGHTS, summarize } from '../src/v4/runner.js';
+import { SUITE_WEIGHTS, runTask, summarize } from '../src/v4/runner.js';
+import type { ChatProvider, ToolCall } from '../src/v4/types.js';
 import type { V4TaskResult } from '../src/v4/types.js';
 import { createServer } from 'node:http';
 import { OpenAIChatProvider } from '../src/v4/providers.js';
@@ -60,6 +61,31 @@ function check(name: string, cond: boolean, detail = '') {
   const slow = summarize([base('code', 1, 90000), base('agent', 0.5, 90000), base('reason', 1, 90000), base('fncall', 1, 90000)]);
   check('speed does not change pipeline_score', fast.pipeline_score === slow.pipeline_score, `${fast.pipeline_score} vs ${slow.pipeline_score}`);
   check('speed is still reported', fast.speed.tps_p50 !== null && slow.speed.tps_p50 !== null && fast.speed.tps_p50 > slow.speed.tps_p50!);
+}
+
+// ── one-call-per-message models get credit for sequential calls ──────────────
+{
+  const t = V4_TASKS.find((x) => x.id === 'fncall-parallel-same-1')!;
+  const seed = 'seq1';
+  const oracle = (t.build(taskRng(seed, t.id)) as unknown as { oracle: ToolCall[] }).oracle;
+  const mk = (perTurn: number, dupLast = false): ChatProvider => {
+    let i = 0;
+    return {
+      name: 'fake', model: 'fake',
+      async chat() {
+        const batch = oracle.slice(i, i + perTurn);
+        i += perTurn;
+        if (!batch.length && dupLast) { dupLast = false; return { text: '', toolCalls: [oracle[0]], latencyMs: 1 }; }
+        return { text: batch.length ? '' : 'done', toolCalls: batch, latencyMs: 1 };
+      },
+    };
+  };
+  const ctx = { sandbox: { run: async () => ({ exitCode: 0, stdout: '', stderr: '', timedOut: false }) } };
+  const oneAtATime = await runTask(t, seed, mk(1), ctx);
+  const allAtOnce = await runTask(t, seed, mk(oracle.length), ctx);
+  const withDup = await runTask(t, seed, mk(1, true), ctx);
+  check('sequential single calls score like parallel ones', oneAtATime.score === 1 && allAtOnce.score === 1, `${oneAtATime.score} ${allAtOnce.score} ${oneAtATime.detail}`);
+  check('a repeated call across turns still costs points', withDup.score < 1, withDup.detail);
 }
 
 // ── a crashed server's empty 200 is an error, not a wrong answer ─────────────

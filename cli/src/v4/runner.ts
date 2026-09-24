@@ -1,7 +1,7 @@
 import { categoryScore, median } from '../score.js';
 import { taskRng } from './rng.js';
 import type {
-  ChatMessage, ChatProvider, GradeContext, Suite, TaskInstance, V4Summary, V4Task, V4TaskResult,
+  ChatMessage, ChatProvider, ChatResponse, GradeContext, Suite, TaskInstance, V4Summary, V4Task, V4TaskResult,
 } from './types.js';
 
 export const SUITE_WEIGHTS: Record<Suite, number> = {
@@ -10,6 +10,9 @@ export const SUITE_WEIGHTS: Record<Suite, number> = {
 
 // Reasoning models think before answering; a tight cap scores their silence, not their skill.
 const DEFAULT_MAX_TOKENS = 16384;
+const TOOL_FOLLOW_UPS = 3;
+// A tool call the server failed to parse arrives as raw chat-format text.
+const RAW_TOOL_CALL = /\bto=functions\.[\w.-]+/;
 
 async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeContext) {
   let tokensIn = 0;
@@ -18,9 +21,29 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
   const maxTokens = Math.max(inst.maxTokens ?? DEFAULT_MAX_TOKENS, provider.maxOutputTokens ?? 0);
 
   if (inst.kind === 'single') {
-    const res = await provider.chat(inst.messages, { tools: inst.tools, maxTokens });
-    const g = await inst.grade(res, ctx);
-    return { grade: g, turns: 1, tokensIn: res.tokensIn ?? 0, tokensOut: res.tokensOut ?? 0, latency: res.latencyMs, text: res.text };
+    // Some models (gpt-oss's chat format among them) emit one tool call per
+    // message. Let them finish the same calls over a few turns so the grade
+    // measures which calls were made, not whether they arrived in one message.
+    const transcript: ChatMessage[] = [...inst.messages];
+    const calls: ChatResponse['toolCalls'] = [];
+    let res = await provider.chat(transcript, { tools: inst.tools, maxTokens });
+    let turns = 1;
+    tokensIn += res.tokensIn ?? 0;
+    tokensOut += res.tokensOut ?? 0;
+    latency += res.latencyMs;
+    calls.push(...res.toolCalls);
+    while (inst.tools?.length && res.toolCalls.length && turns <= TOOL_FOLLOW_UPS) {
+      transcript.push({ role: 'assistant', content: res.text, toolCalls: res.toolCalls });
+      for (const c of res.toolCalls) transcript.push({ role: 'tool', toolCallId: c.id, name: c.name, content: '{"ok": true}' });
+      res = await provider.chat(transcript, { tools: inst.tools, maxTokens });
+      turns++;
+      tokensIn += res.tokensIn ?? 0;
+      tokensOut += res.tokensOut ?? 0;
+      latency += res.latencyMs;
+      calls.push(...res.toolCalls);
+    }
+    const g = await inst.grade({ ...res, toolCalls: calls }, ctx);
+    return { grade: g, turns, tokensIn, tokensOut, latency, text: res.text };
   }
 
   const transcript: ChatMessage[] = [...inst.messages];
@@ -57,7 +80,9 @@ export async function runTask(task: V4Task, seed: string, provider: ChatProvider
     const r = await execute(inst, provider, ctx);
     return {
       task_id: task.id, suite: task.suite,
-      score: Math.max(0, Math.min(1, r.grade.score)), detail: r.grade.detail, response: r.text.slice(0, 4000),
+      score: Math.max(0, Math.min(1, r.grade.score)),
+      detail: RAW_TOOL_CALL.test(r.text) ? `server returned an unparsed tool call; ${r.grade.detail}` : r.grade.detail,
+      response: r.text.slice(0, 4000),
       turns: r.turns, latency_ms: r.latency, tokens_in: r.tokensIn, tokens_out: r.tokensOut,
     };
   } catch (e) {
