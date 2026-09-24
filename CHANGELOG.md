@@ -2,6 +2,21 @@
 
 All notable changes to PipelineScore will be documented here. Format roughly follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) + [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] — 2026-09-23
+
+### Fixed
+- **Speed only counts correct answers.** Throughput was measured on every task, so a model that answered
+  instantly and got everything wrong still scored Speed 100. Speed is now the median tokens/sec across
+  *passing* tasks only; with fewer than 3 passing tasks it is unscored and drops out of the composite.
+  For strong models the change is small (their speed was already measured mostly on passing tasks), but
+  speed scores from CLI versions before 0.4.2 are not strictly comparable. Every submission records its
+  `cli_version`.
+- `@pipelinescore/mcp` 0.1.2 reports its real version to MCP clients (it was hardcoded to `0.1.0`).
+
+### Added
+- CI on every push and pull request: typecheck + tests for the CLI, typecheck/build for the MCP server
+  and backend, lint + typecheck for the site.
+
 ## [0.4.1] — 2026-07-27
 
 ### Fixed

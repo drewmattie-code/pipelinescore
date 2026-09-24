@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pkg: cli
+            run: npm run typecheck && npm test
+          - pkg: mcp
+            run: npm run typecheck && npm run build
+          - pkg: backend
+            run: npm run typecheck
+          - pkg: web
+            run: npm run lint && npx tsc --noEmit
+    name: ${{ matrix.pkg }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.pkg }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.pkg }}/package-lock.json
+      - run: npm ci
+      - run: ${{ matrix.run }}

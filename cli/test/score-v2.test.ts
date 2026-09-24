@@ -73,6 +73,21 @@ check('speed is length-independent (rate)', spdLong.speed_score === spd.speed_sc
 const spdNone = speedScore([tr('code', 8), tr('code', 8)], taxonomy);
 check('speed unscored without token data', spdNone.scored === false && spdNone.speed_score === null);
 
+// 7b. fast but wrong earns no speed: failed tasks don't count toward throughput
+const spdWrong = speedScore(
+  Array.from({ length: 5 }, () => tr('code', 0, { tokens_out: 100, latency_ms: 10 })),
+  taxonomy,
+);
+check('speed unscored when every task failed', spdWrong.scored === false && spdWrong.speed_score === null, JSON.stringify(spdWrong));
+const spdMixed = speedScore(
+  [
+    ...Array.from({ length: 3 }, () => tr('code', 8, { tokens_out: 100, latency_ms: 1000 })),
+    ...Array.from({ length: 5 }, () => tr('code', 0, { tokens_out: 100, latency_ms: 10 })),
+  ],
+  taxonomy,
+);
+check('only passing tasks set the speed', spdMixed.tps_p50 === 100 && spdMixed.samples === 3, JSON.stringify(spdMixed));
+
 // 8. per-profile composites diverge by use case
 const results: TaskResult[] = [
   ...Array.from({ length: 3 }, () => tr('code', 10, { tokens_out: 50, latency_ms: 1000 })),

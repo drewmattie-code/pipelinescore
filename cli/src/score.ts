@@ -74,13 +74,14 @@ export function categoryScore(points: TaskPoint[]): CategoryScore & { se: number
   };
 }
 
-// Throughput speed: tokens/sec, length-independent. Unscored when too few task
-// calls report token counts.
+// Throughput speed: tokens/sec, length-independent. Only passing tasks count,
+// so a model that answers fast but wrong earns no speed. Unscored when too few
+// passing task calls report token counts.
 export function speedScore(results: TaskResult[], taxonomy: Taxonomy): SpeedDetail {
   const target = taxonomy.speed?.tps_target ?? 100;
   const minSamples = taxonomy.speed?.min_samples ?? 3;
   const tps = results
-    .filter((r) => (r.tokens_out ?? 0) > 0 && r.latency_ms > 0)
+    .filter((r) => r.passed && (r.tokens_out ?? 0) > 0 && r.latency_ms > 0)
     .map((r) => (r.tokens_out as number) / (r.latency_ms / 1000));
   if (tps.length < minSamples) {
     return { scored: false, tps_p50: null, speed_score: null, samples: tps.length };
