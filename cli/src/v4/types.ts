@@ -122,6 +122,8 @@ export interface V4Summary {
   suite_scores: Record<Suite, { mean: number; ci_low: number; ci_high: number; n: number }>;
   speed: { tps_p50: number | null; total_tokens_out: number; wall_s: number };
   task_results: V4TaskResult[];
+  // Set when the run stopped early because the model server kept failing.
+  aborted?: string;
   started_at: string;
   finished_at: string;
 }

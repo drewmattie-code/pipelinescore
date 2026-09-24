@@ -5,6 +5,8 @@ import { taskRng } from '../src/v4/rng.js';
 import { V4_TASKS } from '../src/v4/tasks/index.js';
 import { SUITE_WEIGHTS, summarize } from '../src/v4/runner.js';
 import type { V4TaskResult } from '../src/v4/types.js';
+import { createServer } from 'node:http';
+import { OpenAIChatProvider } from '../src/v4/providers.js';
 
 let failures = 0;
 function check(name: string, cond: boolean, detail = '') {
@@ -58,6 +60,28 @@ function check(name: string, cond: boolean, detail = '') {
   const slow = summarize([base('code', 1, 90000), base('agent', 0.5, 90000), base('reason', 1, 90000), base('fncall', 1, 90000)]);
   check('speed does not change pipeline_score', fast.pipeline_score === slow.pipeline_score, `${fast.pipeline_score} vs ${slow.pipeline_score}`);
   check('speed is still reported', fast.speed.tps_p50 !== null && slow.speed.tps_p50 !== null && fast.speed.tps_p50 > slow.speed.tps_p50!);
+}
+
+// ── a crashed server's empty 200 is an error, not a wrong answer ─────────────
+{
+  const bodies = [
+    // what Ollama returned after a Metal compute error
+    { id: 'x', object: 'chat.completion', model: '', choices: [{ index: 0, message: { role: '', content: '' }, finish_reason: null }], usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } },
+    // a legitimate empty answer: tokens were processed and the model stopped
+    { id: 'y', object: 'chat.completion', model: 'm', choices: [{ index: 0, message: { role: 'assistant', content: '' }, finish_reason: 'stop' }], usage: { prompt_tokens: 12, completion_tokens: 1, total_tokens: 13 } },
+  ];
+  let i = 0;
+  const server = createServer((_req, res) => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(bodies[i++])); });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()));
+  const port = (server.address() as { port: number }).port;
+  const p = new OpenAIChatProvider('local', 'm', { baseURL: `http://127.0.0.1:${port}/v1` });
+  let threw = false;
+  try { await p.chat([{ role: 'user', content: 'hi' }], { maxTokens: 10 }); } catch { threw = true; }
+  check('empty no-token completion throws', threw);
+  let ok = false;
+  try { const r = await p.chat([{ role: 'user', content: 'hi' }], { maxTokens: 10 }); ok = r.text === ''; } catch { ok = false; }
+  check('real empty answer is returned, not thrown', ok);
+  server.close();
 }
 
 console.log(failures ? `\n${failures} FAILED` : '\nall v4 core tests passed');

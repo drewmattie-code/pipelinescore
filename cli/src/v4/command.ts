@@ -22,6 +22,8 @@ export interface V4Options {
 }
 
 const MINIMAX_DEFAULT = 'https://api.minimax.io/v1';
+// A server that fails this many tasks in a row is down, not wrong.
+const MAX_CONSECUTIVE_ERRORS = 3;
 // The API's own ceiling for MiniMax-M2.7 (it rejects anything above 196608).
 const MINIMAX_MAX_OUTPUT = 196_608;
 
@@ -69,12 +71,20 @@ export async function runV4(o: V4Options): Promise<V4Summary> {
 
   process.stdout.write(chalk.dim(`PipelineScore v4 ${TESTPACK_V4_VERSION} · ${tasks.length} tasks · seed ${seed} · ${provider.name}/${provider.model}\n\n`));
   const results: V4TaskResult[] = [];
+  let consecutiveErrors = 0;
+  let aborted: string | undefined;
   for (const t of tasks) {
     process.stdout.write(`  ${t.id.padEnd(28)} `);
     const r = await runTask(t, seed, provider, ctx);
     results.push(r);
+    consecutiveErrors = r.error ? consecutiveErrors + 1 : 0;
     const mark = r.error ? chalk.red('ERROR') : r.score >= 0.999 ? chalk.green('PASS ') : r.score > 0 ? chalk.yellow('PART ') : chalk.red('FAIL ');
     process.stdout.write(`${mark} ${(r.score * 100).toFixed(0).padStart(3)}  ${String(r.turns).padStart(2)}t ${(r.latency_ms / 1000).toFixed(1).padStart(6)}s  ${chalk.dim((r.error ?? r.detail).slice(0, 110))}\n`);
+    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+      aborted = `stopped after ${consecutiveErrors} provider errors in a row: ${r.error}`;
+      process.stdout.write(chalk.red(`\n  ${aborted}\n  This run is incomplete and must not be compared or submitted.\n`));
+      break;
+    }
   }
 
   const summary: V4Summary = {
@@ -85,6 +95,7 @@ export async function runV4(o: V4Options): Promise<V4Summary> {
     cli_version: cliVersion(),
     ...summarize(results),
     task_results: results,
+    ...(aborted ? { aborted } : {}),
     started_at,
     finished_at: new Date().toISOString(),
   };
@@ -99,5 +110,6 @@ export async function runV4(o: V4Options): Promise<V4Summary> {
     writeFileSync(o.save, JSON.stringify(summary, null, 2));
     process.stdout.write(chalk.dim(`\n  saved → ${o.save}\n`));
   }
+  if (aborted) process.exitCode = 2;
   return summary;
 }

@@ -61,6 +61,12 @@ export class OpenAIChatProvider implements ChatProvider {
     const latencyMs = Date.now() - start;
     const choice = res.choices?.[0];
     if (!choice) throw new Error('endpoint returned no choices (check the base URL and model id)');
+    // A crashed backend (seen: Ollama after a Metal compute error) keeps answering
+    // HTTP 200 with an empty choice, zero prompt tokens and no finish reason.
+    // Scoring that as a wrong answer would blame the model for the server.
+    if (!choice.finish_reason && !choice.message?.content && !choice.message?.tool_calls?.length && !res.usage?.prompt_tokens) {
+      throw new Error('model server returned an empty completion with no tokens processed (it is likely in an error state; restart it)');
+    }
     const toolCalls = (choice.message.tool_calls ?? []).map((c, i) =>
       parseArgs(c.id || `call_${i}`, c.function.name, c.function.arguments),
     );
