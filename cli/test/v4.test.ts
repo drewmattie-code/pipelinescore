@@ -68,14 +68,15 @@ function check(name: string, cond: boolean, detail = '') {
   const t = V4_TASKS.find((x) => x.id === 'fncall-parallel-same-1')!;
   const seed = 'seq1';
   const oracle = (t.build(taskRng(seed, t.id)) as unknown as { oracle: ToolCall[] }).oracle;
-  const mk = (perTurn: number, dupLast = false): ChatProvider => {
+  // dupFirst: repeats the first call before finishing, so no prefix is ever exact.
+  const mk = (perTurn: number, dupFirst = false): ChatProvider => {
+    const seq = dupFirst ? [oracle[0], ...oracle] : oracle;
     let i = 0;
     return {
       name: 'fake', model: 'fake',
       async chat() {
-        const batch = oracle.slice(i, i + perTurn);
+        const batch = seq.slice(i, i + perTurn);
         i += perTurn;
-        if (!batch.length && dupLast) { dupLast = false; return { text: '', toolCalls: [oracle[0]], latencyMs: 1 }; }
         return { text: batch.length ? '' : 'done', toolCalls: batch, latencyMs: 1 };
       },
     };
@@ -85,7 +86,20 @@ function check(name: string, cond: boolean, detail = '') {
   const allAtOnce = await runTask(t, seed, mk(oracle.length), ctx);
   const withDup = await runTask(t, seed, mk(1, true), ctx);
   check('sequential single calls score like parallel ones', oneAtATime.score === 1 && allAtOnce.score === 1, `${oneAtATime.score} ${allAtOnce.score} ${oneAtATime.detail}`);
-  check('a repeated call across turns still costs points', withDup.score < 1, withDup.detail);
+  check('a repeated call before finishing still costs points', withDup.score < 1, withDup.detail);
+  // Correct calls first, then an unrequested call after the "ok": credit stays.
+  let turn = 0;
+  const wanders: ChatProvider = {
+    name: 'fake', model: 'fake',
+    async chat() {
+      turn++;
+      if (turn === 1) return { text: '', toolCalls: oracle, latencyMs: 1 };
+      if (turn === 2) return { text: '', toolCalls: [{ id: 'z', name: 'get_forecast', arguments: { city: 'Nowhere', date: '2027-01-01', units: 'metric' } }], latencyMs: 1 };
+      return { text: 'done', toolCalls: [], latencyMs: 1 };
+    },
+  };
+  const wandered = await runTask(t, seed, wanders, ctx);
+  check('an extra call after the task is done does not remove credit', wandered.score === 1, wandered.detail);
 }
 
 // ── a crashed server's empty 200 is an error, not a wrong answer ─────────────

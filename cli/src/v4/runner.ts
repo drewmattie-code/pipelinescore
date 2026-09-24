@@ -10,7 +10,7 @@ export const SUITE_WEIGHTS: Record<Suite, number> = {
 
 // Reasoning models think before answering; a tight cap scores their silence, not their skill.
 const DEFAULT_MAX_TOKENS = 16384;
-const TOOL_FOLLOW_UPS = 3;
+const TOOL_FOLLOW_UPS = 6;
 // A tool call the server failed to parse arrives as raw chat-format text.
 const RAW_TOOL_CALL = /\bto=functions\.[\w.-]+/;
 
@@ -32,6 +32,7 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
     tokensOut += res.tokensOut ?? 0;
     latency += res.latencyMs;
     calls.push(...res.toolCalls);
+    const prefixes = [calls.length];
     while (inst.tools?.length && res.toolCalls.length && turns <= TOOL_FOLLOW_UPS) {
       transcript.push({ role: 'assistant', content: res.text, toolCalls: res.toolCalls });
       for (const c of res.toolCalls) transcript.push({ role: 'tool', toolCallId: c.id, name: c.name, content: '{"ok": true}' });
@@ -41,8 +42,16 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
       tokensOut += res.tokensOut ?? 0;
       latency += res.latencyMs;
       calls.push(...res.toolCalls);
+      prefixes.push(calls.length);
     }
-    const g = await inst.grade({ ...res, toolCalls: calls }, ctx);
+    // Grade the calls as they stood after each turn and keep the best: credit
+    // lands when the requested calls are all made, and anything the model
+    // wanders into afterwards (answering an "ok") can't take it away.
+    let g = await inst.grade({ ...res, toolCalls: calls.slice(0, prefixes[0]) }, ctx);
+    for (const n of prefixes.slice(1)) {
+      const next = await inst.grade({ ...res, toolCalls: calls.slice(0, n) }, ctx);
+      if (next.score > g.score) g = next;
+    }
     return { grade: g, turns, tokensIn, tokensOut, latency, text: res.text };
   }
 
