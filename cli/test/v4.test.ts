@@ -102,6 +102,32 @@ function check(name: string, cond: boolean, detail = '') {
   check('an extra call after the task is done does not remove credit', wandered.score === 1, wandered.detail);
 }
 
+// ── dependent calls: the runner feeds a task's own tool results back ─────────
+{
+  const t = V4_TASKS.find((x) => x.id === 'fncall-optional-include-1')!;
+  const seed = 'dep1';
+  const inst = t.build(taskRng(seed, t.id)) as unknown as { oracle: ToolCall[] };
+  const [search, book] = [inst.oracle.find((c) => c.name === 'search_flights')!, inst.oracle.find((c) => c.name === 'book_flight')!];
+  // A model that books whatever the search result says is cheapest-that-fits:
+  // it can only get the id right by reading the result the runner returned.
+  let turn = 0;
+  const reads: ChatProvider = {
+    name: 'fake', model: 'fake',
+    async chat(messages) {
+      turn++;
+      if (turn === 1) return { text: '', toolCalls: [search], latencyMs: 1 };
+      const last = messages[messages.length - 1];
+      const seen = last.role === 'tool' ? last.content : '';
+      const ok = seen.includes(String(book.arguments.flight_id));
+      if (turn === 2 && ok) return { text: '', toolCalls: [book], latencyMs: 1 };
+      return { text: 'done', toolCalls: [], latencyMs: 1 };
+    },
+  };
+  const ctxNoSandbox = { sandbox: { run: async () => ({ exitCode: 0, stdout: '', stderr: '', timedOut: false }) } };
+  const r = await runTask(t, seed, reads, ctxNoSandbox);
+  check('runner returns the task\'s own tool result to the model', r.score === 1, r.detail);
+}
+
 // ── a crashed server's empty 200 is an error, not a wrong answer ─────────────
 {
   const bodies = [

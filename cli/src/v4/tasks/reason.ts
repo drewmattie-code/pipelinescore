@@ -3,13 +3,16 @@ import { finalLine } from '../util.js';
 
 // Every reasoning task is a template: values are drawn per seed by rejection
 // sampling until the answer is clean, and the answer comes from a solver, never
-// from a stored key.
+// from a stored key. Each template carries a trap or an extra step where the
+// obvious method gives a wrong number (pilot 2: the one-step versions saturated
+// at 100 for strong models).
 
 const INT_FORMAT = 'Show your working, then end with a last line of exactly "Final: <integer>" and nothing after it.';
 const FRAC_FORMAT =
   'Show your working, then end with a last line of exactly "Final: <a>/<b>" giving the exact value as a fraction in lowest terms (write a plain integer if it is whole), and nothing after it.';
 
 const gcd = (x: number, y: number): number => (y ? gcd(y, x % y) : Math.abs(x));
+const bgcd = (x: bigint, y: bigint): bigint => { x = x < 0n ? -x : x; y = y < 0n ? -y : y; while (y) [x, y] = [y, x % y]; return x; };
 
 export interface Frac { n: number; d: number }
 
@@ -64,27 +67,35 @@ function choose(n: number, k: number): number {
   return Math.round(r);
 }
 
-// ── 1. tank with a mid-way pipe failure ──────────────────────────────────────
+const cap1 = (s: string) => s[0].toUpperCase() + s.slice(1);
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+// ── 1. tank: four events, a phase where it drains, a fractional finish ──────
 function drawTank(rng: Rng) {
-  for (let attempt = 0; attempt < 5000; attempt++) {
-    const a = rng.int(12, 40);
-    const b = rng.int(a + 10, 120);
-    const lcm = (a * b) / gcd(a, b);
-    if (lcm > 3000) continue;
+  for (let attempt = 0; attempt < 50000; attempt++) {
+    const a = rng.int(10, 40), b = rng.int(a + 5, 90), c = rng.int(15, 80);
+    const l1 = (a * b) / gcd(a, b);
+    const lcm = (l1 * c) / gcd(l1, c);
+    if (lcm > 4000) continue;
     const cap = lcm * rng.int(1, 3);
-    const ra = cap / a;
-    const rb = cap / b;
-    if (rb < 2) continue;
-    const drain = rng.int(1, rb - 1);
-    const r1 = ra + rb - drain;
-    const t1Max = Math.floor(cap / r1) - 1;
-    if (t1Max < 2) continue;
-    const t1 = rng.int(2, t1Max);
-    const rem = cap - t1 * r1;
-    if (rem <= 0 || rem % (rb - drain) !== 0) continue;
-    return { cap, a, b, drain, t1, answer: rem / (rb - drain) };
+    const ra = cap / a, rb = cap / b, rc = cap / c;
+    if (rb + 1 > ra) continue;
+    const drain = rng.int(rb + 1, Math.min(ra + rb - 1, rb + rc - 1));
+    const start = rng.int(1, 9) * Math.max(1, Math.floor(cap / 20));
+    if (start >= cap) continue;
+    const t1 = rng.int(3, 20), t2 = t1 + rng.int(3, 15), t3 = t2 + rng.int(2, 10);
+    // 0..t1: A+B-drain; t1..t2: B-drain (falls); t2..t3: B+C-drain; t3..: B+C (drain shut)
+    const r1 = ra + rb - drain, r2 = rb - drain, r3 = rb + rc - drain, r4 = rb + rc;
+    if (r1 <= 0 || r2 >= 0 || r3 <= 0) continue;
+    const v1 = start + t1 * r1;
+    const v2 = v1 + (t2 - t1) * r2;
+    const v3 = v2 + (t3 - t2) * r3;
+    if (v1 >= cap || v2 <= 0 || v3 >= cap) continue;
+    const ans = frac(t3 * r4 + (cap - v3), r4);
+    if (ans.d === 1 || ans.d > 60) continue;
+    return { cap, a, b, c, drain, start, t1, t2, t3, answer: ans };
   }
-  throw new Error('reason-tank: no integer instance found');
+  throw new Error('reason-tank: no instance found');
 }
 
 export const reasonTank: V4Task = {
@@ -92,75 +103,116 @@ export const reasonTank: V4Task = {
   suite: 'reason',
   difficulty: 3,
   build(rng) {
-    const { cap, a, b, drain, t1, answer } = drawTank(rng);
+    const { cap, a, b, c, drain, start, t1, t2, t3, answer } = drawTank(rng);
     return single(
-      `A ${cap}-litre tank starts empty. Pipe A alone fills it in ${a} minutes; pipe B alone fills it in ${b} minutes. ` +
-        `A drain removes ${drain} litres per minute whenever it is open. All three start together. After ${t1} minutes pipe A breaks and stops for good, ` +
-        `while B and the drain keep running. How many more minutes until the tank is full? ${INT_FORMAT}`,
-      frac(answer),
+      `A ${cap}-litre tank already holds ${start} litres. Pipe A alone fills an empty tank in ${a} minutes, pipe B in ${b} minutes and pipe C in ${c} minutes. ` +
+        `A drain removes ${drain} litres per minute whenever it is open. At minute 0, pipes A and B and the drain are all opened. ` +
+        `At minute ${t1} pipe A breaks and stays off for good. At minute ${t2} pipe C is switched on. At minute ${t3} the drain is shut and stays shut. ` +
+        `B and C keep running until the tank is full. At what minute (counted from minute 0, as an exact value) does the tank become full? ${FRAC_FORMAT}`,
+      answer,
     );
   },
 };
 
-// ── 2. hypergeometric probability ─────────────────────────────────────────────
+// ── 2. conditional probability with two conditions ────────────────────────────
 const COLOURS = ['red', 'blue', 'green', 'yellow', 'black', 'white', 'orange', 'purple'];
 const OBJECTS = ['marbles', 'socks', 'tokens', 'beads', 'tickets', 'dice'];
 
 export const reasonProbDraw: V4Task = {
   id: 'reason-prob-draw-1',
   suite: 'reason',
-  difficulty: 2,
+  difficulty: 3,
   build(rng) {
-    const cols = rng.shuffle(COLOURS).slice(0, 3);
-    const counts = [rng.int(2, 7), rng.int(2, 7), rng.int(2, 7)];
-    const n = counts[0] + counts[1] + counts[2];
-    const k = rng.int(3, 5);
-    const ask = rng.int(0, 2);
-    const j = rng.int(1, Math.min(k, counts[ask]));
-    const p = frac(choose(counts[ask], j) * choose(n - counts[ask], k - j), choose(n, k));
-    return single(
-      `A bag holds ${counts[0]} ${cols[0]}, ${counts[1]} ${cols[1]} and ${counts[2]} ${cols[2]} ${rng.pick(OBJECTS)}. ` +
-        `You draw ${k} at random without replacement. What is the probability that exactly ${j} of them are ${cols[ask]}? ${FRAC_FORMAT}`,
-      p,
-    );
+    for (;;) {
+      const cols = rng.shuffle(COLOURS).slice(0, 4);
+      const counts = cols.map(() => rng.int(2, 6));
+      const k = rng.int(4, 6);
+      const [x, y, z] = rng.shuffle([0, 1, 2, 3]).slice(0, 3);
+      const j = rng.int(1, Math.min(k - 1, counts[x]));
+      // Condition: at least one y AND at most one z. Event: exactly j of x.
+      let num = 0, den = 0;
+      const rec = (i: number, left: number, pick: number[]) => {
+        if (i === 4) {
+          if (left) return;
+          let ways = 1;
+          for (let t = 0; t < 4; t++) ways *= choose(counts[t], pick[t]);
+          if (pick[y] >= 1 && pick[z] <= 1) { den += ways; if (pick[x] === j) num += ways; }
+          return;
+        }
+        for (let q = 0; q <= Math.min(left, counts[i]); q++) rec(i + 1, left - q, [...pick, q]);
+      };
+      rec(0, k, []);
+      if (num <= 0 || num === den) continue;
+      return single(
+        `A bag holds ${counts.map((n, i) => `${n} ${cols[i]}`).join(', ')} ${rng.pick(OBJECTS)}. ` +
+          `You draw ${k} at random without replacement. You are told that at least one of the drawn items is ${cols[y]} and that at most one is ${cols[z]}. ` +
+          `Given that, what is the probability that exactly ${j} of the drawn items are ${cols[x]}? ${FRAC_FORMAT}`,
+        frac(num, den),
+      );
+    }
   },
 };
 
-// ── 3. arrangements with no two copies adjacent ───────────────────────────────
-export function multisetPerms(counts: number[]): number {
-  let r = 1;
-  let used = 0;
+// ── 3. arrangements with three no-adjacency constraints ───────────────────────
+// Counts distinct arrangements with no two equal letters from `banned` side by side.
+export function countArrangements(word: string, banned: string[]): number {
+  const letters = [...new Set(word)];
+  const start = letters.map((l) => [...word].filter((c) => c === l).length);
+  const memo = new Map<string, number>();
+  const rec = (counts: number[], prev: number): number => {
+    if (counts.every((c) => c === 0)) return 1;
+    const key = `${counts.join(',')}|${prev}`;
+    const hit = memo.get(key);
+    if (hit !== undefined) return hit;
+    let total = 0;
+    counts.forEach((c, i) => {
+      if (!c || (i === prev && banned.includes(letters[i]))) return;
+      counts[i]--;
+      total += rec(counts, i);
+      counts[i]++;
+    });
+    memo.set(key, total);
+    return total;
+  };
+  return rec(start, -1);
+}
+
+const multinomial = (counts: number[]) => {
+  let r = 1, used = 0;
   for (const c of counts) { used += c; r *= choose(used, c); }
   return r;
-}
+};
 
 export const reasonArrangements: V4Task = {
   id: 'reason-count-arrange-1',
   suite: 'reason',
   difficulty: 3,
   build(rng) {
-    const letters = rng.shuffle('BCDEFGHKLMNPRSTW'.split(''));
-    const target = letters[0];
-    const a = rng.int(2, 3);
-    const others: string[] = [];
-    const m = rng.int(8 - a - 2, 8 - a); // total length 6..8
-    const pool = letters.slice(1, 1 + rng.int(2, 4));
-    for (let i = 0; i < m; i++) others.push(rng.pick(pool));
-    const word = rng.shuffle([...Array(a).fill(target), ...others]).join('');
-    const counts = pool.map((l) => others.filter((x) => x === l).length).filter((c) => c > 0);
-    // Arrange the other letters, then drop the copies of the target into distinct gaps.
-    const answer = multisetPerms(counts) * choose(m + 1, a);
-    return single(
-      `How many distinct arrangements of the letters of the string "${word}" have no two ${target}'s next to each other? ` +
-        `(Arrangements that read the same letter-for-letter count once.) ${INT_FORMAT}`,
-      frac(answer),
-    );
+    for (;;) {
+      const letters = rng.shuffle('BCDEFGHKLMNPRSTW'.split(''));
+      const [p, q, r] = letters;
+      const cs = [rng.int(2, 3), rng.int(2, 3), rng.int(2, 3)];
+      const len = rng.int(10, 11);
+      const rest = len - cs[0] - cs[1] - cs[2];
+      if (rest < 1) continue;
+      const pool = letters.slice(3, 3 + rng.int(1, 2));
+      const others = Array.from({ length: rest }, () => rng.pick(pool));
+      const word = rng.shuffle([...Array(cs[0]).fill(p), ...Array(cs[1]).fill(q), ...Array(cs[2]).fill(r), ...others]).join('');
+      const counts = [...new Set(word)].map((l) => [...word].filter((c) => c === l).length);
+      if (multinomial(counts) > 400000) continue; // keeps brute-force checking cheap
+      const answer = countArrangements(word, [p, q, r]);
+      if (answer <= 0) continue;
+      return single(
+        `How many distinct arrangements of the letters of the string "${word}" have no two ${p}'s next to each other, no two ${q}'s next to each other ` +
+          `and no two ${r}'s next to each other? (Arrangements that read the same letter-for-letter count once.) ${INT_FORMAT}`,
+        frac(answer),
+      );
+    }
   },
 };
 
-// ── 4. weekday counting across a date range ───────────────────────────────────
+// ── 4. business days with observed holidays ───────────────────────────────────
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 // Days since 1970-01-01 by the civil-from-days inverse (Howard Hinnant), no Date object.
 export function daysFromCivil(y: number, m: number, d: number): number {
@@ -171,100 +223,93 @@ export function daysFromCivil(y: number, m: number, d: number): number {
   const doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
   return era * 146097 + doe - 719468;
 }
-const weekdayOf = (days: number) => (((days + 3) % 7) + 7) % 7; // 1970-01-01 was a Thursday (index 3, Monday = 0)
-const dim = (y: number, m: number) => [31, (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+function civilFromDays(z: number): [number, number, number] {
+  z += 719468;
+  const era = Math.floor(z / 146097);
+  const doe = z - era * 146097;
+  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
+  const mp = Math.floor((5 * doy + 2) / 153);
+  const d = doy - Math.floor((153 * mp + 2) / 5) + 1;
+  const m = mp + (mp < 10 ? 3 : -9);
+  return [yoe + era * 400 + (m <= 2 ? 1 : 0), m, d];
+}
+const weekdayOf = (days: number) => (((days + 3) % 7) + 7) % 7; // Monday = 0
+const dateName = (days: number) => { const [y, m, d] = civilFromDays(days); return `${MONTHS[m - 1]} ${d}, ${y}`; };
 
 export const reasonWeekdays: V4Task = {
   id: 'reason-weekday-count-1',
   suite: 'reason',
-  difficulty: 2,
+  difficulty: 3,
   build(rng) {
-    const y1 = rng.int(2026, 2031);
-    const m1 = rng.int(1, 12);
-    const d1 = rng.int(1, dim(y1, m1));
-    const start = daysFromCivil(y1, m1, d1);
-    const span = rng.int(40, 700);
-    // Walk months to name the end date (keeps the solver Date-free).
-    let y2 = y1, m2 = m1, d2 = d1 + span;
-    while (d2 > dim(y2, m2)) { d2 -= dim(y2, m2); m2++; if (m2 > 12) { m2 = 1; y2++; } }
-    const end = daysFromCivil(y2, m2, d2);
-    const want = rng.int(0, 6);
-    const w0 = weekdayOf(start);
-    const offset = (want - w0 + 7) % 7;
-    const count = start + offset > end ? 0 : Math.floor((end - (start + offset)) / 7) + 1;
-    return single(
-      `${MONTHS[m1 - 1]} ${d1}, ${y1} is a ${WEEKDAYS[w0]}. How many ${WEEKDAYS[want]}s are there from ${MONTHS[m1 - 1]} ${d1}, ${y1} ` +
-        `through ${MONTHS[m2 - 1]} ${d2}, ${y2}, counting both of those dates? ${INT_FORMAT}`,
-      frac(count),
-    );
+    for (;;) {
+      const start = daysFromCivil(rng.int(2026, 2031), rng.int(1, 12), rng.int(1, 28));
+      const end = start + rng.int(150, 420);
+      const hol = new Set<number>();
+      const onDay = (w: number) => { let d = rng.int(start, end - 7); while (weekdayOf(d) !== w) d++; return d; };
+      hol.add(onDay(5));
+      hol.add(onDay(6));
+      hol.add(onDay(4)); // a Friday holiday: collides with the last-Friday closure half the time
+      hol.add(rng.pick([start - 1, start - 2, end + 1, end + 2]));
+      while (hol.size < 8) hol.add(rng.int(start - 2, end + 2));
+      const observed = [...hol].map((h) => { const w = weekdayOf(h); return w === 5 ? h - 1 : w === 6 ? h + 1 : h; });
+      if (new Set(observed).size !== observed.length) continue;
+      // Last Friday of every month.
+      const lastFri = new Set<number>();
+      for (let d = start - 40; d <= end + 40; d++) {
+        const [y, m] = civilFromDays(d);
+        const next = daysFromCivil(m === 12 ? y + 1 : y, m === 12 ? 1 : m + 1, 1);
+        let f = next - 1;
+        while (weekdayOf(f) !== 4) f--;
+        lastFri.add(f);
+        d = next - 1;
+      }
+      let count = 0;
+      for (let d = start; d <= end; d++) if (weekdayOf(d) < 5 && !observed.includes(d) && !lastFri.has(d)) count++;
+      const list = rng.shuffle([...hol]).map(dateName).join('; ');
+      return single(
+        `${dateName(start)} is a ${WEEKDAYS[weekdayOf(start)]}. A company works Monday to Friday. Its holidays are: ${list}. ` +
+          `A holiday that falls on a Saturday is observed on the Friday before it, and one that falls on a Sunday is observed on the Monday after it; ` +
+          `nobody works on an observed holiday. The office is also closed on the last Friday of every month. ` +
+          `How many working days are there from ${dateName(start)} through ${dateName(end)}, counting both of those dates? ${INT_FORMAT}`,
+        frac(count),
+      );
+    }
   },
 };
 
-// ── 5. logic grid ─────────────────────────────────────────────────────────────
-const NAMES = ['Ava', 'Ben', 'Cleo', 'Dan', 'Eva', 'Finn', 'Gia', 'Hugo', 'Ines', 'Jon', 'Kai', 'Lena', 'Milo', 'Nora', 'Omar', 'Pia'];
-const PETS = ['cat', 'dog', 'parrot', 'rabbit', 'turtle', 'hamster', 'ferret', 'goldfish'];
-const DRINKS = ['tea', 'coffee', 'milk', 'juice', 'cocoa', 'lemonade', 'soda', 'water'];
+// ── 5. knights and knaves ──────────────────────────────────────────────────────
+// Knights always tell the truth, knaves always lie. Statements are generated to
+// match a hidden assignment and added until exactly one assignment fits.
+const ISLANDERS = ['Ava', 'Ben', 'Cleo', 'Dan', 'Eva', 'Finn', 'Gia', 'Hugo', 'Ines', 'Jon', 'Kai', 'Lena', 'Milo', 'Nora', 'Omar', 'Pia'];
 
-type Cat = 0 | 1 | 2; // name, pet, drink
-interface Ent { cat: Cat; v: string }
-type Assign = string[][]; // [cat][house] = value
-interface Clue { text: string; holds(a: Assign): boolean }
+interface Stmt { text: string; truth(k: boolean[]): boolean }
 
-const perms4 = (() => {
-  const out: number[][] = [];
-  const rec = (cur: number[], rest: number[]) => {
-    if (!rest.length) { out.push(cur); return; }
-    rest.forEach((x, i) => rec([...cur, x], [...rest.slice(0, i), ...rest.slice(i + 1)]));
-  };
-  rec([], [0, 1, 2, 3]);
-  return out;
-})();
-
-export function entPhrase(e: Ent): string {
-  return e.cat === 0 ? e.v : e.cat === 1 ? `the ${e.v} owner` : `the ${e.v} drinker`;
-}
-const cap1 = (s: string) => s[0].toUpperCase() + s.slice(1);
-const houseOf = (a: Assign, e: Ent) => a[e.cat].indexOf(e.v);
-
-function allAssignments(vals: string[][]): Assign[] {
-  const out: Assign[] = [];
-  for (const p1 of perms4) for (const p2 of perms4) {
-    // Names fixed by position permutation too; enumerate all three.
-    for (const p0 of perms4) out.push([p0.map((i) => vals[0][i]), p1.map((i) => vals[1][i]), p2.map((i) => vals[2][i])]);
+function randomStmt(rng: Rng, n: number, names: string[], self: number): Stmt {
+  const other = () => { let x = rng.int(0, n - 1); while (x === self) x = rng.int(0, n - 1); return x; };
+  const kind = rng.int(0, 4);
+  if (kind === 0) {
+    const x = other(), knight = rng.next() < 0.5;
+    return { text: `${names[x]} is a ${knight ? 'knight' : 'knave'}.`, truth: (k) => k[x] === knight };
   }
-  return out;
-}
-
-function randomClue(rng: Rng, sol: Assign): Clue {
-  const ent = (): Ent => { const cat = rng.int(0, 2) as Cat; return { cat, v: rng.pick(sol[cat]) }; };
-  for (;;) {
-    const kind = rng.int(0, 5);
-    const e1 = ent();
-    let e2 = ent();
-    const h1 = houseOf(sol, e1);
-    if (kind === 0) {
-      return { text: `${cap1(entPhrase(e1))} lives in house ${h1 + 1}.`, holds: (a) => houseOf(a, e1) === h1 };
-    }
-    if (kind === 1) {
-      const k = rng.pick([0, 1, 2, 3].filter((x) => x !== h1));
-      return { text: `${cap1(entPhrase(e1))} does not live in house ${k + 1}.`, holds: (a) => houseOf(a, e1) !== k };
-    }
-    if (e1.cat === e2.cat && e1.v === e2.v) continue;
-    const h2 = houseOf(sol, e2);
-    if (kind === 2 && h1 === h2 && e1.cat !== e2.cat) {
-      return { text: `${cap1(entPhrase(e1))} and ${entPhrase(e2)} live in the same house.`, holds: (a) => houseOf(a, e1) === houseOf(a, e2) };
-    }
-    if (kind === 3 && h1 + 1 === h2) {
-      return { text: `${cap1(entPhrase(e1))} lives directly left of ${entPhrase(e2)}.`, holds: (a) => houseOf(a, e1) + 1 === houseOf(a, e2) };
-    }
-    if (kind === 4 && h1 < h2) {
-      return { text: `${cap1(entPhrase(e1))} lives somewhere left of ${entPhrase(e2)}.`, holds: (a) => houseOf(a, e1) < houseOf(a, e2) };
-    }
-    if (kind === 5 && Math.abs(h1 - h2) === 1) {
-      return { text: `${cap1(entPhrase(e1))} and ${entPhrase(e2)} live next to each other.`, holds: (a) => Math.abs(houseOf(a, e1) - houseOf(a, e2)) === 1 };
-    }
-    e2 = ent();
+  if (kind === 1) {
+    const grp = rng.shuffle(Array.from({ length: n }, (_, i) => i)).slice(0, 3).sort((a, b) => a - b);
+    const want = rng.int(0, 3);
+    return { text: `Exactly ${want} of ${grp.map((i) => names[i]).join(', ')} ${want === 1 ? 'is a knave' : 'are knaves'}.`, truth: (k) => grp.filter((i) => !k[i]).length === want };
   }
+  if (kind === 2) {
+    const x = other();
+    let y = other(); while (y === x) y = other();
+    const same = rng.next() < 0.5;
+    return { text: `${names[x]} and ${names[y]} are ${same ? 'the same kind' : 'different kinds'}.`, truth: (k) => (k[x] === k[y]) === same };
+  }
+  if (kind === 3) {
+    const want = rng.int(1, n - 1);
+    return { text: `At least ${want} of the ${n} of us are knights.`, truth: (k) => k.filter(Boolean).length >= want };
+  }
+  const x = other();
+  let y = other(); while (y === x) y = other();
+  return { text: `If ${names[x]} is a knight, then ${names[y]} is a knave.`, truth: (k) => !k[x] || !k[y] };
 }
 
 export const reasonLogicGrid: V4Task = {
@@ -272,36 +317,36 @@ export const reasonLogicGrid: V4Task = {
   suite: 'reason',
   difficulty: 3,
   build(rng) {
-    const vals = [rng.shuffle(NAMES).slice(0, 4), rng.shuffle(PETS).slice(0, 4), rng.shuffle(DRINKS).slice(0, 4)];
-    const sol: Assign = vals.map((v) => rng.shuffle(v));
-    const space = allAssignments(vals);
-    const clues: Clue[] = [];
-    let alive = space;
-    while (alive.length > 1) {
-      const c = randomClue(rng, sol);
-      const next = alive.filter((a) => c.holds(a));
-      if (next.length < alive.length) { clues.push(c); alive = next; }
+    for (;;) {
+      const n = rng.int(7, 8);
+      const names = rng.shuffle(ISLANDERS).slice(0, n);
+      const sol = names.map(() => rng.next() < 0.5);
+      const space = Array.from({ length: 1 << n }, (_, m) => names.map((_, i) => !!(m & (1 << i))));
+      // Each islander speaks once; a statement is kept only if it is true exactly when its speaker is a knight.
+      const said: Array<{ who: number; s: Stmt }> = [];
+      for (let who = 0; who < n; who++) {
+        for (;;) {
+          const st = randomStmt(rng, n, names, who);
+          if (st.truth(sol) === sol[who]) { said.push({ who, s: st }); break; }
+        }
+      }
+      const fits = space.filter((k) => said.every(({ who, s }) => s.truth(k) === k[who]));
+      if (fits.length !== 1) continue;
+      const knights = sol.map((v, i) => (v ? i + 1 : 0)).filter(Boolean);
+      const answer = 100 * knights.length + knights.reduce((a, b) => a + b, 0);
+      return single(
+        `On an island every person is either a knight, who always tells the truth, or a knave, who always lies. ` +
+          `${n} islanders sit in seats numbered 1 to ${n}: ${names.map((x, i) => `${x} (seat ${i + 1})`).join(', ')}. Each says one thing:\n` +
+          said.map(({ who, s }) => `- ${names[who]}: "${s.text}"`).join('\n') +
+          `\nLet K be the number of knights and S the sum of the knights' seat numbers. What is 100K + S? ${INT_FORMAT}`,
+        frac(answer),
+      );
     }
-    // Drop clues that are no longer needed, so each one carries weight.
-    for (let i = clues.length - 1; i >= 0; i--) {
-      const rest = clues.filter((_, j) => j !== i);
-      if (space.filter((a) => rest.every((c) => c.holds(a))).length === 1) clues.splice(i, 1);
-    }
-    const askCat = rng.int(1, 2) as Cat;
-    const askVal = rng.pick(sol[askCat]);
-    const answer = sol[askCat].indexOf(askVal) + 1;
-    return single(
-      `Four houses stand in a row, numbered 1 to 4 from left to right. Each house has one resident, one pet and one drink, all different: ` +
-        `residents ${vals[0].join(', ')}; pets ${vals[1].join(', ')}; drinks ${vals[2].join(', ')}.\n` +
-        clues.map((c) => `- ${c.text}`).join('\n') +
-        `\nWhich house number is home to ${entPhrase({ cat: askCat, v: askVal })}? ${INT_FORMAT}`,
-      frac(answer),
-    );
   },
 };
 
-// ── 6. shortest route in prose ────────────────────────────────────────────────
-const TOWNS = ['Ashford', 'Brill', 'Carrow', 'Dunmore', 'Elston', 'Farley', 'Glenby', 'Harwick', 'Ivel', 'Jarrow', 'Kelby', 'Lorne'];
+// ── 6. route through a required stop, with closed roads ───────────────────────
+const TOWNS = ['Ashford', 'Brill', 'Carrow', 'Dunmore', 'Elston', 'Farley', 'Glenby', 'Harwick', 'Ivel', 'Jarrow', 'Kelby', 'Lorne', 'Marsh', 'Norbury'];
 
 export function dijkstra(n: number, edges: Array<[number, number, number]>, s: number, t: number): number {
   const dist = Array(n).fill(Infinity);
@@ -323,216 +368,306 @@ export function dijkstra(n: number, edges: Array<[number, number, number]>, s: n
 export const reasonShortestPath: V4Task = {
   id: 'reason-route-1',
   suite: 'reason',
-  difficulty: 2,
+  difficulty: 3,
   build(rng) {
     for (;;) {
-      const n = rng.int(6, 8);
+      const n = rng.int(11, 13);
       const towns = rng.shuffle(TOWNS).slice(0, n);
       const edges: Array<[number, number, number]> = [];
       const has = (a: number, b: number) => edges.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
       for (let i = 1; i < n; i++) edges.push([i, rng.int(0, i - 1), rng.int(5, 60)]);
-      const extra = rng.int(3, 6);
+      const extra = rng.int(8, 12);
       for (let i = 0; i < extra; i++) {
         const a = rng.int(0, n - 1), b = rng.int(0, n - 1);
         if (a !== b && !has(a, b)) edges.push([a, b, rng.int(5, 60)]);
       }
       const s = 0, t = n - 1;
-      const best = dijkstra(n, edges, s, t);
-      // Plant a tempting direct road that is slower than the best route.
-      if (!has(s, t)) edges.push([s, t, best + rng.int(3, 15)]);
-      // Require the best route to use at least 3 roads.
-      const direct2 = edges.some(([a, b, w]) => (a === s || b === s) && edges.some(([c, d, w2]) => {
-        const mid = a === s ? b : a;
-        return ((c === mid && d === t) || (d === mid && c === t)) && w + w2 === best;
-      }));
-      if (direct2 || edges.some(([a, b, w]) => ((a === s && b === t) || (a === t && b === s)) && w === best)) continue;
+      const [v1, v2] = rng.shuffle(Array.from({ length: n - 2 }, (_, i) => i + 1)).slice(0, 2);
+      const d = (es: Array<[number, number, number]>, x: number, y: number) => dijkstra(n, es, x, y);
+      const route = (es: Array<[number, number, number]>) =>
+        Math.min(d(es, s, v1) + d(es, v1, v2) + d(es, v2, t), d(es, s, v2) + d(es, v2, v1) + d(es, v1, t));
+      const before = route(edges);
+      const closedIdx = rng.shuffle(edges.map((_, i) => i)).slice(0, 3);
+      const open = edges.filter((_, i) => !closedIdx.includes(i));
+      const best = route(open);
+      // Closures must matter, and the naive order (the one listed) must not be the best.
+      const listedOrder = d(open, s, v1) + d(open, v1, v2) + d(open, v2, t);
+      if (!Number.isFinite(best) || best === before || listedOrder === best) continue;
       const lines = rng.shuffle(edges).map(([a, b, w]) => `- The road between ${towns[a]} and ${towns[b]} takes ${w} minutes.`);
+      const closed = closedIdx.map((i) => `${towns[edges[i][0]]} and ${towns[edges[i][1]]}`);
       return single(
         `Roads run both ways and these are the only roads:\n${lines.join('\n')}\n` +
-          `What is the fewest minutes needed to drive from ${towns[s]} to ${towns[t]}? ${INT_FORMAT}`,
+          `Today these roads are closed: between ${closed.join('; between ')}. ` +
+          `You must drive from ${towns[s]} to ${towns[t]} and stop in both ${towns[v1]} and ${towns[v2]} on the way, in either order ` +
+          `(passing through any town more than once is allowed). What is the fewest minutes of driving? ${INT_FORMAT}`,
         frac(best),
       );
     }
   },
 };
 
-// ── 7. project critical path ──────────────────────────────────────────────────
+// ── 7. project schedule with waits and earliest starts ────────────────────────
 const JOBS = ['survey', 'permits', 'foundation', 'framing', 'roofing', 'wiring', 'plumbing', 'drywall', 'painting', 'flooring', 'landscaping', 'inspection'];
+
+// Two crews; whenever a crew is free, it starts the ready job with the longest
+// duration (ties: alphabetical). Event-driven simulation.
+export function crewSchedule(
+  jobs: Array<{ name: string; dur: number; release: number; deps: Array<{ j: number; wait: number }> }>, crews: number,
+): number {
+  const finish: Array<number | null> = jobs.map(() => null);
+  const started = jobs.map(() => false);
+  const busy: number[] = []; // finish times of running jobs
+  let now = 0;
+  for (;;) {
+    for (let i = busy.length - 1; i >= 0; i--) if (busy[i] <= now) busy.splice(i, 1);
+    const ready = jobs
+      .map((jb, i) => ({ jb, i }))
+      .filter(({ jb, i }) => !started[i] && now >= jb.release && jb.deps.every((d) => finish[d.j] !== null && finish[d.j]! + d.wait <= now))
+      .sort((a, b) => b.jb.dur - a.jb.dur || a.jb.name.localeCompare(b.jb.name));
+    while (busy.length < crews && ready.length) {
+      const { jb, i } = ready.shift()!;
+      started[i] = true;
+      finish[i] = now + jb.dur;
+      busy.push(now + jb.dur);
+    }
+    if (started.every(Boolean)) return Math.max(...(finish as number[]));
+    // Next moment anything can change: a crew frees, a release date, or a wait ends.
+    const cands = [
+      ...busy,
+      ...jobs.map((jb) => jb.release),
+      ...jobs.flatMap((jb) => jb.deps.map((d) => (finish[d.j] === null ? Infinity : finish[d.j]! + d.wait))),
+    ].filter((t) => t > now);
+    now = Math.min(...cands);
+  }
+}
 
 export const reasonCriticalPath: V4Task = {
   id: 'reason-critical-path-1',
   suite: 'reason',
   difficulty: 3,
   build(rng) {
-    const n = rng.int(6, 8);
+    const n = rng.int(9, 11);
     const names = rng.shuffle(JOBS).slice(0, n);
-    const dur = names.map(() => rng.int(1, 9));
-    const deps: number[][] = names.map((_, i) => {
-      if (i === 0) return [];
-      const pool = Array.from({ length: i }, (_, j) => j);
-      return rng.shuffle(pool).slice(0, rng.int(1, Math.min(2, i)));
-    });
-    const finish: number[] = [];
-    for (let i = 0; i < n; i++) finish[i] = Math.max(0, ...deps[i].map((d) => finish[d])) + dur[i];
-    const answer = Math.max(...finish);
+    const jobs = names.map((name, i) => ({
+      name,
+      dur: rng.int(1, 9),
+      release: 0,
+      deps: i === 0 ? [] : rng.shuffle(Array.from({ length: i }, (_, j) => j)).slice(0, rng.int(0, Math.min(2, i))).map((j) => ({ j, wait: rng.next() < 0.3 ? rng.int(1, 3) : 0 })),
+    }));
+    for (const i of rng.shuffle(names.map((_, i) => i)).slice(0, 2)) jobs[i].release = rng.int(3, 12);
+    const answer = crewSchedule(jobs, 2);
     const order = rng.shuffle(names.map((_, i) => i));
-    const lines = order.map((i) =>
-      `- ${cap1(names[i])} takes ${dur[i]} day${dur[i] === 1 ? '' : 's'}` +
-      (deps[i].length ? ` and can start only after ${deps[i].map((d) => names[d]).join(' and ')} ${deps[i].length === 1 ? 'is' : 'are'} finished.` : ' and can start right away.'),
-    );
+    const lines = order.map((i) => {
+      const jb = jobs[i];
+      const need = jb.deps.length
+        ? `needs: ${jb.deps.map((d) => (d.wait ? `${names[d.j]} +${d.wait} days wait` : names[d.j])).join(', ')}.`
+        : 'needs: nothing.';
+      return `- ${cap1(jb.name)} (${jb.dur} day${jb.dur === 1 ? '' : 's'}) ${need}${jb.release ? ` It cannot start before day ${jb.release}.` : ''}`;
+    });
     return single(
-      `A project has these jobs. Any number of jobs can run at the same time as long as their prerequisites are done.\n${lines.join('\n')}\n` +
-        `What is the smallest number of days to finish every job? ${INT_FORMAT}`,
+      `A project starts on day 0 with exactly 2 crews; each crew works on one job at a time and a job, once started, runs to the end without a break. ` +
+        `Each job lists the jobs that must be finished before it can start; "+N days wait" means it must also wait N more days after that job finishes. ` +
+        `Rule: whenever a crew is free and at least one job is ready, that crew immediately starts the ready job with the longest duration ` +
+        `(ties go to the job whose name comes first alphabetically).\n${lines.join('\n')}\n` +
+        `Following that rule exactly, on what day does the last job finish? ${INT_FORMAT}`,
       frac(answer),
     );
   },
 };
 
-// ── 8. currency chain with fees ────────────────────────────────────────────────
+// ── 8. best conversion route through a table with fees ────────────────────────
 const CURRENCIES = ['krona', 'dinar', 'peso', 'rand', 'lira', 'zloty', 'real', 'baht'];
+
+type BF = [bigint, bigint];
+const bfNorm = ([n, d]: BF): BF => { const g = bgcd(n, d) || 1n; return [n / g, d / g]; };
+const bfMul = (a: BF, b: BF): BF => bfNorm([a[0] * b[0], a[1] * b[1]]);
+const bfCmp = (a: BF, b: BF) => (a[0] * b[1] === b[0] * a[1] ? 0 : a[0] * b[1] > b[0] * a[1] ? 1 : -1);
 
 export const reasonCurrencyChain: V4Task = {
   id: 'reason-currency-chain-1',
   suite: 'reason',
-  difficulty: 2,
+  difficulty: 3,
   build(rng) {
     for (;;) {
-      const [c1, c2, c3] = rng.shuffle(CURRENCIES).slice(0, 3);
-      const amount = rng.int(4, 60) * 50;
-      const r1 = frac(rng.int(1, 12), rng.pick([1, 2, 4, 5])); // c2 per c1
-      const pct = rng.pick([2, 4, 5, 10, 20]);
-      const flat = rng.int(1, 40);
-      const r2 = frac(rng.int(1, 12), rng.pick([1, 2, 4, 5, 8])); // c3 per c2
-      // amount * r1, keep (100 - pct)%, minus flat, then * r2
-      let v = frac(amount * r1.n, r1.d);
-      v = frac(v.n * (100 - pct), v.d * 100);
-      v = frac(v.n - flat * v.d, v.d);
-      if (v.n <= 0) continue;
-      v = frac(v.n * r2.n, v.d * r2.d);
-      if (v.d !== 1) continue;
-      const rate = (r: Frac) => fracStr(r).includes('/') ? (r.n / r.d).toString() : fracStr(r);
+      const cur = rng.shuffle(CURRENCIES).slice(0, 6);
+      const s = 0, t = 5;
+      const rates: Array<{ a: number; b: number; rate: BF; fee: number }> = [];
+      const have = (a: number, b: number) => rates.some((r) => r.a === a && r.b === b);
+      const nRates = rng.int(12, 15);
+      while (rates.length < nRates) {
+        const a = rng.int(0, 4), b = rng.int(1, 5);
+        if (a === b || have(a, b) || b === s || a === t) continue;
+        const den = rng.pick([1n, 2n, 4n, 5n, 10n]);
+        rates.push({ a, b, rate: bfNorm([BigInt(rng.int(2, 40)), den]), fee: rng.pick([0, 1, 2, 4, 5]) });
+      }
+      if (!have(s, t)) continue;
+      const amount = BigInt(rng.int(2, 40) * 100);
+      // Best final amount over simple routes of at most 3 conversions.
+      let best: BF | null = null;
+      let bestLen = 0;
+      let ties = 0;
+      const dfs = (at: number, v: BF, seen: Set<number>, len: number) => {
+        if (at === t) {
+          const c = best ? bfCmp(v, best) : 1;
+          if (c > 0) { best = v; bestLen = len; ties = 0; } else if (c === 0) ties++;
+          return;
+        }
+        if (len === 4) return;
+        for (const r of rates) {
+          if (r.a !== at || seen.has(r.b)) continue;
+          seen.add(r.b);
+          dfs(r.b, bfMul(bfMul(v, r.rate), [BigInt(100 - r.fee), 100n]), seen, len + 1);
+          seen.delete(r.b);
+        }
+      };
+      dfs(s, [amount, 1n], new Set([s]), 0);
+      // The direct conversion must not be the best route, and the best must be unique.
+      if (!best || bestLen < 3 || ties > 0) continue;
+      const b = best as BF;
+      if (b[1] > 100000n || b[0] > 1_000_000_000n) continue;
+      const rateText = (r: BF) => (r[1] === 1n ? `${r[0]}` : `${Number(r[0]) / Number(r[1])}`);
+      const lines = rng.shuffle(rates).map((r) =>
+        `- 1 ${cur[r.a]} buys ${rateText(r.rate)} ${cur[r.b]}${r.fee ? `, with a ${r.fee}% fee taken from the ${cur[r.b]} you receive` : ', no fee'}.`);
       return single(
-        `You change ${amount} ${c1} into ${c2} at ${rate(r1)} ${c2} per ${c1}. The exchange keeps ${pct}% of the ${c2} you receive as commission, ` +
-          `then charges a flat ${flat} ${c2} handling fee. You change everything left into ${c3} at ${rate(r2)} ${c3} per ${c2}. ` +
-          `How many ${c3} do you end with? ${INT_FORMAT}`,
-        v,
+        `A money changer offers only these one-way conversions:\n${lines.join('\n')}\n` +
+          `You have ${amount} ${cur[s]} and want as many ${cur[t]} as possible, using at most four conversions and never holding the same currency twice. ` +
+          `How many ${cur[t]} can you end with? ${FRAC_FORMAT}`,
+        frac(Number(b[0]), Number(b[1])),
       );
     }
   },
 };
 
-// ── 9. work rate with a departure ─────────────────────────────────────────────
+// ── 9. work rate: a break, a departure and a late arrival ─────────────────────
 export const reasonWorkRate: V4Task = {
   id: 'reason-work-rate-1',
   suite: 'reason',
   difficulty: 3,
   build(rng) {
     for (;;) {
-      const [a, b, c] = [rng.int(2, 9), rng.int(2, 12), rng.int(3, 15)]; // hours alone
-      const t = rng.int(15, 150); // minutes before C leaves
-      // work per minute, as fractions of the job
-      const all = frac(60 * (b * c + a * c + a * b), 3600 * a * b * c); // 1/(60a)+1/(60b)+1/(60c)
-      const doneN = all.n * t;
-      if (doneN >= all.d) continue; // C must leave before the job is done
-      const ab = frac(b + a, 60 * a * b);
-      // remaining = 1 - t*all ; time = remaining / ab
-      const rem = frac(all.d - doneN, all.d);
-      const more = frac(rem.n * ab.d, rem.d * ab.n);
-      const total = frac(more.n + t * more.d, more.d);
-      if (total.d > 200) continue;
+      const [a, b, c, d] = [rng.int(2, 9), rng.int(3, 12), rng.int(3, 15), rng.int(2, 10)];
+      const t1 = rng.int(15, 60); // Cal leaves
+      const bs = rng.int(5, 50), be = bs + rng.int(10, 40); // Ana's break [bs, be)
+      const t2 = rng.int(t1 + 5, t1 + 90); // Dee arrives
+      // Rates per minute in units of U = 60abcd.
+      const U = 60 * a * b * c * d;
+      const rA = b * c * d, rB = a * c * d, rC = a * b * d, rD = a * b * c;
+      const rateAt = (m: number) => (m >= bs && m < be ? 0 : rA) + rB + (m < t1 ? rC : 0) + (m >= t2 ? rD : 0);
+      let done = 0, m = 0;
+      while (m < Math.max(t2, be) && done < U) { done += rateAt(m); m++; }
+      if (done >= U) continue; // everyone listed must still matter
+      const r = rateAt(m);
+      const total = frac((U - done) + m * r, r);
+      if (total.d === 1 || total.d > 400) continue;
       return single(
-        `Alone, Ana paints a fence in ${a} hours, Ben in ${b} hours and Cal in ${c} hours. All three start together; after ${t} minutes Cal leaves, ` +
-          `and Ana and Ben finish the fence together. How many minutes after the start is the fence finished? ${FRAC_FORMAT}`,
+        `Alone, Ana paints a fence in ${a} hours, Ben in ${b} hours, Cal in ${c} hours and Dee in ${d} hours. Ana, Ben and Cal start together at minute 0. ` +
+          `Cal leaves for good at minute ${t1}. Ana takes a break from minute ${bs} to minute ${be} and then goes back to painting. ` +
+          `Dee arrives at minute ${t2} and paints until the fence is finished. Everyone who is painting works at their own steady rate. ` +
+          `At what minute is the fence finished? ${FRAC_FORMAT}`,
         total,
       );
     }
   },
 };
 
-// ── 10. modular arithmetic with huge exponents ───────────────────────────────
-export function powMod(base: number, exp: number, mod: number): number {
-  // Cycle detection on the sequence base^k mod m — O(m), no bigints.
-  const seen = new Map<number, number>();
-  const seq: number[] = [];
-  let v = 1 % mod;
-  for (let k = 0; ; k++) {
-    if (k === exp) return v;
-    if (seen.has(v)) {
-      const start = seen.get(v)!;
-      const len = k - start;
-      return seq[start + ((exp - start) % len)];
-    }
-    seen.set(v, k);
-    seq.push(v);
-    v = (v * base) % mod;
-  }
+// ── 10. divisibility: "exactly two" of four non-coprime divisors ──────────────
+export function lcmN(xs: number[]): number {
+  return xs.reduce((l, x) => (l * x) / gcd(l, x), 1);
 }
 
 export const reasonModular: V4Task = {
   id: 'reason-modular-1',
   suite: 'reason',
-  difficulty: 2,
-  build(rng) {
-    const a = rng.int(2, 19), b = rng.int(2, 19);
-    const n = rng.int(1000, 999999), m = rng.int(1000, 999999);
-    const mod = rng.pick([7, 9, 11, 13, 17, 19, 23, 37, 100]);
-    const op = rng.pick(['+', '×'] as const);
-    const x = powMod(a, n, mod), y = powMod(b, m, mod);
-    const answer = op === '+' ? (x + y) % mod : (x * y) % mod;
-    const expr = `${a}^${n} ${op} ${b}^${m}`;
-    const q = mod === 100 ? `What are the last two digits of ${expr} (as a number from 0 to 99)?` : `What is the remainder when ${expr} is divided by ${mod}?`;
-    return single(`${q} ${INT_FORMAT}`, frac(answer));
-  },
-};
-
-// ── 11. average-speed trap ─────────────────────────────────────────────────────
-export const reasonAverageSpeed: V4Task = {
-  id: 'reason-average-speed-trap-1',
-  suite: 'reason',
-  difficulty: 2,
+  difficulty: 3,
   build(rng) {
     for (;;) {
-      const legs = rng.int(2, 3);
-      const speeds = Array.from({ length: legs }, () => rng.int(8, 72));
-      if (new Set(speeds).size < legs) continue;
-      // harmonic mean: legs / sum(1/v)
-      let sum = frac(0);
-      for (const v of speeds) sum = frac(sum.n * v + sum.d, sum.d * v);
-      const avg = frac(legs * sum.d, sum.n);
-      const arith = frac(speeds.reduce((s, v) => s + v, 0), legs);
-      if (avg.n * arith.d === arith.n * avg.d) continue;
-      const vehicle = rng.pick(['cyclist', 'courier van', 'ferry', 'runner', 'delivery drone']);
-      const legText = legs === 2
-        ? `goes from town P to town Q at ${speeds[0]} km/h and comes straight back along the same route at ${speeds[1]} km/h`
-        : `covers three stretches of equal length at ${speeds[0]}, ${speeds[1]} and ${speeds[2]} km/h in turn`;
-      return single(`A ${vehicle} ${legText}. What is its average speed over the whole trip, in km/h? ${FRAC_FORMAT}`, avg);
+      const primes = rng.shuffle([2, 3, 5, 7, 11]).slice(0, 3);
+      // Divisors built from shared primes so that lcm, not product, matters.
+      const divs = new Set<number>();
+      while (divs.size < 4) divs.add(rng.pick(primes) * rng.pick(primes) * rng.pick([1, 1, rng.pick(primes)]));
+      const ds = [...divs].sort((x, y) => x - y);
+      if (ds.some((x, i) => ds.some((y, j) => i !== j && y % x === 0))) continue; // no divisor divides another
+      const lo = rng.int(1, 50) * 100 + 1;
+      const hi = lo + rng.int(3000, 60000);
+      // Inclusion–exclusion over subsets: count of integers in [lo, hi] hitting exactly two.
+      const cnt = (L: number) => Math.floor(hi / L) - Math.floor((lo - 1) / L);
+      let exactly2 = 0;
+      for (let mask = 1; mask < 16; mask++) {
+        const sub = ds.filter((_, i) => mask & (1 << i));
+        if (sub.length < 2) continue;
+        const coef = sub.length === 2 ? 1 : sub.length === 3 ? -3 : 6;
+        exactly2 += coef * cnt(lcmN(sub));
+      }
+      if (exactly2 <= 0) continue;
+      return single(
+        `How many integers n with ${lo} ≤ n ≤ ${hi} are divisible by exactly two of the four numbers ${ds.join(', ')}? ` +
+          `(Divisible by exactly two means divisible by two of them and not by the other two.) ${INT_FORMAT}`,
+        frac(exactly2),
+      );
     }
   },
 };
 
-// ── 12. three-set survey (inclusion–exclusion) ─────────────────────────────────
+// ── 11. average speed: thirds by distance, one third split by time, a stop ────
+export const reasonAverageSpeed: V4Task = {
+  id: 'reason-average-speed-trap-1',
+  suite: 'reason',
+  difficulty: 3,
+  build(rng) {
+    for (;;) {
+      const [v1, v2, v3, v4] = [rng.int(6, 60), rng.int(6, 60), rng.int(6, 60), rng.int(6, 60)];
+      if (new Set([v1, v2, v3, v4]).size < 4) continue;
+      const D = rng.int(2, 20) * 3; // km, whole thirds
+      const stop = rng.pick([10, 12, 15, 20, 30]); // minutes
+      const third = D / 3;
+      // hours: third/v1 + third*2/(v2+v3) + third/v4 + stop/60
+      let t = frac(third, v1);
+      const add = (x: Frac) => { t = frac(t.n * x.d + x.n * t.d, t.d * x.d); };
+      add(frac(2 * third, v2 + v3));
+      add(frac(third, v4));
+      add(frac(stop, 60));
+      const avg = frac(D * t.d, t.n);
+      if (avg.d === 1) continue;
+      const vehicle = rng.pick(['cyclist', 'courier van', 'ferry', 'runner', 'delivery drone']);
+      return single(
+        `A ${vehicle} makes a ${D} km trip in three stretches of equal distance. It covers the first stretch at a steady ${v1} km/h. ` +
+          `On the second stretch, for half of the time that stretch takes it moves at ${v2} km/h and for the other half of that time at ${v3} km/h. ` +
+          `It then stops for ${stop} minutes before covering the last stretch at a steady ${v4} km/h. ` +
+          `What is its average speed over the whole trip, including the stop, in km/h? ${FRAC_FORMAT}`,
+        avg,
+      );
+    }
+  },
+};
+
+// ── 12. four-set survey stated with "at least" counts ──────────────────────────
 const TOPICS = [
-  ['tea', 'coffee', 'juice'], ['hiking', 'cycling', 'swimming'], ['jazz', 'rock', 'folk'],
-  ['Python', 'Rust', 'Go'], ['chess', 'poker', 'bridge'], ['novels', 'comics', 'poetry'],
+  ['tea', 'coffee', 'juice', 'cocoa'], ['hiking', 'cycling', 'swimming', 'rowing'], ['jazz', 'rock', 'folk', 'opera'],
+  ['Python', 'Rust', 'Go', 'Java'], ['chess', 'poker', 'bridge', 'go'], ['novels', 'comics', 'poetry', 'essays'],
 ];
 
 export const reasonVenn: V4Task = {
   id: 'reason-venn-1',
   suite: 'reason',
-  difficulty: 2,
+  difficulty: 3,
   build(rng) {
-    const [x, y, z] = rng.shuffle(rng.pick(TOPICS));
-    // Regions: only x, only y, only z, xy only, xz only, yz only, all three, none.
-    const r = Array.from({ length: 7 }, () => rng.int(1, 40));
-    const none = rng.int(0, 30);
-    const total = r.reduce((s, v) => s + v, 0) + none;
-    const X = r[0] + r[3] + r[4] + r[6], Y = r[1] + r[3] + r[5] + r[6], Z = r[2] + r[4] + r[5] + r[6];
-    const XY = r[3] + r[6], XZ = r[4] + r[6], YZ = r[5] + r[6];
+    const names = rng.shuffle(rng.pick(TOPICS));
+    const region = Array.from({ length: 16 }, (_, m) => (m === 0 ? 0 : rng.int(0, 25)));
+    const none = rng.int(0, 40);
+    const bits = (m: number) => [0, 1, 2, 3].filter((i) => m & (1 << i)).length;
+    const total = region.reduce((s, v) => s + v, 0) + none;
+    const like = [0, 1, 2, 3].map((i) => region.reduce((s, v, m) => s + (m & (1 << i) ? v : 0), 0));
+    // Sum over the six pairs of |A ∩ B|: a person in k sets is counted C(k,2) times.
+    const pairSum = region.reduce((s, v, m) => s + v * choose(bits(m), 2), 0);
+    const atLeast3 = region.reduce((s, v, m) => s + (bits(m) >= 3 ? v : 0), 0);
+    const all4 = region[15];
     return single(
-      `A survey of ${total} people asked which of ${x}, ${y} and ${z} they like. ${X} like ${x}, ${Y} like ${y} and ${Z} like ${z}. ` +
-        `${XY} like both ${x} and ${y}, ${XZ} like both ${x} and ${z}, and ${YZ} like both ${y} and ${z}. ${none} like none of the three. ` +
-        `How many like all three? ${INT_FORMAT}`,
-      frac(r[6]),
+      `A survey of ${total} people asked which of ${names.join(', ')} they like. ` +
+        `${like.map((v, i) => `${v} like ${names[i]}`).join(', ')}. ` +
+        `If you take each of the six pairs of these four, count the people who like both in the pair, and add the six counts, you get ${pairSum}. ` +
+        `${atLeast3} people like at least three of the four, and ${all4} like all four. ` +
+        `How many people like none of the four? ${INT_FORMAT}`,
+      frac(none),
     );
   },
 };

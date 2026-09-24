@@ -35,7 +35,7 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
     const prefixes = [calls.length];
     while (inst.tools?.length && res.toolCalls.length && turns <= TOOL_FOLLOW_UPS) {
       transcript.push({ role: 'assistant', content: res.text, toolCalls: res.toolCalls });
-      for (const c of res.toolCalls) transcript.push({ role: 'tool', toolCallId: c.id, name: c.name, content: '{"ok": true}' });
+      for (const c of res.toolCalls) transcript.push({ role: 'tool', toolCallId: c.id, name: c.name, content: inst.toolResult?.(c) ?? '{"ok": true}' });
       res = await provider.chat(transcript, { tools: inst.tools, maxTokens });
       turns++;
       tokensIn += res.tokensIn ?? 0;

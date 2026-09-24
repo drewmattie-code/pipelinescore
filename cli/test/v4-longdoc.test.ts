@@ -14,7 +14,7 @@ function check(name: string, cond: boolean, detail = '') {
 
 const ctx = {} as GradeContext; // longdoc graders never touch the sandbox
 const resp = (text: string): ChatResponse => ({ text, toolCalls: [], latencyMs: 1 });
-const SEEDS = ['s1', 's2', 's3', 'alpha', 'beta', 'x9', 'smoke1', 'pilot1'];
+const SEEDS = ['s1', 's2', 's3', 'alpha', 'beta', 'x9', 'smoke1', 'pilot1', 'pilot2', 'harden1', 'q7', 'z3'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const iso = (long: string) => {
   const [, mon, d] = long.match(/(\w+) (\d+), 2027/)!;
@@ -33,50 +33,79 @@ const ORACLES: Record<string, Oracle> = {
   'longdoc-two-hop-1': (p) => {
     const ticket = p.match(/ticket (INC-\d+) was raised/)![1];
     const host = p.match(new RegExp(`\\| (srv-\\d+) \\| [\\w-]+ \\| outage \\d+ min \\| ${ticket} \\|`))![1];
-    const team = p.match(new RegExp(`\\n${host}: team (\\w+),`))![1];
-    const [, manager, deputy] = p.match(new RegExp(`Team ${team}: escalation manager ([^;]+); deputy ([^;]+);`))!;
-    return { right: { host, team, manager }, wrong: { host, team, manager: deputy } };
+    const printedTeam = p.match(new RegExp(`\\n${host}: team (\\w+),`))![1];
+    const moves = [...p.matchAll(new RegExp(`\\n(2027-\\d\\d-\\d\\d): ${host} transferred from Team \\w+ to Team (\\w+)\\.`, 'g'))]
+      .map((m) => ({ date: m[1], to: m[2] })).sort((a, b) => a.date.localeCompare(b.date));
+    const team = moves.length ? moves[moves.length - 1].to : printedTeam;
+    const [, printedMgr, deputy] = p.match(new RegExp(`Team ${team}: escalation manager ([^;]+); deputy ([^;]+);`))!;
+    const upds = [...p.matchAll(new RegExp(`Effective (2027-\\d\\d-\\d\\d), the escalation manager for Team ${team} is ([A-Z][a-z]+ [A-Z][a-z]+) \\(previously`, 'g'))]
+      .map((m) => ({ date: m[1], who: m[2] })).sort((a, b) => a.date.localeCompare(b.date));
+    const manager = upds.length ? upds[upds.length - 1].who : printedMgr;
+    // Plausible wrong: stop at the first transfer / first update, or read the printed tables.
+    const wrong = moves.length
+      ? { host, team: moves.length > 1 ? moves[0].to : printedTeam, manager }
+      : { host, team, manager: upds.length > 1 ? upds[0].who : upds.length ? printedMgr : deputy };
+    return { right: { host, team, manager }, wrong };
   },
   'longdoc-clause-xref-1': (p) => {
     const [, long, name] = p.match(/on (\w+ \d+, 2027), ([A-Z][a-z]+ [A-Z][a-z]+) sent a formal notice/)!;
-    const header = new RegExp(`From: ${name} <[^>]+> \\| Date: ${iso(long)} \\|[^\\n]*\\n([^\\n]*)`);
-    const body = p.match(header)![1];
+    const [, project, body] = p.match(new RegExp(`From: ${name} <[^>]+> \\| Date: ${iso(long)} \\| Subject: ([^\\n]+) formal notice\\n([^\\n]*)`))!;
     const clause = body.match(/Clause (\d+\.\d+)/)![1];
-    const [, notice, fee] = p.match(new RegExp(`\\nClause ${clause.replace('.', '\\.')}: [^.]+\\. Notice period: (\\d+) days\\. Early-termination fee: ([\\d.]+)%`))!;
-    return {
-      right: { clause, notice_days: Number(notice), fee_percent: Number(fee) },
-      wrong: { clause, notice_days: Number(notice) + 15, fee_percent: Number(fee) },
-    };
+    const cre = clause.replace('.', '\\.');
+    const orig = p.match(new RegExp(`\\nClause ${cre}: [^.]+\\. Notice period: (\\d+) days\\. Early-termination fee: ([\\d.]+)%`))!;
+    const rest = p.match(new RegExp(`\\nClause ${cre} \\(restated\\): Notice period: (\\d+) days\\. Early-termination fee: ([\\d.]+)%`));
+    const [notice, fee] = rest ? [Number(rest[1]), Number(rest[2])] : [Number(orig[1]), Number(orig[2])];
+    const [, originalV, remainingV] = p.match(new RegExp(`\\n${project}: original contract value \\$([\\d,]+); remaining contract value \\$([\\d,]+)`))!;
+    const remaining = Number(remainingV.replace(/,/g, ''));
+    const right = { clause, notice_days: notice, fee_dollars: Math.round((remaining * fee) / 100) };
+    const wrong = rest
+      ? { clause, notice_days: Number(orig[1]), fee_dollars: Math.round((remaining * Number(orig[2])) / 100) }
+      : { ...right, fee_dollars: Math.round((Number(originalV.replace(/,/g, '')) * fee) / 100) };
+    return { right, wrong };
   },
   'longdoc-amendments-1': (p) => {
-    const city = p.match(/current daily per-diem for ([\w ]+?), and which/)![1];
-    const hits = [...p.matchAll(new RegExp(`Amendment (A-\\d+) \\(effective (2027-\\d\\d-\\d\\d)\\): per-diem for ${city} set to \\$(\\d+)`, 'g'))]
+    const [, asOfLong, city, days] = p.match(/as of (\w+ \d+, 2027), counting only amendments[^?]*? per-diem for (.+?), which amendment set it, and what is the total per-diem for a (\d+)-day trip/)!;
+    const asOf = iso(asOfLong);
+    const rescinded = new Set([...p.matchAll(/Amendment (A-\d+) is rescinded\./g)].map((m) => m[1]));
+    const corrected = new Map([...p.matchAll(/Amendment (A-\d+): effective date corrected to (2027-\d\d-\d\d)\./g)].map((m) => [m[1], m[2]]));
+    const printed = [...p.matchAll(new RegExp(`Amendment (A-\\d+) \\(effective (2027-\\d\\d-\\d\\d)\\): per-diem for ${city} set to \\$(\\d+)`, 'g'))]
       .map((m) => ({ id: m[1], date: m[2], rate: Number(m[3]) }));
-    const latest = [...hits].sort((a, b) => b.date.localeCompare(a.date))[0];
-    const lastInText = hits[hits.length - 1];
-    const byId = [...hits].sort((a, b) => Number(b.id.slice(2)) - Number(a.id.slice(2)))[0];
-    const decoy = lastInText.id !== latest.id ? lastInText : byId;
-    return { right: { per_diem: latest.rate, amendment: latest.id }, wrong: { per_diem: decoy.rate, amendment: decoy.id } };
+    const pick = (hs: typeof printed) => hs.filter((h) => h.date <= asOf && !rescinded.has(h.id)).sort((a, b) => b.date.localeCompare(a.date))[0];
+    const win = pick(printed.map((h) => ({ ...h, date: corrected.get(h.id) ?? h.date })));
+    const noCorrections = pick(printed);
+    const naive = [...printed].sort((a, b) => b.date.localeCompare(a.date))[0];
+    const decoy = noCorrections && noCorrections.id !== win.id ? noCorrections : naive.id !== win.id ? naive : printed.find((h) => h.id !== win.id)!;
+    const t = (h: { id: string; rate: number }) => ({ per_diem: h.rate, amendment: h.id, trip_total: h.rate * Number(days) });
+    return { right: t(win), wrong: t(decoy) };
   },
   'longdoc-abstain-1': (p) => {
-    const [, a, b] = p.match(/warranty, in months, of model ([A-Z]{2}-\d{4}), and of model ([A-Z]{2}-\d{4})\?/)!;
+    const ids = p.match(/warranty, in months, of model ([A-Z]{2}-\d{4}), of model ([A-Z]{2}-\d{4}), of model ([A-Z]{2}-\d{4}), and of model ([A-Z]{2}-\d{4})\?/)!.slice(1);
     const look = (id: string) => {
+      const erratum = p.match(new RegExp(`Model ${id}: warranty is (\\d+) months`));
+      if (erratum) return Number(erratum[1]);
       const m = p.match(new RegExp(`Model ${id} \\| series \\w+ \\| warranty (\\d+) months`));
       return m ? Number(m[1]) : NOT_IN_DOC;
     };
-    const right = { first: look(a), second: look(b) };
-    // Plausible wrong: guess the present model's value for the missing one.
-    const present = right.first === NOT_IN_DOC ? right.second : right.first;
-    return { right, wrong: { first: present, second: present } };
+    const naive = (id: string) => {
+      const printed = p.match(new RegExp(`Model ${id} \\| series \\w+ \\| warranty (\\d+) months`));
+      const plan = p.match(new RegExp(`Model ${id} \\| discontinued \\| service plan (\\d+) months`));
+      return printed ? Number(printed[1]) : plan ? Number(plan[1]) : NOT_IN_DOC;
+    };
+    const keys = ['first', 'second', 'third', 'fourth'];
+    return {
+      right: Object.fromEntries(keys.map((k, i) => [k, look(ids[i])])),
+      wrong: Object.fromEntries(keys.map((k, i) => [k, naive(ids[i])])),
+    };
   },
   'longdoc-bounded-count-1': (p) => {
     const site = p.match(/at site (\w+) with severity HIGH/)![1];
-    const s7 = section(p, '## Section 7: current findings register');
-    const ids = [...s7.matchAll(/(F-\d+) \| site: (\w+) \| severity: (\w+) \| status: ([A-Z ]+?) \| area/g)]
-      .filter((m) => m[2] === site && m[3] === 'HIGH' && m[4] === 'OPEN').map((m) => m[1]);
-    const whole = [...p.matchAll(/(F-\d+) \| site: (\w+) \| severity: (\w+) \| status: ([A-Z ]+?) \| area/g)]
-      .filter((m) => m[2] === site && m[3] === 'HIGH' && m[4] === 'OPEN').map((m) => m[1]);
-    return { right: { count: ids.length, ids }, wrong: { count: whole.length, ids: whole } };
+    const s7 = section(p, '## Section 7: current findings register (as printed)');
+    const s9 = section(p, '## Section 9: status updates since the register was printed');
+    const upd = new Map([...s9.matchAll(/(F-\d+): status changed to ([A-Z ]+?)\./g)].map((m) => [m[1], m[2]]));
+    const rows = [...s7.matchAll(/(F-\d+) \| site: (\w+) \| severity: (\w+) \| status: ([A-Z ]+?) \| area/g)].filter((m) => m[2] === site && m[3] === 'HIGH');
+    const ids = rows.filter((m) => (upd.get(m[1]) ?? m[4]) === 'OPEN').map((m) => m[1]);
+    const printed = rows.filter((m) => m[4] === 'OPEN').map((m) => m[1]);
+    return { right: { count: ids.length, ids }, wrong: { count: printed.length, ids: printed } };
   },
 };
 
@@ -87,6 +116,8 @@ for (const t of LONGDOC_TASKS) {
     const p = (inst.messages[0] as { content: string }).content;
     const docLen = p.indexOf('\n\n---\n');
     check(`${t.id} doc size in window [${seed}]`, docLen >= DOC_MIN_CHARS && docLen <= DOC_MAX_CHARS, `${docLen} chars`);
+    // Must fit a 32K-token local context with room to answer (~5.4 chars/token measured).
+    check(`${t.id} prompt fits a 32K context [${seed}]`, p.length / 5.4 < 26_000, `${p.length} chars`);
     let o: ReturnType<Oracle>;
     try { o = ORACLES[t.id](p); } catch (e) { check(`${t.id} oracle parses doc [${seed}]`, false, (e as Error).message); continue; }
     const ok = await inst.grade(resp(JSON.stringify(o.right)), ctx);

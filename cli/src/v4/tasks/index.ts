@@ -7,7 +7,7 @@ import { LONGDOC_TASKS } from './longdoc.js';
 import { REASON_TASKS } from './reason.js';
 import { REPO_TASKS } from './repo.js';
 
-export const TESTPACK_V4_VERSION = '4.0.0-alpha.2';
+export const TESTPACK_V4_VERSION = '4.0.0-alpha.3';
 
 export const V4_TASKS: V4Task[] = [
   ...CODE_TASKS,

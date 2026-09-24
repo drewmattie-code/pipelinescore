@@ -75,6 +75,9 @@ export interface SingleInstance {
   messages: ChatMessage[];
   tools?: ToolDef[];
   maxTokens?: number;
+  // What each tool call returns on follow-up turns. Tasks whose later calls
+  // depend on an earlier result supply realistic JSON; default is {"ok": true}.
+  toolResult?(call: ToolCall): string;
   grade(res: ChatResponse, ctx: GradeContext): Promise<Grade> | Grade;
 }
 
