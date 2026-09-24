@@ -599,6 +599,21 @@ function buildProvider(name: string, opts: RunCommandOptions): LLMProvider {
   }
 }
 
+program
+  .command('v4')
+  .description('Run the PipelineScore v4 preview (harder suite, Docker sandbox required, not submitted yet)')
+  .requiredOption('--provider <name>', 'local | openai | minimax | anthropic')
+  .requiredOption('--model <id>', 'model id as the server reports it')
+  .option('--endpoint <url>', 'OpenAI- or Anthropic-compatible base URL')
+  .option('--api-key <key>', 'API key (defaults to env)')
+  .option('--seed <seed>', 'reuse a seed to reproduce a run exactly')
+  .option('--only <ids>', 'comma-separated task ids to run')
+  .option('--save <file>', 'write the full result JSON to this file')
+  .action(async (opts) => {
+    const { runV4 } = await import('./v4/command.js');
+    await runV4(opts);
+  });
+
 program.parseAsync().catch((e) => {
   process.stderr.write(chalk.red(`\nFatal: ${(e as Error).message}\n`));
   process.exit(1);
