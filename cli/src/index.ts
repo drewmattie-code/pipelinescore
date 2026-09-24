@@ -609,10 +609,32 @@ program
   .option('--seed <seed>', 'reuse a seed to reproduce a run exactly')
   .option('--only <ids>', 'comma-separated task ids to run')
   .option('--save <file>', 'write the full result JSON to this file')
+  .option('--hardware-tag <tag>', 'where the model runs, when that is not this machine (e.g. m3-ultra-96gb)')
   .option('--max-tokens <n>', 'raise every task\'s output cap to at least n (MiniMax defaults to its 196608 max)')
   .action(async (opts) => {
     const { runV4 } = await import('./v4/command.js');
     await runV4(opts);
+  });
+
+program
+  .command('profile')
+  .description('Merge saved v4 results into a routing profile that routers can load')
+  .argument('<results...>', 'result JSON files written by `ps-bench v4 --save`')
+  .requiredOption('--out <file>', 'where to write the routing profile JSON')
+  .action(async (files: string[], opts: { out: string }) => {
+    const { buildProfile } = await import('./v4/profile.js');
+    const runs = files.map((f) => {
+      const r = JSON.parse(readFileSync(f, 'utf8'));
+      // Results saved before hardware tagging: local runs are unknown hardware, the rest are cloud.
+      r.hardware_tag ??= r.provider === 'local' ? 'unknown' : 'cloud';
+      return r;
+    });
+    const profile = buildProfile(runs);
+    writeFileSync(opts.out, JSON.stringify(profile, null, 2));
+    for (const m of profile.models) {
+      process.stdout.write(`  ${m.pipeline_score.toFixed(1).padStart(5)}  ${m.location.padEnd(5)}  ${m.hardware_tag.padEnd(16)} ${m.provider}/${m.id}\n`);
+    }
+    process.stdout.write(chalk.dim(`\n  ${profile.models.length} model(s) → ${opts.out}\n`));
   });
 
 program.parseAsync().catch((e) => {

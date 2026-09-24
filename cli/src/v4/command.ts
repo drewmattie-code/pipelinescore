@@ -8,6 +8,7 @@ import { newSeed } from './rng.js';
 import { runTask, summarize } from './runner.js';
 import { DockerSandbox, dockerStatus, ensureImages } from './sandbox.js';
 import { TESTPACK_V4_VERSION, V4_TASKS } from './tasks/index.js';
+import { detectHardwareTag } from '../hardware.js';
 import type { ChatProvider, V4Summary, V4TaskResult } from './types.js';
 
 export interface V4Options {
@@ -19,6 +20,7 @@ export interface V4Options {
   only?: string;
   save?: string;
   maxTokens?: string;
+  hardwareTag?: string;
 }
 
 const MINIMAX_DEFAULT = 'https://api.minimax.io/v1';
@@ -92,6 +94,7 @@ export async function runV4(o: V4Options): Promise<V4Summary> {
     seed,
     model: provider.model,
     provider: provider.name,
+    hardware_tag: o.hardwareTag ?? (provider.name === 'local' ? detectHardwareTag() ?? 'unknown' : 'cloud'),
     cli_version: cliVersion(),
     ...summarize(results),
     task_results: results,

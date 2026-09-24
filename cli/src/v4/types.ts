@@ -117,6 +117,8 @@ export interface V4Summary {
   seed: string;
   model: string;
   provider: string;
+  // Where the model runs: a detected or given hardware tag for local models, 'cloud' otherwise.
+  hardware_tag: string;
   cli_version: string;
   pipeline_score: number; // quality only; speed is reported separately
   suite_scores: Record<Suite, { mean: number; ci_low: number; ci_high: number; n: number }>;
