@@ -21,8 +21,8 @@ export class OpenAIChatProvider implements ChatProvider {
   maxOutputTokens?: number;
   private client: OpenAI;
   private stream: boolean;
-  constructor(public name: string, public model: string, opts: { baseURL?: string; apiKey?: string; stream?: boolean }) {
-    this.client = new OpenAI({ baseURL: opts.baseURL, apiKey: opts.apiKey ?? 'local-no-key', timeout: 3_600_000, maxRetries: 4 });
+  constructor(public name: string, public model: string, opts: { baseURL?: string; apiKey?: string; stream?: boolean; headers?: Record<string, string> }) {
+    this.client = new OpenAI({ baseURL: opts.baseURL, apiKey: opts.apiKey ?? 'local-no-key', timeout: 3_600_000, maxRetries: 4, defaultHeaders: opts.headers });
     this.stream = opts.stream ?? false;
   }
 

@@ -22,6 +22,7 @@ export interface V4Options {
   maxTokens?: string;
   hardwareTag?: string;
   stream?: boolean;
+  header?: string[];
 }
 
 const MINIMAX_DEFAULT = 'https://api.minimax.io/v1';
@@ -36,16 +37,29 @@ function minimaxKey(): string | undefined {
   return existsSync(p) ? readFileSync(p, 'utf8').trim() : undefined;
 }
 
+// "Name: value" pairs from repeated --header flags.
+function parseHeaders(raw: string[] | undefined): Record<string, string> | undefined {
+  if (!raw?.length) return undefined;
+  const out: Record<string, string> = {};
+  for (const h of raw) {
+    const i = h.indexOf(':');
+    if (i <= 0) throw new Error(`--header must look like "Name: value", got "${h}"`);
+    out[h.slice(0, i).trim()] = h.slice(i + 1).trim();
+  }
+  return out;
+}
+
 export function buildChatProvider(o: V4Options): ChatProvider {
+  const headers = parseHeaders(o.header);
   switch (o.provider) {
     case 'local':
-      return new OpenAIChatProvider('local', o.model, { baseURL: normalizeLocalEndpoint(o.endpoint ?? 'http://localhost:11434/v1'), apiKey: o.apiKey, stream: o.stream });
+      return new OpenAIChatProvider('local', o.model, { baseURL: normalizeLocalEndpoint(o.endpoint ?? 'http://localhost:11434/v1'), apiKey: o.apiKey, stream: o.stream, headers });
     case 'openai':
-      return new OpenAIChatProvider('openai', o.model, { baseURL: o.endpoint, apiKey: o.apiKey ?? process.env.OPENAI_API_KEY, stream: o.stream });
+      return new OpenAIChatProvider('openai', o.model, { baseURL: o.endpoint, apiKey: o.apiKey ?? process.env.OPENAI_API_KEY, stream: o.stream, headers });
     case 'minimax': {
       const key = o.apiKey ?? minimaxKey();
       if (!key) throw new Error('MiniMax needs a key: set MINIMAX_API_KEY or put it in ~/.config/minimax/api_key');
-      const p = new OpenAIChatProvider('minimax', o.model, { baseURL: o.endpoint ?? MINIMAX_DEFAULT, apiKey: key, stream: o.stream });
+      const p = new OpenAIChatProvider('minimax', o.model, { baseURL: o.endpoint ?? MINIMAX_DEFAULT, apiKey: key, stream: o.stream, headers });
       p.maxOutputTokens = MINIMAX_MAX_OUTPUT;
       return p;
     }
