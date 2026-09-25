@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { categoryScore, median } from '../score.js';
 import { taskRng } from './rng.js';
 import type {
@@ -14,7 +15,7 @@ const TOOL_FOLLOW_UPS = 6;
 // A tool call the server failed to parse arrives as raw chat-format text.
 const RAW_TOOL_CALL = /\bto=functions\.[\w.-]+/;
 
-async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeContext) {
+async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeContext, sessionId: string) {
   const served: string[] = [];
   const note = (r: ChatResponse) => { if (r.servedBy) served.push(r.servedBy); };
   let tokensIn = 0;
@@ -28,7 +29,7 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
     // measures which calls were made, not whether they arrived in one message.
     const transcript: ChatMessage[] = [...inst.messages];
     const calls: ChatResponse['toolCalls'] = [];
-    let res = await provider.chat(transcript, { tools: inst.tools, maxTokens });
+    let res = await provider.chat(transcript, { tools: inst.tools, maxTokens, sessionId });
     note(res);
     let turns = 1;
     tokensIn += res.tokensIn ?? 0;
@@ -39,7 +40,7 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
     while (inst.tools?.length && res.toolCalls.length && turns <= TOOL_FOLLOW_UPS) {
       transcript.push({ role: 'assistant', content: res.text, toolCalls: res.toolCalls });
       for (const c of res.toolCalls) transcript.push({ role: 'tool', toolCallId: c.id, name: c.name, content: inst.toolResult?.(c) ?? '{"ok": true}' });
-      res = await provider.chat(transcript, { tools: inst.tools, maxTokens });
+      res = await provider.chat(transcript, { tools: inst.tools, maxTokens, sessionId });
       note(res);
       turns++;
       tokensIn += res.tokensIn ?? 0;
@@ -64,7 +65,7 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
   let turns = 0;
   while (turns < inst.maxTurns) {
     turns++;
-    const res = await provider.chat(transcript, { tools: inst.tools, maxTokens });
+    const res = await provider.chat(transcript, { tools: inst.tools, maxTokens, sessionId });
     note(res);
     tokensIn += res.tokensIn ?? 0;
     tokensOut += res.tokensOut ?? 0;
@@ -91,7 +92,7 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
 export async function runTask(task: V4Task, seed: string, provider: ChatProvider, ctx: GradeContext): Promise<V4TaskResult> {
   const inst = task.build(taskRng(seed, task.id));
   try {
-    const r = await execute(inst, provider, ctx);
+    const r = await execute(inst, provider, ctx, `ps-${seed}-${task.id}-${randomUUID()}`);
     return {
       task_id: task.id, suite: task.suite,
       score: Math.max(0, Math.min(1, r.grade.score)),

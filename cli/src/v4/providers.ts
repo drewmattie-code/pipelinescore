@@ -24,7 +24,7 @@ export class OpenAIChatProvider implements ChatProvider {
     this.client = new OpenAI({ baseURL: opts.baseURL, apiKey: opts.apiKey ?? 'local-no-key', timeout: 3_600_000, maxRetries: 4 });
   }
 
-  async chat(messages: ChatMessage[], opts: { tools?: ToolDef[]; maxTokens: number }): Promise<ChatResponse> {
+  async chat(messages: ChatMessage[], opts: { tools?: ToolDef[]; maxTokens: number; sessionId?: string }): Promise<ChatResponse> {
     const wire: OpenAI.Chat.ChatCompletionMessageParam[] = messages.map((m) => {
       switch (m.role) {
         case 'system':
@@ -57,7 +57,7 @@ export class OpenAIChatProvider implements ChatProvider {
       ...(opts.tools?.length
         ? { tools: opts.tools.map((t) => ({ type: 'function' as const, function: { name: t.name, description: t.description, parameters: t.parameters } })) }
         : {}),
-    }).withResponse();
+    }, opts.sessionId ? { headers: { 'Session-Id': opts.sessionId } } : undefined).withResponse();
     const latencyMs = Date.now() - start;
     const choice = res.choices?.[0];
     if (!choice) throw new Error('endpoint returned no choices (check the base URL and model id)');
@@ -90,7 +90,7 @@ export class AnthropicChatProvider implements ChatProvider {
     this.client = new Anthropic({ baseURL: opts.baseURL, apiKey: opts.apiKey, timeout: 3_600_000, maxRetries: 4 });
   }
 
-  async chat(messages: ChatMessage[], opts: { tools?: ToolDef[]; maxTokens: number }): Promise<ChatResponse> {
+  async chat(messages: ChatMessage[], opts: { tools?: ToolDef[]; maxTokens: number; sessionId?: string }): Promise<ChatResponse> {
     const system = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n');
     const wire: Anthropic.MessageParam[] = [];
     for (const m of messages) {

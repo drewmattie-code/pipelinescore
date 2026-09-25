@@ -41,7 +41,9 @@ export interface ChatProvider {
   // Raises every task's output cap to at least this, so reasoning models that
   // think at length are never cut off before they answer.
   maxOutputTokens?: number;
-  chat(messages: ChatMessage[], opts: { tools?: ToolDef[]; maxTokens: number }): Promise<ChatResponse>;
+  // sessionId groups one task's calls as one conversation for routers that pin
+  // sessions (sent as a Session-Id header); independent tasks never share one.
+  chat(messages: ChatMessage[], opts: { tools?: ToolDef[]; maxTokens: number; sessionId?: string }): Promise<ChatResponse>;
 }
 
 export interface Rng {
