@@ -15,6 +15,8 @@ const TOOL_FOLLOW_UPS = 6;
 const RAW_TOOL_CALL = /\bto=functions\.[\w.-]+/;
 
 async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeContext) {
+  const served: string[] = [];
+  const note = (r: ChatResponse) => { if (r.servedBy) served.push(r.servedBy); };
   let tokensIn = 0;
   let tokensOut = 0;
   let latency = 0;
@@ -27,6 +29,7 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
     const transcript: ChatMessage[] = [...inst.messages];
     const calls: ChatResponse['toolCalls'] = [];
     let res = await provider.chat(transcript, { tools: inst.tools, maxTokens });
+    note(res);
     let turns = 1;
     tokensIn += res.tokensIn ?? 0;
     tokensOut += res.tokensOut ?? 0;
@@ -37,6 +40,7 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
       transcript.push({ role: 'assistant', content: res.text, toolCalls: res.toolCalls });
       for (const c of res.toolCalls) transcript.push({ role: 'tool', toolCallId: c.id, name: c.name, content: inst.toolResult?.(c) ?? '{"ok": true}' });
       res = await provider.chat(transcript, { tools: inst.tools, maxTokens });
+      note(res);
       turns++;
       tokensIn += res.tokensIn ?? 0;
       tokensOut += res.tokensOut ?? 0;
@@ -52,7 +56,7 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
       const next = await inst.grade({ ...res, toolCalls: calls.slice(0, n) }, ctx);
       if (next.score > g.score) g = next;
     }
-    return { grade: g, turns, tokensIn, tokensOut, latency, text: res.text };
+    return { grade: g, turns, tokensIn, tokensOut, latency, text: res.text, served };
   }
 
   const transcript: ChatMessage[] = [...inst.messages];
@@ -61,6 +65,7 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
   while (turns < inst.maxTurns) {
     turns++;
     const res = await provider.chat(transcript, { tools: inst.tools, maxTokens });
+    note(res);
     tokensIn += res.tokensIn ?? 0;
     tokensOut += res.tokensOut ?? 0;
     latency += res.latencyMs;
@@ -80,7 +85,7 @@ async function execute(inst: TaskInstance, provider: ChatProvider, ctx: GradeCon
     }
   }
   const g = await inst.grade(finalText, transcript, ctx);
-  return { grade: g, turns, tokensIn, tokensOut, latency, text: finalText };
+  return { grade: g, turns, tokensIn, tokensOut, latency, text: finalText, served };
 }
 
 export async function runTask(task: V4Task, seed: string, provider: ChatProvider, ctx: GradeContext): Promise<V4TaskResult> {
@@ -93,6 +98,7 @@ export async function runTask(task: V4Task, seed: string, provider: ChatProvider
       detail: RAW_TOOL_CALL.test(r.text) ? `server returned an unparsed tool call; ${r.grade.detail}` : r.grade.detail,
       response: r.text.slice(0, 4000),
       turns: r.turns, latency_ms: r.latency, tokens_in: r.tokensIn, tokens_out: r.tokensOut,
+      ...(r.served.length ? { served_by: r.served } : {}),
     };
   } catch (e) {
     return {

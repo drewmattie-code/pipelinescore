@@ -49,7 +49,7 @@ export class OpenAIChatProvider implements ChatProvider {
       }
     });
     const start = Date.now();
-    const res = await this.client.chat.completions.create({
+    const { data: res, response: http } = await this.client.chat.completions.create({
       model: this.model,
       messages: wire,
       max_tokens: opts.maxTokens,
@@ -57,7 +57,7 @@ export class OpenAIChatProvider implements ChatProvider {
       ...(opts.tools?.length
         ? { tools: opts.tools.map((t) => ({ type: 'function' as const, function: { name: t.name, description: t.description, parameters: t.parameters } })) }
         : {}),
-    });
+    }).withResponse();
     const latencyMs = Date.now() - start;
     const choice = res.choices?.[0];
     if (!choice) throw new Error('endpoint returned no choices (check the base URL and model id)');
@@ -76,6 +76,7 @@ export class OpenAIChatProvider implements ChatProvider {
       tokensIn: res.usage?.prompt_tokens,
       tokensOut: res.usage?.completion_tokens,
       latencyMs,
+      servedBy: http.headers.get('x-router-model') ?? undefined,
     };
   }
 }

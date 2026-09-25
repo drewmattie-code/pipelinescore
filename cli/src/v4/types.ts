@@ -31,6 +31,8 @@ export interface ChatResponse {
   tokensIn?: number;
   tokensOut?: number;
   latencyMs: number;
+  // Set when a router answered: the model it actually dispatched to (x-router-model).
+  servedBy?: string;
 }
 
 export interface ChatProvider {
@@ -112,6 +114,8 @@ export interface V4TaskResult {
   latency_ms: number;
   tokens_in: number;
   tokens_out: number;
+  // Models a router dispatched to while answering this task, in call order.
+  served_by?: string[];
   error?: string;
 }
 
