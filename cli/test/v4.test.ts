@@ -128,6 +128,30 @@ function check(name: string, cond: boolean, detail = '') {
   check('runner returns the task\'s own tool result to the model', r.score === 1, r.detail);
 }
 
+// ── streaming reassembles text, split tool-call deltas and usage ─────────────
+{
+  const chunks = [
+    { choices: [{ index: 0, delta: { role: 'assistant', content: 'Hel' } }] },
+    { choices: [{ index: 0, delta: { content: 'lo', tool_calls: [{ index: 0, id: 'c1', type: 'function', function: { name: 'get_', arguments: '{"ci' } }] } }] },
+    { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { name: 'weather', arguments: 'ty":"Oslo"}' } }] } }] },
+    { choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }] },
+    { choices: [], usage: { prompt_tokens: 7, completion_tokens: 9, total_tokens: 16 } },
+  ];
+  const server = createServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream', 'x-router-model': 'local/x' });
+    for (const c of chunks) res.write(`data: ${JSON.stringify({ id: 's', object: 'chat.completion.chunk', created: 0, model: 'm', ...c })}\n\n`);
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()));
+  const port = (server.address() as { port: number }).port;
+  const p = new OpenAIChatProvider('local', 'm', { baseURL: `http://127.0.0.1:${port}/v1`, stream: true });
+  const r = await p.chat([{ role: 'user', content: 'hi' }], { maxTokens: 10 });
+  check('stream: text reassembled', r.text === 'Hello', r.text);
+  check('stream: split tool call reassembled', r.toolCalls.length === 1 && r.toolCalls[0].name === 'get_weather' && r.toolCalls[0].arguments.city === 'Oslo', JSON.stringify(r.toolCalls));
+  check('stream: usage and router header kept', r.tokensIn === 7 && r.tokensOut === 9 && r.servedBy === 'local/x');
+  server.close();
+}
+
 // ── a crashed server's empty 200 is an error, not a wrong answer ─────────────
 {
   const bodies = [

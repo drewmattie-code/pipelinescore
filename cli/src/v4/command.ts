@@ -21,6 +21,7 @@ export interface V4Options {
   save?: string;
   maxTokens?: string;
   hardwareTag?: string;
+  stream?: boolean;
 }
 
 const MINIMAX_DEFAULT = 'https://api.minimax.io/v1';
@@ -38,13 +39,13 @@ function minimaxKey(): string | undefined {
 export function buildChatProvider(o: V4Options): ChatProvider {
   switch (o.provider) {
     case 'local':
-      return new OpenAIChatProvider('local', o.model, { baseURL: normalizeLocalEndpoint(o.endpoint ?? 'http://localhost:11434/v1'), apiKey: o.apiKey });
+      return new OpenAIChatProvider('local', o.model, { baseURL: normalizeLocalEndpoint(o.endpoint ?? 'http://localhost:11434/v1'), apiKey: o.apiKey, stream: o.stream });
     case 'openai':
-      return new OpenAIChatProvider('openai', o.model, { baseURL: o.endpoint, apiKey: o.apiKey ?? process.env.OPENAI_API_KEY });
+      return new OpenAIChatProvider('openai', o.model, { baseURL: o.endpoint, apiKey: o.apiKey ?? process.env.OPENAI_API_KEY, stream: o.stream });
     case 'minimax': {
       const key = o.apiKey ?? minimaxKey();
       if (!key) throw new Error('MiniMax needs a key: set MINIMAX_API_KEY or put it in ~/.config/minimax/api_key');
-      const p = new OpenAIChatProvider('minimax', o.model, { baseURL: o.endpoint ?? MINIMAX_DEFAULT, apiKey: key });
+      const p = new OpenAIChatProvider('minimax', o.model, { baseURL: o.endpoint ?? MINIMAX_DEFAULT, apiKey: key, stream: o.stream });
       p.maxOutputTokens = MINIMAX_MAX_OUTPUT;
       return p;
     }

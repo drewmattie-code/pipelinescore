@@ -610,6 +610,7 @@ program
   .option('--only <ids>', 'comma-separated task ids to run')
   .option('--save <file>', 'write the full result JSON to this file')
   .option('--hardware-tag <tag>', 'where the model runs, when that is not this machine (e.g. m3-ultra-96gb)')
+  .option('--stream', 'stream responses (needed behind routers/proxies that time out slow first bytes)')
   .option('--max-tokens <n>', 'raise every task\'s output cap to at least n (MiniMax defaults to its 196608 max)')
   .action(async (opts) => {
     const { runV4 } = await import('./v4/command.js');

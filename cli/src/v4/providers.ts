@@ -20,8 +20,10 @@ function parseArgs(id: string, name: string, raw: string): ToolCall {
 export class OpenAIChatProvider implements ChatProvider {
   maxOutputTokens?: number;
   private client: OpenAI;
-  constructor(public name: string, public model: string, opts: { baseURL?: string; apiKey?: string }) {
+  private stream: boolean;
+  constructor(public name: string, public model: string, opts: { baseURL?: string; apiKey?: string; stream?: boolean }) {
     this.client = new OpenAI({ baseURL: opts.baseURL, apiKey: opts.apiKey ?? 'local-no-key', timeout: 3_600_000, maxRetries: 4 });
+    this.stream = opts.stream ?? false;
   }
 
   async chat(messages: ChatMessage[], opts: { tools?: ToolDef[]; maxTokens: number; sessionId?: string }): Promise<ChatResponse> {
@@ -49,7 +51,7 @@ export class OpenAIChatProvider implements ChatProvider {
       }
     });
     const start = Date.now();
-    const { data: res, response: http } = await this.client.chat.completions.create({
+    const params = {
       model: this.model,
       messages: wire,
       max_tokens: opts.maxTokens,
@@ -57,7 +59,11 @@ export class OpenAIChatProvider implements ChatProvider {
       ...(opts.tools?.length
         ? { tools: opts.tools.map((t) => ({ type: 'function' as const, function: { name: t.name, description: t.description, parameters: t.parameters } })) }
         : {}),
-    }, opts.sessionId ? { headers: { 'Session-Id': opts.sessionId } } : undefined).withResponse();
+    };
+    const reqOpts = opts.sessionId ? { headers: { 'Session-Id': opts.sessionId } } : undefined;
+    const { data: res, response: http } = this.stream
+      ? await this.streamed(params, reqOpts)
+      : await this.client.chat.completions.create(params, reqOpts).withResponse();
     const latencyMs = Date.now() - start;
     const choice = res.choices?.[0];
     if (!choice) throw new Error('endpoint returned no choices (check the base URL and model id)');
@@ -78,6 +84,49 @@ export class OpenAIChatProvider implements ChatProvider {
       latencyMs,
       servedBy: http.headers.get('x-router-model') ?? undefined,
     };
+  }
+
+  // Streams the completion and reassembles it into the non-streaming shape.
+  // Routers and proxies often cap time-to-first-byte (Weave: 30 s), which a
+  // long-thinking model blows through when the client waits for the whole body.
+  private async streamed(
+    params: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming,
+    reqOpts: { headers: Record<string, string> } | undefined,
+  ): Promise<{ data: OpenAI.Chat.ChatCompletion; response: Response }> {
+    const { data: stream, response } = await this.client.chat.completions
+      .create({ ...params, stream: true, stream_options: { include_usage: true } }, reqOpts)
+      .withResponse();
+    let content = '';
+    let finish: OpenAI.Chat.ChatCompletion.Choice['finish_reason'] | null = null;
+    let usage: OpenAI.CompletionUsage | undefined;
+    const calls: Array<{ id: string; name: string; args: string }> = [];
+    for await (const chunk of stream) {
+      if (chunk.usage) usage = chunk.usage;
+      const choice = chunk.choices?.[0];
+      if (!choice) continue;
+      if (choice.delta?.content) content += choice.delta.content;
+      for (const d of choice.delta?.tool_calls ?? []) {
+        const c = (calls[d.index] ??= { id: '', name: '', args: '' });
+        if (d.id) c.id = d.id;
+        if (d.function?.name) c.name += d.function.name;
+        if (d.function?.arguments) c.args += d.function.arguments;
+      }
+      if (choice.finish_reason) finish = choice.finish_reason;
+    }
+    const toolCalls = calls.filter(Boolean).map((c, i) => ({
+      id: c.id || `call_${i}`, type: 'function' as const, function: { name: c.name, arguments: c.args },
+    }));
+    const data = {
+      id: 'streamed', object: 'chat.completion', created: 0, model: this.model,
+      choices: [{
+        index: 0, logprobs: null, finish_reason: finish ?? 'stop',
+        message: { role: 'assistant', content, refusal: null, ...(toolCalls.length ? { tool_calls: toolCalls } : {}) },
+      }],
+      ...(usage ? { usage } : {}),
+    } as OpenAI.Chat.ChatCompletion;
+    // No chunks at all is the crashed-server signature; keep it detectable.
+    if (!content && !toolCalls.length && !usage && !finish) data.choices[0].finish_reason = null as never;
+    return { data, response };
   }
 }
 
