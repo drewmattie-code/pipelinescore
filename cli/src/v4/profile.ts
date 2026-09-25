@@ -1,4 +1,5 @@
 import { taskRng } from './rng.js';
+import { NATURAL_EXAMPLES } from './examples.js';
 import { TESTPACK_V4_VERSION, V4_TASKS } from './tasks/index.js';
 import type { Suite, V4Summary } from './types.js';
 
@@ -88,10 +89,15 @@ export function buildProfile(runs: V4Summary[], opts: { examplesPerSuite?: numbe
   });
 
   const k = opts.examplesPerSuite ?? 3;
+  // Everyday phrasings first, then benchmark prompts, so the kind of request a
+  // user types weighs as much as the kind of task the scores came from.
   const suite_examples = {} as RoutingProfile['suite_examples'];
+  for (const [s, xs] of Object.entries(NATURAL_EXAMPLES) as Array<[Suite, string[]]>) suite_examples[s] = [...xs];
+  const benchCount: Partial<Record<Suite, number>> = {};
   for (const t of V4_TASKS) {
     const list = (suite_examples[t.suite] ??= []);
-    if (list.length >= k * 4) continue;
+    if ((benchCount[t.suite] ?? 0) >= k * 4) continue;
+    benchCount[t.suite] = (benchCount[t.suite] ?? 0) + 1;
     const inst = t.build(taskRng('profile-examples', t.id));
     const user = inst.messages.filter((m) => m.role === 'user').map((m) => m.content).join('\n');
     // Long documents would swamp an embedder; keep the question end, which carries the intent.

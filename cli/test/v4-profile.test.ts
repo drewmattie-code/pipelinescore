@@ -34,6 +34,7 @@ check('runs and seeds recorded', small.runs === 2 && small.seeds.join() === 'a,b
 check('cloud vs local location', p.models.find((m) => m.id === 'big')!.location === 'cloud' && small.location === 'local');
 check('sorted best first', p.models[0].id === 'big');
 check('suite examples for every suite', Object.keys(p.suite_examples).length === 7 && Object.values(p.suite_examples).every((xs) => xs.length > 0));
+check('everyday examples are included', p.suite_examples.code.some((x) => x.startsWith('Write a function that merges two sorted arrays')));
 check('examples are bounded in length', Object.values(p.suite_examples).flat().every((x) => x.length <= 1200));
 
 const sameModelOtherHw = buildProfile([run('small', 'm5-max-48gb', 60, 'a'), run('small', 'rtx-3080-10gb', 50, 'b')]);
