@@ -129,6 +129,9 @@ export interface V4Summary {
   task_results: V4TaskResult[];
   // Set when the run stopped early because the model server kept failing.
   aborted?: string;
+  // Task ids that ended in a provider error (timeouts, 5xx) rather than a graded answer.
+  // Such a run is incomplete: rerun those tasks before comparing or submitting.
+  provider_errors?: string[];
   started_at: string;
   finished_at: string;
 }

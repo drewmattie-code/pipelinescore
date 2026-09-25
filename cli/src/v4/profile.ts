@@ -37,6 +37,8 @@ const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 // Runs of the same model on the same hardware are merged (per-task scores
 // averaged); aborted runs and runs from another testpack version are refused.
 export function buildProfile(runs: V4Summary[], opts: { examplesPerSuite?: number; now?: Date } = {}): RoutingProfile {
+  const flaky = runs.filter((r) => r.provider_errors?.length);
+  if (flaky.length) throw new Error(`refusing run(s) with provider errors (rerun those tasks first): ${flaky.map((r) => `${r.model}: ${r.provider_errors!.join(', ')}`).join('; ')}`);
   const bad = runs.filter((r) => r.aborted);
   if (bad.length) throw new Error(`refusing aborted run(s): ${bad.map((r) => `${r.model} (${r.aborted})`).join('; ')}`);
   const versions = new Set(runs.map((r) => r.testpack_version));

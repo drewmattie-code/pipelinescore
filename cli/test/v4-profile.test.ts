@@ -46,5 +46,9 @@ threw = '';
 try { buildProfile([run('x', 'cloud', 50, 'a'), run('y', 'cloud', 50, 'b', { testpack_version: '4.0.0-other' })]); } catch (e) { threw = (e as Error).message; }
 check('mixed testpack versions are refused', threw.includes('different testpack'), threw);
 
+threw = '';
+try { buildProfile([run('x', 'cloud', 50, 'a', { provider_errors: ['code-a'] })]); } catch (e) { threw = (e as Error).message; }
+check('runs with provider errors are refused', threw.includes('provider errors'), threw);
+
 console.log(failures ? `\n${failures} FAILED` : '\nall v4 profile tests passed');
 process.exit(failures ? 1 : 0);

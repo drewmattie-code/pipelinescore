@@ -99,6 +99,7 @@ export async function runV4(o: V4Options): Promise<V4Summary> {
     ...summarize(results),
     task_results: results,
     ...(aborted ? { aborted } : {}),
+    ...(results.some((r) => r.error) ? { provider_errors: results.filter((r) => r.error).map((r) => r.task_id) } : {}),
     started_at,
     finished_at: new Date().toISOString(),
   };
@@ -112,6 +113,9 @@ export async function runV4(o: V4Options): Promise<V4Summary> {
   if (o.save) {
     writeFileSync(o.save, JSON.stringify(summary, null, 2));
     process.stdout.write(chalk.dim(`\n  saved → ${o.save}\n`));
+  }
+  if (summary.provider_errors?.length && !aborted) {
+    process.stdout.write(chalk.yellow(`\n  ${summary.provider_errors.length} task(s) hit a provider error, not a wrong answer: ${summary.provider_errors.join(', ')}\n  Rerun them with --only before comparing or submitting this result.\n`));
   }
   if (aborted) process.exitCode = 2;
   return summary;

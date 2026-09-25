@@ -21,7 +21,7 @@ export class OpenAIChatProvider implements ChatProvider {
   maxOutputTokens?: number;
   private client: OpenAI;
   constructor(public name: string, public model: string, opts: { baseURL?: string; apiKey?: string }) {
-    this.client = new OpenAI({ baseURL: opts.baseURL, apiKey: opts.apiKey ?? 'local-no-key', timeout: 3_600_000, maxRetries: 2 });
+    this.client = new OpenAI({ baseURL: opts.baseURL, apiKey: opts.apiKey ?? 'local-no-key', timeout: 3_600_000, maxRetries: 4 });
   }
 
   async chat(messages: ChatMessage[], opts: { tools?: ToolDef[]; maxTokens: number }): Promise<ChatResponse> {
@@ -86,7 +86,7 @@ export class AnthropicChatProvider implements ChatProvider {
   maxOutputTokens?: number;
   private client: Anthropic;
   constructor(public name: string, public model: string, opts: { baseURL?: string; apiKey: string }) {
-    this.client = new Anthropic({ baseURL: opts.baseURL, apiKey: opts.apiKey, timeout: 3_600_000, maxRetries: 2 });
+    this.client = new Anthropic({ baseURL: opts.baseURL, apiKey: opts.apiKey, timeout: 3_600_000, maxRetries: 4 });
   }
 
   async chat(messages: ChatMessage[], opts: { tools?: ToolDef[]; maxTokens: number }): Promise<ChatResponse> {
