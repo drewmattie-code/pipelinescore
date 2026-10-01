@@ -3,6 +3,7 @@ import { DataUnavailable } from "@/components/DataUnavailable";
 import { getHardwareBoard, getLeaderboardModels, getStats } from "@/lib/api";
 import { BenchTable } from "@/components/BenchTable";
 import { CopyCommand } from "@/components/CopyCommand";
+import { ProductFilm } from "@/components/ProductFilm";
 import { CATEGORY_LABELS, CATEGORY_WEIGHTS, TIERS } from "@/lib/tiers";
 import { modelMatchups, rigMatchups } from "@/lib/matchups";
 
@@ -28,7 +29,8 @@ export default async function Home() {
     <div className="flex flex-col">
       {/* Masthead — data-first, no hero. The board is the homepage. */}
       <section className="border-b border-[var(--color-line-2)] bg-[var(--color-surface)]">
-        <div className="max-w-7xl mx-auto px-6 md:px-10 pt-12 md:pt-16 pb-8">
+        <div className="max-w-7xl mx-auto px-6 md:px-10 pt-12 md:pt-16 pb-8 grid gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-center">
+          <div>
           <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-[var(--color-emerald)] font-semibold">
             LLM benchmarks · v3 testpack · deterministic · no API key
           </div>
@@ -74,6 +76,8 @@ export default async function Home() {
               See where you&apos;d rank →
             </Link>
           </div>
+          </div>
+          <ProductFilm />
         </div>
 
         {/* Instrument strip */}
