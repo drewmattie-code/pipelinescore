@@ -562,6 +562,20 @@ export const instructPostscript: V4Task = {
   },
 };
 
+// Some rules hold vacuously on empty text ("no bullet ends with punctuation"), so
+// an empty answer would earn partial credit. It scores 0 instead.
+function noCreditForEmpty(task: V4Task): V4Task {
+  return {
+    ...task,
+    build(rng) {
+      const inst = task.build(rng) as SingleInstance;
+      const grade = inst.grade.bind(inst);
+      inst.grade = (res, ctx) => (res.text.trim() ? grade(res, ctx) : { score: 0, detail: 'empty answer' });
+      return inst;
+    },
+  };
+}
+
 export const INSTRUCT_TASKS: V4Task[] = [
   instructProductCopy,
   instructJsonSchema,
@@ -573,4 +587,4 @@ export const INSTRUCT_TASKS: V4Task[] = [
   instructCsv,
   instructUppercaseNotice,
   instructPostscript,
-];
+].map(noCreditForEmpty);

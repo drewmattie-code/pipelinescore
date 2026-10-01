@@ -437,7 +437,7 @@ for (const t of INSTRUCT_TASKS) {
     check(`${t.id} [i${i}]: violation scores < 1`, b.score < 1, `${b.detail}\n${bad}`);
     if (ALL_OR_NOTHING.has(t.id)) check(`${t.id} [i${i}]: all-or-nothing gives 0`, b.score === 0, b.detail);
     else check(`${t.id} [i${i}]: one violation costs one rule, not everything`, b.score > 0, b.detail);
-    check(`${t.id} [i${i}]: empty reply scores low`, (inst.grade(resp(''), ctx) as { score: number }).score < 0.5);
+    for (const empty of ['', '  \n ']) check(`${t.id} [i${i}]: empty reply scores 0`, (inst.grade(resp(empty), ctx) as { score: number }).score === 0);
   }
   check(`${t.id}: prompts vary across seeds`, prompts.size >= 8, `${prompts.size}/12`);
 }
