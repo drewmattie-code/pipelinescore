@@ -146,6 +146,9 @@ function fnTask(s: FnSpec): V4Task {
         async grade(res, ctx) {
           const code = extractCode(res.text);
           if (s.forbid && s.forbid.re.test(code)) return { score: 0, detail: s.forbid.why };
+          if (!new RegExp(`\\b${s.fn}\\b`).test(code)) {
+            return { score: 0, detail: `answer has no \`${s.fn}\` (empty, or ran out of output tokens before writing code)` };
+          }
           const files: Record<string, string> =
             s.lang === 'python'
               ? { 'main.py': pyHarness(code, s), 'cases.json': JSON.stringify(cases) }
