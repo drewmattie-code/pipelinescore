@@ -28,8 +28,6 @@ export interface V4Options {
 const MINIMAX_DEFAULT = 'https://api.minimax.io/v1';
 // A server that fails this many tasks in a row is down, not wrong.
 const MAX_CONSECUTIVE_ERRORS = 3;
-// The API's own ceiling for MiniMax-M2.7 (it rejects anything above 196608).
-const MINIMAX_MAX_OUTPUT = 196_608;
 
 function minimaxKey(): string | undefined {
   if (process.env.MINIMAX_API_KEY) return process.env.MINIMAX_API_KEY;
@@ -59,9 +57,8 @@ export function buildChatProvider(o: V4Options): ChatProvider {
     case 'minimax': {
       const key = o.apiKey ?? minimaxKey();
       if (!key) throw new Error('MiniMax needs a key: set MINIMAX_API_KEY or put it in ~/.config/minimax/api_key');
-      const p = new OpenAIChatProvider('minimax', o.model, { baseURL: o.endpoint ?? MINIMAX_DEFAULT, apiKey: key, stream: o.stream, headers });
-      p.maxOutputTokens = MINIMAX_MAX_OUTPUT;
-      return p;
+      // Same answer budget as every other provider (runner DEFAULT_MAX_TOKENS): one board, one limit.
+      return new OpenAIChatProvider('minimax', o.model, { baseURL: o.endpoint ?? MINIMAX_DEFAULT, apiKey: key, stream: o.stream, headers });
     }
     case 'anthropic': {
       const key = o.apiKey ?? process.env.ANTHROPIC_API_KEY;
