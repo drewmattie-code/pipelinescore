@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { Sandbox, SandboxRun } from './types.js';
@@ -29,10 +29,14 @@ export class DockerSandbox implements Sandbox {
   async run(opts: { image: 'python' | 'node'; files: Record<string, string>; cmd: string[]; timeoutMs?: number }): Promise<SandboxRun> {
     const dir = mkdtempSync(join(tmpdir(), 'ps-sbx-'));
     try {
+      // mkdtemp makes the folder 0700 and the container runs as nobody (65534). On Linux the
+      // bind mount keeps host permissions, so nobody could not read the files and every code task
+      // scored 0 (Docker Desktop on macOS hides this). Read-only for everyone is enough.
+      chmodSync(dir, 0o755);
       for (const [rel, content] of Object.entries(opts.files)) {
         const p = join(dir, rel);
-        mkdirSync(dirname(p), { recursive: true });
-        writeFileSync(p, content);
+        mkdirSync(dirname(p), { recursive: true, mode: 0o755 });
+        writeFileSync(p, content, { mode: 0o644 });
       }
       const name = `ps-sbx-${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
       const args = [
