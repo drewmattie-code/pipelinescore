@@ -146,7 +146,7 @@ export async function getLeaderboardModels(): Promise<Model[]> {
   // Pull a large window so every model shows up at least once, then dedupe by
   // slug. days=365 explicitly: the backend's old 30-day default silently
   // emptied this board once early submissions aged out.
-  const res = await timedFetch(`${API_BASE}/v1/leaderboard?limit=200&days=365`);
+  const res = await timedFetch(`${API_BASE}/v1/leaderboard?limit=200&days=365&testpack=v3`);
   if (!res) return MOCKS_ENABLED ? MOCK_MODELS : [];
   try {
     const data = await res.json() as { entries: BackendLeaderboardEntry[] };
@@ -171,7 +171,7 @@ export async function getLeaderboardModels(): Promise<Model[]> {
 
 /** Per-model detail page. undefined = no such model, null = backend unreachable. */
 export async function getModel(slug: string): Promise<Model | null | undefined> {
-  const res = await apiFetch(`${API_BASE}/v1/models/${encodeURIComponent(slug)}`);
+  const res = await apiFetch(`${API_BASE}/v1/models/${encodeURIComponent(slug)}?testpack=v3`);
   if (res === '404') return undefined;
   if (!res) return MOCKS_ENABLED ? getMockModelBySlug(slug) : null;
   try {
@@ -204,7 +204,7 @@ export async function getModel(slug: string): Promise<Model | null | undefined> 
 }
 
 export async function getRecentSubmissions(slug: string): Promise<Submission[]> {
-  const res = await timedFetch(`${API_BASE}/v1/models/${encodeURIComponent(slug)}`);
+  const res = await timedFetch(`${API_BASE}/v1/models/${encodeURIComponent(slug)}?testpack=v3`);
   if (!res) {
     return MOCKS_ENABLED ? MOCK_SUBMISSIONS.filter((s) => s.modelSlug === slug) : [];
   }
@@ -317,7 +317,7 @@ export interface UserLeaderboardQuery {
 
 /** Long-form user leaderboard (paginated, sortable, filterable). */
 export async function getUserLeaderboard(q: UserLeaderboardQuery = {}): Promise<UserLeaderboardPage> {
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ testpack: 'v3' });
   if (q.provider) params.set('provider', q.provider);
   if (q.tier) params.set('tier', q.tier);
   if (q.user) params.set('user', q.user);
@@ -360,7 +360,7 @@ export async function getUserLeaderboard(q: UserLeaderboardQuery = {}): Promise<
  * profiles for nicknames that only ever existed in the mock fixtures.
  */
 export async function getUserProfile(nickname: string): Promise<UserProfile | null | undefined> {
-  const res = await apiFetch(`${API_BASE}/v1/users/${encodeURIComponent(nickname)}`);
+  const res = await apiFetch(`${API_BASE}/v1/users/${encodeURIComponent(nickname)}?testpack=v3`);
   if (res === '404') return undefined;
   if (!res) return MOCKS_ENABLED ? mockUserProfile(nickname) : null;
   try {
@@ -413,7 +413,7 @@ export async function getUserProfile(nickname: string): Promise<UserProfile | nu
 }
 
 export async function getUserDirectory(): Promise<UserDirectoryEntry[]> {
-  const res = await timedFetch(`${API_BASE}/v1/users`);
+  const res = await timedFetch(`${API_BASE}/v1/users?testpack=v3`);
   if (!res) return MOCKS_ENABLED ? MOCK_USER_DIRECTORY : [];
   try {
     const data = (await res.json()) as { users: Array<{ user_nickname: string; submission_count: number; best_score: number }> };
@@ -612,7 +612,7 @@ export interface SiteStats {
 }
 
 export async function getStats(): Promise<SiteStats> {
-  const res = await timedFetch(`${API_BASE}/v1/stats`);
+  const res = await timedFetch(`${API_BASE}/v1/stats?testpack=v3`);
   if (!res) return { submission_count: 0, user_count: 0, model_count: 0 };
   try {
     const d = (await res.json()) as Partial<SiteStats>;
@@ -641,6 +641,7 @@ export interface SubmissionDetail {
   createdAt: string;
   ciLow: number | null;
   ciHigh: number | null;
+  v4Suites: Record<string, number> | null;
 }
 
 /** Single run, for the /s/[id] share page. undefined = not found, null = backend unreachable. */
@@ -693,6 +694,8 @@ export async function getSubmission(id: string): Promise<SubmissionDetail | null
       createdAt: d.created_at ?? '',
       ciLow: typeof d.score_detail?.pipeline_ci_low === 'number' ? d.score_detail.pipeline_ci_low : null,
       ciHigh: typeof d.score_detail?.pipeline_ci_high === 'number' ? d.score_detail.pipeline_ci_high : null,
+      // v4 runs keep their seven suite scores as-is; the v3 categories above are zeros for them.
+      v4Suites: (d.testpack_version ?? '').startsWith('4.') ? cs : null,
     };
   } catch {
     return undefined;
@@ -701,3 +704,66 @@ export async function getSubmission(id: string): Promise<SubmissionDetail | null
 
 // Re-export the sample tasks so pages don't have to know where to find them.
 export { SAMPLE_TASKS };
+
+// ---- v4 board ----------------------------------------------------------------
+export interface V4Row {
+  submissionId: string;
+  slug: string;
+  displayName: string;
+  provider: string;
+  score: number;
+  suites: Partial<Record<string, number>>;
+  hardware: string | null;
+  wallSeconds: number | null;
+  tokensPerSecond: number | null;
+  userNickname: string | null;
+  runs: number;
+  createdAt: string;
+}
+
+/** The v4 board: best run per model + hardware (v4 ranks where a model runs, too). */
+export async function getV4Board(): Promise<V4Row[]> {
+  const res = await timedFetch(`${API_BASE}/v1/leaderboard?limit=200&days=365&testpack=v4`);
+  if (!res) return [];
+  try {
+    type Entry = {
+      submission_id: string;
+      pipeline_score: number;
+      category_scores?: Record<string, number>;
+      score_detail?: { hardware_tag?: string; speed?: { wall_s?: number; tps_p50?: number } } | null;
+      hardware_tag?: string | null;
+      user_nickname?: string | null;
+      created_at: string;
+      model: { slug: string; display_name: string; provider: string };
+    };
+    const data = (await res.json()) as { entries: Entry[] };
+    const best: Record<string, V4Row> = {};
+    const runs: Record<string, number> = {};
+    for (const e of data.entries) {
+      const detail = e.score_detail ?? {};
+      const hw = (detail.hardware_tag ?? e.hardware_tag ?? null) as string | null;
+      const key = `${e.model.slug}@${hw ?? ''}`;
+      runs[key] = (runs[key] ?? 0) + 1;
+      const row: V4Row = {
+        submissionId: e.submission_id,
+        slug: e.model.slug,
+        displayName: e.model.display_name,
+        provider: e.model.provider,
+        score: Number(e.pipeline_score),
+        suites: e.category_scores ?? {},
+        hardware: hw,
+        wallSeconds: detail.speed?.wall_s ?? null,
+        tokensPerSecond: detail.speed?.tps_p50 ?? null,
+        userNickname: e.user_nickname ?? null,
+        runs: 1,
+        createdAt: e.created_at,
+      };
+      if (!best[key] || row.score > best[key].score) best[key] = row;
+    }
+    return Object.entries(best)
+      .map(([k, r]) => ({ ...r, runs: runs[k] }))
+      .sort((a, b) => b.score - a.score);
+  } catch {
+    return [];
+  }
+}

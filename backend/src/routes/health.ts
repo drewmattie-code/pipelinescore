@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { boardFor, testpackClause } from '../lib/testpack.js';
 import { stamp } from '../lib/api-version.js';
 
 const router: Router = Router();
@@ -17,10 +18,12 @@ router.get('/health', (_req, res) => {
 });
 
 // Public site-stats endpoint — used by the homepage live-counts strip.
-router.get('/v1/stats', (_req, res) => {
-  const submission_count = (db.prepare('SELECT COUNT(*) AS c FROM submissions').get() as { c: number }).c;
+router.get('/v1/stats', (req, res) => {
+  // Counts follow the board being shown; /health above stays all-time on purpose.
+  const tp = testpackClause(boardFor(req), '');
+  const submission_count = (db.prepare(`SELECT COUNT(*) AS c FROM submissions WHERE ${tp}`).get() as { c: number }).c;
   const user_count = (db
-    .prepare('SELECT COUNT(DISTINCT user_nickname) AS c FROM submissions WHERE user_nickname IS NOT NULL')
+    .prepare(`SELECT COUNT(DISTINCT user_nickname) AS c FROM submissions WHERE user_nickname IS NOT NULL AND ${tp}`)
     .get() as { c: number }).c;
   const model_count = (db.prepare('SELECT COUNT(*) AS c FROM models').get() as { c: number }).c;
   res.json(stamp({ submission_count, user_count, model_count }));

@@ -599,6 +599,73 @@ function buildProvider(name: string, opts: RunCommandOptions): LLMProvider {
   }
 }
 
+program
+  .command('v4')
+  .description('Run the PipelineScore v4 benchmark (Docker sandbox required); save with --save, then submit with v4-submit')
+  .requiredOption('--provider <name>', 'local | openai | minimax | anthropic')
+  .requiredOption('--model <id>', 'model id as the server reports it')
+  .option('--endpoint <url>', 'OpenAI- or Anthropic-compatible base URL')
+  .option('--api-key <key>', 'API key (defaults to env)')
+  .option('--seed <seed>', 'reuse a seed to reproduce a run exactly')
+  .option('--only <ids>', 'comma-separated task ids to run')
+  .option('--save <file>', 'write the full result JSON to this file')
+  .option('--hardware-tag <tag>', 'where the model runs, when that is not this machine (e.g. m3-ultra-96gb)')
+  .option('--stream', 'stream responses (needed behind routers/proxies that time out slow first bytes)')
+  .option('--header <header...>', 'extra request header(s), "Name: value" (e.g. "X-Weave-Routing-Marker: off")')
+  .option('--max-tokens <n>', 'raise every task\'s output cap to at least n (MiniMax defaults to its 196608 max)')
+  .action(async (opts) => {
+    const { runV4 } = await import('./v4/command.js');
+    await runV4(opts);
+  });
+
+program
+  .command('v4-submit')
+  .description('Submit saved v4 results (from `ps-bench v4 --save`) to the public v4 board')
+  .argument('<results...>', 'result JSON files written by `ps-bench v4 --save`')
+  .option('--user <nickname>', 'your public leaderboard nickname (defaults to your saved one)')
+  .option('--config-tag <tag>', 'differentiator for this configuration')
+  .option('--backend <url>', 'PipelineScore backend URL', 'https://api.pipelinescore.ai')
+  .option('--site <url>', 'PipelineScore web URL', 'https://pipelinescore.ai')
+  .action(async (files: string[], opts: { user?: string; configTag?: string; backend: string; site: string }) => {
+    const { submitV4 } = await import('./v4/submit.js');
+    const saved = loadSavedConfig();
+    const nickname = opts.user ?? saved.user_nickname;
+    if (nickname && !NICKNAME_RE.test(nickname)) throw new Error('nickname: 2-40 characters, letters, digits, . _ -');
+    let failed = 0;
+    for (const f of files) {
+      const summary = JSON.parse(readFileSync(f, 'utf8'));
+      try {
+        const url = await submitV4(summary, { backend: opts.backend, site: opts.site, user_nickname: nickname, config_tag: opts.configTag });
+        process.stdout.write(`  ${summary.pipeline_score.toFixed(1).padStart(5)}  ${summary.model}  ${chalk.cyan(url)}\n`);
+      } catch (e) {
+        failed++;
+        process.stderr.write(chalk.yellow(`  ${f}: ${(e as Error).message}\n`));
+      }
+    }
+    if (failed) process.exitCode = 1;
+  });
+
+program
+  .command('profile')
+  .description('Merge saved v4 results into a routing profile that routers can load')
+  .argument('<results...>', 'result JSON files written by `ps-bench v4 --save`')
+  .requiredOption('--out <file>', 'where to write the routing profile JSON')
+  .action(async (files: string[], opts: { out: string }) => {
+    const { buildProfile } = await import('./v4/profile.js');
+    const runs = files.map((f) => {
+      const r = JSON.parse(readFileSync(f, 'utf8'));
+      // Results saved before hardware tagging: local runs are unknown hardware, the rest are cloud.
+      r.hardware_tag ??= r.provider === 'local' ? 'unknown' : 'cloud';
+      return r;
+    });
+    const profile = buildProfile(runs);
+    writeFileSync(opts.out, JSON.stringify(profile, null, 2));
+    for (const m of profile.models) {
+      process.stdout.write(`  ${m.pipeline_score.toFixed(1).padStart(5)}  ${m.location.padEnd(5)}  ${m.hardware_tag.padEnd(16)} ${m.provider}/${m.id}\n`);
+    }
+    process.stdout.write(chalk.dim(`\n  ${profile.models.length} model(s) → ${opts.out}\n`));
+  });
+
 program.parseAsync().catch((e) => {
   process.stderr.write(chalk.red(`\nFatal: ${(e as Error).message}\n`));
   process.exit(1);

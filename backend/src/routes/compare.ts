@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { boardFor, testpackClause, type Board } from '../lib/testpack.js';
 import { stamp } from '../lib/api-version.js';
 
 const router: Router = Router();
@@ -11,14 +12,14 @@ function median(nums: number[]): number | null {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-function summarize(slug: string) {
+function summarize(slug: string, board: Board) {
   const model = db.prepare('SELECT * FROM models WHERE slug = ?').get(slug) as
     | Record<string, unknown>
     | undefined;
   if (!model) return null;
 
   const subs = db
-    .prepare(`SELECT pipeline_score, category_scores, lab_verified FROM submissions WHERE model_id = ?`)
+    .prepare(`SELECT pipeline_score, category_scores, lab_verified FROM submissions WHERE model_id = ? AND ${testpackClause(board, '')}`)
     .all(model.id) as Array<Record<string, unknown>>;
 
   const pipelineScores = subs.map((s) => s.pipeline_score as number);
@@ -50,8 +51,9 @@ router.get('/v1/compare', (req, res) => {
     return res.status(400).json(stamp({ error: 'missing_params', detail: 'a and b query params required' }));
   }
 
-  const aSum = summarize(a);
-  const bSum = summarize(b);
+  const board = boardFor(req);
+  const aSum = summarize(a, board);
+  const bSum = summarize(b, board);
   if (!aSum) return res.status(404).json(stamp({ error: 'not_found', slug: a }));
   if (!bSum) return res.status(404).json(stamp({ error: 'not_found', slug: b }));
 
