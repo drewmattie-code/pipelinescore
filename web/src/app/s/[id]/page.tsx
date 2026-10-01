@@ -4,6 +4,7 @@ import { getSubmission } from "@/lib/api";
 import { ScoreNumber } from "@/components/ScoreNumber";
 import { TierBadge } from "@/components/TierBadge";
 import { CategoryBars } from "@/components/CategoryBars";
+import { V4_SUITES, V4_SUITE_LABELS } from "@/lib/tiers";
 import { CopyCommand } from "@/components/CopyCommand";
 
 // Every CLI run prints this URL on its score card — the page must reflect the
@@ -137,14 +138,20 @@ export default async function SharePage({
         </div>
 
         <div className="mt-8 pt-8 border-t border-[var(--color-line-2)]">
-          <CategoryBars scores={sub.categoryScores} />
+          {sub.v4Suites ? (
+            <CategoryBars
+              items={V4_SUITES.filter((k) => sub.v4Suites?.[k] != null).map((k) => ({ key: k, label: V4_SUITE_LABELS[k], value: sub.v4Suites![k] }))}
+            />
+          ) : (
+            <CategoryBars scores={sub.categoryScores} />
+          )}
         </div>
 
         <div className="mt-8 pt-6 border-t border-[var(--color-line-2)] flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px] text-[var(--color-ink-3)]">
           {date && <span>{date}</span>}
           {sub.testpackVersion && <span>testpack {sub.testpackVersion}</span>}
           <span>cli {sub.cliVersion}</span>
-          <span>34 deterministic tasks · scored locally</span>
+          <span>{sub.v4Suites ? "71 tasks · v4 · scored locally" : "34 deterministic tasks · scored locally"}</span>
         </div>
       </div>
 
@@ -154,8 +161,9 @@ export default async function SharePage({
           How does your rig stack up?
         </h2>
         <p className="text-sm text-[var(--color-ink-2)] mt-1 leading-relaxed">
-          Same 34 tasks, scored on your machine — no API key, no account. One
-          command:
+          {sub.v4Suites
+            ? "Same 71 tasks, scored on your machine. No API key, no account. One command:"
+            : "Same 34 tasks, scored on your machine — no API key, no account. One command:"}
         </p>
         <div className="mt-4">
           <CopyCommand command="npx @pipelinescore/cli" />

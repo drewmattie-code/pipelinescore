@@ -6,14 +6,18 @@ const CATEGORIES = ["code", "reason", "tool_use", "rag", "speed"] as const;
 export function CategoryBars({
   scores,
   compact = false,
+  items,
 }: {
-  scores: CategoryScores;
+  scores?: CategoryScores;
   compact?: boolean;
+  /** Any labelled scores (v4 suites); when given, replaces the v3 categories. */
+  items?: { key: string; label: string; value: number }[];
 }) {
+  const rows =
+    items ?? CATEGORIES.map((c) => ({ key: c, label: CATEGORY_LABELS[c], value: scores ? scores[c] : 0 }));
   return (
     <div className={`flex flex-col ${compact ? "gap-1.5" : "gap-3"}`}>
-      {CATEGORIES.map((c) => {
-        const v = scores[c];
+      {rows.map(({ key: c, label, value: v }) => {
         const tier = tierForScore(v);
         const color = TIER_BY_ID[tier].color;
         return (
@@ -21,7 +25,7 @@ export function CategoryBars({
             <div
               className={`${compact ? "w-14 text-[10px]" : "w-20 text-xs"} text-[var(--color-ink-2)] font-medium uppercase tracking-wider`}
             >
-              {CATEGORY_LABELS[c]}
+              {label}
             </div>
             <div className={`flex-1 ${compact ? "h-1.5" : "h-2"} bg-[var(--color-line-2)] rounded-full overflow-hidden`}>
               <div
