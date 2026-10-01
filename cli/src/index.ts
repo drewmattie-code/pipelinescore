@@ -601,7 +601,7 @@ function buildProvider(name: string, opts: RunCommandOptions): LLMProvider {
 
 program
   .command('v4')
-  .description('Run the PipelineScore v4 preview (harder suite, Docker sandbox required, not submitted yet)')
+  .description('Run the PipelineScore v4 benchmark (Docker sandbox required); save with --save, then submit with v4-submit')
   .requiredOption('--provider <name>', 'local | openai | minimax | anthropic')
   .requiredOption('--model <id>', 'model id as the server reports it')
   .option('--endpoint <url>', 'OpenAI- or Anthropic-compatible base URL')
@@ -616,6 +616,33 @@ program
   .action(async (opts) => {
     const { runV4 } = await import('./v4/command.js');
     await runV4(opts);
+  });
+
+program
+  .command('v4-submit')
+  .description('Submit saved v4 results (from `ps-bench v4 --save`) to the public v4 board')
+  .argument('<results...>', 'result JSON files written by `ps-bench v4 --save`')
+  .option('--user <nickname>', 'your public leaderboard nickname (defaults to your saved one)')
+  .option('--config-tag <tag>', 'differentiator for this configuration')
+  .option('--backend <url>', 'PipelineScore backend URL', 'https://api.pipelinescore.ai')
+  .option('--site <url>', 'PipelineScore web URL', 'https://pipelinescore.ai')
+  .action(async (files: string[], opts: { user?: string; configTag?: string; backend: string; site: string }) => {
+    const { submitV4 } = await import('./v4/submit.js');
+    const saved = loadSavedConfig();
+    const nickname = opts.user ?? saved.user_nickname;
+    if (nickname && !NICKNAME_RE.test(nickname)) throw new Error('nickname: 2-40 characters, letters, digits, . _ -');
+    let failed = 0;
+    for (const f of files) {
+      const summary = JSON.parse(readFileSync(f, 'utf8'));
+      try {
+        const url = await submitV4(summary, { backend: opts.backend, site: opts.site, user_nickname: nickname, config_tag: opts.configTag });
+        process.stdout.write(`  ${summary.pipeline_score.toFixed(1).padStart(5)}  ${summary.model}  ${chalk.cyan(url)}\n`);
+      } catch (e) {
+        failed++;
+        process.stderr.write(chalk.yellow(`  ${f}: ${(e as Error).message}\n`));
+      }
+    }
+    if (failed) process.exitCode = 1;
   });
 
 program

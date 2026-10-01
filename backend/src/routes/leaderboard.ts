@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { boardFor, testpackClause, type Board } from '../lib/testpack.js';
 import { stamp, toIsoDate } from '../lib/api-version.js';
 
 const router: Router = Router();
@@ -20,7 +21,8 @@ router.get('/v1/leaderboard', (req, res) => {
   const days = Math.max(1, Math.min(parseInt((req.query.days as string) ?? '365', 10) || 365, 365));
 
   // Pull recent submissions (last N days) joined w/ models.
-  const where: string[] = [`s.created_at >= datetime('now', ?)`];
+  const board = boardFor(req);
+  const where: string[] = [`s.created_at >= datetime('now', ?)`, testpackClause(board)];
   const params: unknown[] = [`-${days} days`];
 
   if (provider) {
@@ -92,7 +94,7 @@ router.get('/v1/leaderboard', (req, res) => {
 
   res.json(stamp({
     count: entries.length,
-    filters: { category, profile, provider, lab_verified: labVerified, days, limit },
+    filters: { testpack: board, category, profile, provider, lab_verified: labVerified, days, limit },
     entries,
   }));
 });

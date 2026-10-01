@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { boardFor, testpackClause } from '../lib/testpack.js';
 import { stamp, toIsoDate } from '../lib/api-version.js';
 
 const router: Router = Router();
@@ -20,7 +21,7 @@ router.get('/v1/models/:slug', (req, res) => {
   const subs = db
     .prepare(
       `SELECT id, pipeline_score, tier, category_scores, lab_verified, created_at
-       FROM submissions WHERE model_id = ? ORDER BY created_at DESC`
+       FROM submissions WHERE model_id = ? AND ${testpackClause(boardFor(req), '')} ORDER BY created_at DESC`
     )
     .all(model.id) as Array<Record<string, unknown>>;
 

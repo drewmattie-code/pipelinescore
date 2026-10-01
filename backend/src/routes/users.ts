@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { boardFor, testpackClause } from '../lib/testpack.js';
 import { stamp, toIsoDate } from '../lib/api-version.js';
 import { getBetaTesterRank, getBetaTesterRankMap, BETA_TESTER_CAP } from '../lib/beta-testers.js';
 
@@ -76,7 +77,7 @@ router.get('/v1/leaderboard/users', (req, res) => {
   // of named users and would be nonsense with blank rows in it.
   const includeAnonymous = q.include_anonymous === '1' || q.include_anonymous === 'true';
 
-  const where: string[] = [`s.created_at >= datetime('now', ?)`];
+  const where: string[] = [`s.created_at >= datetime('now', ?)`, testpackClause(boardFor(req))];
   if (!includeAnonymous) where.push(`s.user_nickname IS NOT NULL`);
   const params: unknown[] = [`-${days} days`];
 
@@ -155,7 +156,7 @@ router.get('/v1/users/:nickname', (req, res) => {
               m.slug AS model_slug, m.display_name AS model_display_name, m.provider AS model_provider, m.family AS model_family
        FROM submissions s
        JOIN models m ON s.model_id = m.id
-       WHERE s.user_nickname = ?
+       WHERE s.user_nickname = ? AND ${testpackClause(boardFor(req))}
        ORDER BY s.pipeline_score DESC, s.created_at DESC`
     )
     .all(nick) as Array<Record<string, unknown>>;
@@ -251,12 +252,12 @@ router.get('/v1/users/:nickname', (req, res) => {
 
 // ---- /v1/users (directory) ---------------------------------------------------
 // Top users by best score. Useful for "Top Reviewers" panels.
-router.get('/v1/users', (_req, res) => {
+router.get('/v1/users', (req, res) => {
   const rows = db
     .prepare(
       `SELECT user_nickname, COUNT(*) AS submission_count, MAX(pipeline_score) AS best_score
        FROM submissions
-       WHERE user_nickname IS NOT NULL
+       WHERE user_nickname IS NOT NULL AND ${testpackClause(boardFor(req), '')}
        GROUP BY user_nickname
        ORDER BY best_score DESC
        LIMIT 200`
