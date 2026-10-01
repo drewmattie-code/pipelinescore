@@ -8,6 +8,22 @@
 
 ---
 
+## New: PipelineScore v4
+
+v4 is the current board: 71 tasks across code, repo bug fixes, multi-step agent work, tool calls, reasoning, long documents and instructions. Model-written code runs in a Docker sandbox (no network), and every answer is checked by a program. Docker must be running.
+
+```bash
+npx @pipelinescore/cli v4 \
+  --provider local \
+  --endpoint http://localhost:11434/v1 \
+  --model qwen3.8:27b \
+  --save my-run.json
+
+npx @pipelinescore/cli v4-submit my-run.json   # post it to pipelinescore.ai/leaderboard
+```
+
+Every provider gets the same answer budget, and `v4-submit` refuses runs that stopped early or hit provider errors. The 34-task v3 commands below still work; their board lives at [pipelinescore.ai/leaderboard/v3](https://pipelinescore.ai/leaderboard/v3).
+
 ## Quickstart — zero config
 
 ```bash
