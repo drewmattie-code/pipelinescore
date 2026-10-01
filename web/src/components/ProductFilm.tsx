@@ -45,11 +45,11 @@ export function ProductFilm() {
         playsInline
         preload="metadata"
         controls={reduced}
-        poster="/video/pipelinescore-product-poster.jpg"
+        poster="/video/pipelinescore-product-v2-poster.jpg"
         aria-label="PipelineScore in 20 seconds: one command runs the tests on your machine, then the model board and the hardware board."
       >
-        <source src="/video/pipelinescore-product.mp4" type="video/mp4" media="(min-width: 1024px)" />
-        <source src="/video/pipelinescore-product-720.mp4" type="video/mp4" />
+        <source src="/video/pipelinescore-product-v2.mp4" type="video/mp4" media="(min-width: 1024px)" />
+        <source src="/video/pipelinescore-product-v2-720.mp4" type="video/mp4" />
       </video>
     </figure>
   );
