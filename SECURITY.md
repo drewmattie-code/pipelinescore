@@ -4,7 +4,7 @@ PipelineScore is BYOK (Bring Your Own Key) for frontier API runs, and zero-key f
 
 ## Reporting a vulnerability
 
-Email **security@pipelinescore.ai** with:
+Email **drew@pipelinescore.ai** with:
 - A description of the vulnerability
 - Steps to reproduce
 - Affected versions (CLI, MCP server, backend)

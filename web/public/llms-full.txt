@@ -191,7 +191,7 @@ Install in Claude Code:
 - **Your model server** — you control it.
 - **Your API key** — you and the provider (Anthropic / OpenAI). Set a spending cap before benchmarking via frontier.
 
-Vulnerability reports: security@pipelinescore.ai. Don't open a public GitHub issue.
+Vulnerability reports: drew@pipelinescore.ai. Don't open a public GitHub issue.
 
 ---
 

@@ -144,10 +144,10 @@ export default function PrivacyPage() {
         <p>
           Email{" "}
           <a
-            href="mailto:privacy@pipelinescore.ai"
+            href="mailto:drew@pipelinescore.ai"
             className="text-[var(--color-emerald)] hover:text-[var(--color-emerald-dark)] underline-offset-4 hover:underline"
           >
-            privacy@pipelinescore.ai
+            drew@pipelinescore.ai
           </a>{" "}
           with the nickname and we&apos;ll redact it. Since there&apos;s no
           auth, we can&apos;t verify ownership of a nickname — if someone

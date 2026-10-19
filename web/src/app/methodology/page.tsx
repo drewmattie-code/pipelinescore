@@ -172,10 +172,10 @@ PipelineScore  = Σ (category_score × profile_weight)   (weights sum to 1.0)`}
             is Andrej. The leaderboard is signal-grade, not reputation-graded.
             If someone impersonates you, email{" "}
             <a
-              href="mailto:privacy@pipelinescore.ai"
+              href="mailto:drew@pipelinescore.ai"
               className="text-[var(--color-emerald)] hover:underline"
             >
-              privacy@pipelinescore.ai
+              drew@pipelinescore.ai
             </a>{" "}
             and we&apos;ll redact on a good-faith basis.
           </Bullet>
