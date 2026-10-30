@@ -121,7 +121,7 @@ export function V4Table({ rows }: { rows: V4Row[] }) {
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-4 py-12 text-center text-[var(--color-ink-3)]">
+                <td colSpan={12} className="px-4 py-12 text-center text-[var(--color-ink-3)]">
                   {search ? `No runs match "${search}".` : "No v4 runs yet."}
                 </td>
               </tr>
