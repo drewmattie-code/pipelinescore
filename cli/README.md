@@ -10,7 +10,7 @@
 
 ## New: PipelineScore v4
 
-v4 is the current board: 71 tasks across code, repo bug fixes, multi-step agent work, tool calls, reasoning, long documents and instructions. Model-written code runs in a Docker sandbox (no network), and every answer is checked by a program. Docker must be running.
+v4 is the current board: 80 tasks across code, repo bug fixes, multi-step agent work, tool calls, reasoning, long documents, instructions and exact compute (business arithmetic that must be right to the digit or the cent, with no tools: big products, invoice totals, tiered rebates, landed cost, FX chains, cable takeoffs, margin pricing). Model-written code runs in a Docker sandbox (no network), and every answer is checked by a program. Docker must be running.
 
 ```bash
 npx @pipelinescore/cli v4 \

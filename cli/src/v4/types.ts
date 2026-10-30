@@ -2,7 +2,7 @@
 // values from a seeded RNG each run, so answers can't be memorized from the
 // public repo while any run stays reproducible from its recorded seed.
 
-export type Suite = 'code' | 'repo' | 'agent' | 'fncall' | 'reason' | 'longdoc' | 'instruct';
+export type Suite = 'code' | 'repo' | 'agent' | 'fncall' | 'reason' | 'longdoc' | 'instruct' | 'compute';
 
 export interface ToolDef {
   name: string;

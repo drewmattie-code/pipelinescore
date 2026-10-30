@@ -55,8 +55,8 @@ export const PROFILES: { id: ProfileId; label: string }[] = [
   { id: "local-first", label: "Local-first" },
 ];
 
-// v4: seven suites, quality only (speed is shown as time beside the score, never in it).
-export const V4_SUITES = ["code", "repo", "agent", "fncall", "reason", "longdoc", "instruct"] as const;
+// v4: eight suites (v4.1 added exact compute), quality only (speed is shown as time beside the score, never in it).
+export const V4_SUITES = ["code", "repo", "agent", "fncall", "reason", "longdoc", "instruct", "compute"] as const;
 export type V4Suite = (typeof V4_SUITES)[number];
 export const V4_SUITE_LABELS: Record<V4Suite, string> = {
   code: "Code",
@@ -66,4 +66,5 @@ export const V4_SUITE_LABELS: Record<V4Suite, string> = {
   reason: "Reason",
   longdoc: "Long docs",
   instruct: "Instructions",
+  compute: "Exact compute",
 };

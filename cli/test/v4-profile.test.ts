@@ -11,7 +11,7 @@ function check(name: string, cond: boolean, detail = '') {
 
 const suiteScores = (m: number) => {
   const out = {} as V4Summary['suite_scores'];
-  for (const s of ['code', 'repo', 'agent', 'fncall', 'reason', 'longdoc', 'instruct'] as Suite[]) out[s] = { mean: m, ci_low: m - 10, ci_high: m + 10, n: 2 };
+  for (const s of ['code', 'repo', 'agent', 'fncall', 'reason', 'longdoc', 'instruct', 'compute'] as Suite[]) out[s] = { mean: m, ci_low: m - 10, ci_high: m + 10, n: 2 };
   return out;
 };
 const task = (id: string, suite: Suite, score: number): V4TaskResult =>
@@ -33,7 +33,7 @@ check('merged band spans both runs', small.suites.code.ci_low === 50 && small.su
 check('runs and seeds recorded', small.runs === 2 && small.seeds.join() === 'a,b');
 check('cloud vs local location', p.models.find((m) => m.id === 'big')!.location === 'cloud' && small.location === 'local');
 check('sorted best first', p.models[0].id === 'big');
-check('suite examples for every suite', Object.keys(p.suite_examples).length === 7 && Object.values(p.suite_examples).every((xs) => xs.length > 0));
+check('suite examples for every suite', Object.keys(p.suite_examples).length === 8 && Object.values(p.suite_examples).every((xs) => xs.length > 0));
 check('everyday examples are included', p.suite_examples.code.some((x) => x.startsWith('Write a function that merges two sorted arrays')));
 check('examples are bounded in length', Object.values(p.suite_examples).flat().every((x) => x.length <= 1200));
 

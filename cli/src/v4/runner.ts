@@ -6,7 +6,8 @@ import type {
 } from './types.js';
 
 export const SUITE_WEIGHTS: Record<Suite, number> = {
-  code: 0.18, repo: 0.12, agent: 0.25, fncall: 0.12, reason: 0.13, longdoc: 0.10, instruct: 0.10,
+  // v4.1 adds exact compute at 0.10; the original seven keep their proportions (x0.9).
+  code: 0.162, repo: 0.108, agent: 0.225, fncall: 0.108, reason: 0.117, longdoc: 0.09, instruct: 0.09, compute: 0.10,
 };
 
 // Reasoning models think before answering; a tight cap scores their silence, not their skill.

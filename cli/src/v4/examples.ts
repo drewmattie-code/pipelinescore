@@ -103,4 +103,18 @@ export const NATURAL_EXAMPLES: Record<Suite, string[]> = {
     'Summarize the article in exactly 50 words.',
     'Write a slogan in all caps that includes the word "fast" exactly once.',
   ],
+  compute: [
+    'What is 48,213,977 times 6,042,118 exactly?',
+    'Add up these invoice lines and give me the total to the cent.',
+    'We get 2% rebate on the first 50k, 3.5% on the next 100k and 5% above that. What is the rebate on $187,432.17?',
+    'Work out the landed cost per unit if freight is split by weight and duty is 6% on goods plus freight.',
+    'List price is $2,480, we get 17.5% then another 5% off, plus 13% HST. What do we pay?',
+    'Convert 125,000 CAD to USD at 0.7312 and then to EUR at 0.9204, rounding to the cent each time.',
+    'How many 500 m reels do I need for these runs in feet, and how much is left over?',
+    'What price gives a 32.5% gross margin on a $41.80 cost, rounded up to the next nickel?',
+    'Divide 9,876,543,210,123 by 4,567 and round to two decimals.',
+    'Total these quantities and extended prices exactly, no rounding until the end.',
+    'What is 3.75% of $1,284,906.40, rounded half up to the cent?',
+    'Split $12,450 of freight across three lines by weight and tell me each share.',
+  ],
 };
